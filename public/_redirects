@@ -14,6 +14,12 @@
 # Hashed asset bundles — includes the lazily-fetched ffmpeg core.
 /converter/assets/*             /assets/:splat        200
 
+# The FLAC encoder (libflacjs glue + wasm), loaded at runtime from /flac/.
+# Without this the SPA fallback below answers with the app shell, the <script>
+# load fails, and the FLAC chip quietly disables itself — which is exactly what
+# happened on the first deploy.
+/converter/flac/*               /flac/:splat          200
+
 # Static files referenced from index.html / app code (BASE_URL-prefixed).
 /converter/favicon.svg          /favicon.svg          200
 /converter/unisim-icon.png      /unisim-icon.png      200

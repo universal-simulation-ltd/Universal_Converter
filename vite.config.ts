@@ -78,8 +78,22 @@ export default defineConfig(({ mode }) => {
           // fetched on the first conversion and runtime-cached below, exactly
           // like Universal Images excludes its ONNX runtime. Do not remove
           // these two rules when the engine lands.
-          globIgnores: ['**/*.wasm'],
+          // The FLAC glue is ~110 KB and only matters to people converting to
+          // FLAC, so it stays out of the install-time precache alongside its
+          // wasm and is runtime-cached on first use instead.
+          globIgnores: ['**/*.wasm', 'flac/*.js'],
           runtimeCaching: [
+            {
+              // libflacjs — cached after the first FLAC conversion, so it works
+              // offline from then on.
+              urlPattern: /\/flac\/libflac.*\.(?:js|wasm)$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'libflac',
+                expiration: { maxEntries: 4, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
             {
               // ffmpeg.wasm core (self-hosted under /assets/) — cached on first
               // conversion so the app converts offline from then on.
