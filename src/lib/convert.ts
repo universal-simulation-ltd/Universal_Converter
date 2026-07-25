@@ -2,6 +2,7 @@ import { encodeAiff } from './aiff'
 import { audioFormatMeta } from './formats'
 import { formatDuration, withExtension } from './humanise'
 import { encodeMp3, nearestLameRate } from './mp3'
+import { OPUS_SAMPLE_RATE, encodeOpus } from './opus'
 import type { AudioSettings, ConvertedFile } from './types'
 import { encodeWav } from './wav'
 
@@ -57,6 +58,13 @@ export async function convertAudio(
 
   const name = withExtension(file.name, meta.ext)
 
+  if (settings.format === 'opus') {
+    const blob = await encodeOpus(channels, rendered.sampleRate, settings.bitrateKbps, (fraction) =>
+      onProgress(0.5 + fraction * 0.5),
+    )
+    return { blob, name }
+  }
+
   if (settings.format === 'mp3') {
     // Encoding dominates the wall-clock here, so the second half of the bar is
     // all LAME's.
@@ -92,7 +100,13 @@ async function render(decoded: AudioBuffer, settings: AudioSettings): Promise<Au
   const requested = settings.sampleRate === 'source' ? decoded.sampleRate : settings.sampleRate
   // LAME accepts a fixed set of rates, so a 96 kHz source resamples on the way
   // in rather than failing at the encoder.
-  const sampleRate = settings.format === 'mp3' ? nearestLameRate(requested) : requested
+  const sampleRate =
+    settings.format === 'mp3'
+      ? nearestLameRate(requested)
+      : // Opus is a 48 kHz codec; resample rather than refuse the file.
+        settings.format === 'opus'
+        ? OPUS_SAMPLE_RATE
+        : requested
   const channelCount =
     settings.channels === 'source' ? decoded.numberOfChannels : settings.channels === 'mono' ? 1 : 2
 

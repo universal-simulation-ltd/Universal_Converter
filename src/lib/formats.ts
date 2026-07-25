@@ -1,3 +1,4 @@
+import { opusSupported } from './opus'
 import type { AudioFormat, Engine, ImageFormat, MediaKind } from './types'
 
 export interface FormatMeta<T extends string> {
@@ -15,9 +16,11 @@ export interface FormatMeta<T extends string> {
 }
 
 // ── Audio ────────────────────────────────────────────────────────────────────
-// WAV and AIFF are our own PCM writers; MP3 is LAME-in-JS, loaded on first use.
-// The rest wait on the ffmpeg.wasm core — the UI reads `engine` to decide what
-// to disable, so enabling one is a one-line change here.
+// WAV and AIFF are our own PCM writers; MP3 is LAME-in-JS, loaded on first use;
+// Opus is the browser's own WebCodecs encoder in an Ogg container we write. Only
+// FLAC, M4A and OGG (Vorbis) still want the ffmpeg core. The UI reads `engine`
+// and `audioFormatSupported()` to decide what to disable, so enabling one more
+// is a one-line change here.
 export const AUDIO_FORMATS: FormatMeta<AudioFormat>[] = [
   { id: 'mp3',  label: 'MP3',  ext: 'mp3',  mime: 'audio/mpeg', lossy: true,  engine: 'lame',     blurb: 'Plays everywhere. The default choice for sharing audio.' },
   { id: 'wav',  label: 'WAV',  ext: 'wav',  mime: 'audio/wav',  lossy: false, engine: 'built-in', blurb: 'Uncompressed PCM — the safe interchange format. Large files.' },
@@ -25,7 +28,7 @@ export const AUDIO_FORMATS: FormatMeta<AudioFormat>[] = [
   { id: 'flac', label: 'FLAC', ext: 'flac', mime: 'audio/flac', lossy: false, engine: 'ffmpeg',   blurb: 'Lossless and compressed — about half the size of WAV.' },
   { id: 'm4a',  label: 'M4A',  ext: 'm4a',  mime: 'audio/mp4',  lossy: true,  engine: 'ffmpeg',   blurb: 'AAC in an MP4 container — Apple’s default, small and clean.' },
   { id: 'ogg',  label: 'OGG',  ext: 'ogg',  mime: 'audio/ogg',  lossy: true,  engine: 'ffmpeg',   blurb: 'Vorbis — open format, good quality per kilobyte.' },
-  { id: 'opus', label: 'Opus', ext: 'opus', mime: 'audio/opus', lossy: true,  engine: 'ffmpeg',   blurb: 'Best quality at low bitrates. Ideal for speech and podcasts.' },
+  { id: 'opus', label: 'Opus', ext: 'opus', mime: 'audio/ogg',  lossy: true,  engine: 'built-in', blurb: 'Best quality at low bitrates. Ideal for speech and podcasts.' },
 ]
 
 // ── Images ───────────────────────────────────────────────────────────────────
@@ -96,4 +99,16 @@ export function imageFormatSupported(format: ImageFormat): Promise<boolean> {
 
   supportCache.set(format, probe)
   return probe
+}
+
+/**
+ * Whether this browser can actually produce a given audio target. Only Opus
+ * varies — it rides on WebCodecs, which not every engine implements — so the
+ * rest answer true immediately rather than paying for a probe.
+ */
+export function audioFormatSupported(format: AudioFormat): Promise<boolean> {
+  const meta = audioFormatMeta(format)
+  if (meta.engine === 'ffmpeg') return Promise.resolve(false)
+  if (format === 'opus') return opusSupported()
+  return Promise.resolve(true)
 }

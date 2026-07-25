@@ -21,6 +21,7 @@ import { encodeMp3 } from '../src/lib/mp3.ts'
 import { targetSize } from '../src/lib/resize.ts'
 import { parseClock } from '../src/lib/humanise.ts'
 import { createZip, crc32 } from '../src/lib/zip.ts'
+import { HEADER_BOS, HEADER_EOS, buildPage, oggCrc, opusHead, opusTags } from '../src/lib/ogg.ts'
 
 // A 1-second 440 Hz tone, the input for the encoder round-trips below.
 function tone(sampleRate = 44100, seconds = 1) {
@@ -148,6 +149,73 @@ function ascii(view, offset, length) {
   assert.equal(parseClock('1:75'), null, 'minutes past 59 are a typo, not 75 seconds')
   assert.equal(parseClock('-5'), null)
   console.log('✓ trim — clock parsing accepts seconds, mm:ss and h:mm:ss, rejects the rest')
+}
+
+// ── Ogg ──────────────────────────────────────────────────────────────────────
+// The container is written by hand, and a malformed page is rejected wholesale
+// by every demuxer with no useful error, so the structure is pinned here.
+{
+  const page = buildPage({
+    packets: [new Uint8Array([1, 2, 3])],
+    granulePosition: 0,
+    serial: 0x554e4943,
+    sequence: 0,
+    headerType: HEADER_BOS,
+  })
+  const view = new DataView(page.buffer)
+
+  assert.equal(ascii(view, 0, 4), 'OggS')
+  assert.equal(page[4], 0, 'stream structure version')
+  assert.equal(page[5], HEADER_BOS)
+  assert.equal(view.getUint32(14, true), 0x554e4943, 'serial')
+  assert.equal(page[26], 1, 'one segment for a 3-byte packet')
+  assert.equal(page[27], 3, 'segment length')
+  assert.deepEqual([...page.slice(28)], [1, 2, 3], 'payload follows the segment table')
+
+  // Lacing: a packet that is an exact multiple of 255 needs a trailing zero
+  // segment, or a reader waits forever for a continuation that never comes.
+  const exact = buildPage({
+    packets: [new Uint8Array(510)],
+    granulePosition: 0, serial: 1, sequence: 1, headerType: 0,
+  })
+  assert.equal(exact[26], 3, '510 bytes → 255, 255, 0')
+  assert.deepEqual([...exact.slice(27, 30)], [255, 255, 0])
+
+  // Granule position is 64-bit little-endian, written as a split pair.
+  const big = buildPage({
+    packets: [new Uint8Array([0])],
+    granulePosition: 0x1_0000_0001, serial: 1, sequence: 2, headerType: HEADER_EOS,
+  })
+  const bigView = new DataView(big.buffer)
+  assert.equal(bigView.getUint32(6, true), 1, 'low word')
+  assert.equal(bigView.getUint32(10, true), 1, 'high word')
+  assert.equal(big[5], HEADER_EOS)
+
+  // Ogg's CRC is its own variant — poly 0x04C11DB7, unreflected. The checksum
+  // must cover the whole page with the field zeroed while computing.
+  const stored = view.getUint32(22, true)
+  const zeroed = page.slice()
+  new DataView(zeroed.buffer).setUint32(22, 0, true)
+  assert.equal(stored, oggCrc(zeroed), 'checksum covers the page with its own field zeroed')
+  assert.notEqual(oggCrc(new Uint8Array([1, 2, 3])), crc32(new Uint8Array([1, 2, 3])), 'not the ZIP variant')
+
+  // OpusHead / OpusTags field layout.
+  const head = opusHead(2, 312, 44100)
+  const headView = new DataView(head.buffer)
+  assert.equal(ascii(headView, 0, 8), 'OpusHead')
+  assert.equal(head[8], 1, 'version')
+  assert.equal(head[9], 2, 'channels')
+  assert.equal(headView.getUint16(10, true), 312, 'pre-skip')
+  assert.equal(headView.getUint32(12, true), 44100, 'original input rate is preserved in the header')
+  assert.equal(head[18], 0, 'mapping family 0')
+
+  const tags = opusTags('x')
+  const tagsView = new DataView(tags.buffer)
+  assert.equal(ascii(tagsView, 0, 8), 'OpusTags')
+  assert.equal(tagsView.getUint32(8, true), 1, 'vendor length')
+  assert.equal(tagsView.getUint32(13, true), 0, 'zero user comments')
+
+  console.log('✓ ogg — page header, lacing, 64-bit granule, Opus header packets')
 }
 
 // ── CRC32 ────────────────────────────────────────────────────────────────────

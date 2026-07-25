@@ -14,8 +14,9 @@ Live at **opensource.unisim.co.uk/converter** once deployed.
 | Tab | Targets | Engine |
 |---|---|---|
 | **Audio** | **MP3** (128–320 kbps CBR) | LAME compiled to JS ([`@breezystack/lamejs`](https://www.npmjs.com/package/@breezystack/lamejs)), dynamically imported on first use |
+| | **Opus** | The browser's own WebCodecs `AudioEncoder`, in an Ogg container we write ([`ogg.ts`](src/lib/ogg.ts)) — no library at all |
 | | **WAV**, **AIFF** | Our own 16-bit PCM writers ([`wav.ts`](src/lib/wav.ts), [`aiff.ts`](src/lib/aiff.ts)) |
-| | FLAC, M4A, OGG, Opus | **Disabled** — need the ffmpeg core (below) |
+| | FLAC, M4A, OGG (Vorbis) | **Disabled** — need the ffmpeg core (below) |
 | **Images** | **WebP**, **JPEG**, **PNG**, **AVIF** | The browser's own canvas encoder — convert, re-quality and resize |
 | **Video** | — | Phase 2 |
 
@@ -30,7 +31,7 @@ LAME rather than failing at the encoder.
 
 ## The ffmpeg question (and why MP3 didn't wait for it)
 
-FLAC, M4A, OGG and Opus need real codecs, which in practice means
+FLAC, M4A and OGG (Vorbis) need real codecs, which in practice means
 `ffmpeg.wasm`. **The only published `@ffmpeg/core` is `GPL-2.0-or-later`** — it
 bundles libx264 — so adding it relicenses this app. That's a decision, not a
 chore, and it's why those four chips are disabled rather than half-built:
@@ -38,11 +39,22 @@ chore, and it's why those four chips are disabled rather than half-built:
 - **MP3 didn't need it.** LAME's JS port is LGPL-3.0, which is a *dependency*
   licence, not a project one, so the app stays MIT — and it's ~170 KB against the
   core's ~31 MB.
-- **The remaining four still do.** Taking the GPL core is the suite's standing
+- **Opus didn't either.** WebCodecs exposes the browser's own Opus encoder, so
+  the only missing piece was the Ogg container — about a page of code, and no
+  third-party codec anywhere in the path. Support is probed at runtime
+  (`opusSupported()`), same as AVIF on the images side.
+- **The remaining three still do.** Taking the GPL core is the suite's standing
   recommendation (`next-products.md` §10); the alternative is a custom LGPL build
   with libx264 dropped, which is a real toolchain job.
 - **Video forces the issue.** H.264/MP4 output is exactly what libx264 provides,
   so Phase 2 can't dodge it.
+
+**Worth knowing before anyone reaches for ffmpeg again:** WebCodecs in Chrome
+also reports `mp4a.40.2` (AAC) as encodable, so **M4A** is likely reachable the
+same way — the blocker is an MP4/M4A muxer, which is a bigger job than Ogg but
+still not a licence question. FLAC and Vorbis it will *not* encode; FLAC's best
+non-ffmpeg candidate is [`libflacjs`](https://www.npmjs.com/package/libflacjs)
+(MIT).
 
 When the core does land it's a contained change:
 
@@ -55,8 +67,9 @@ When the core does land it's a contained change:
   a `CacheFirst` runtime rule caches it after the first conversion. **Don't
   remove those two rules.**
 
-Trim and tag-copying land with that engine too — absent from the panel rather
-than shipped as controls that do nothing.
+Tag-copying lands with that engine too — absent from the panel rather than
+shipped as a control that does nothing. (Trim shipped without it: start/end are
+just arguments to the offline render.)
 
 ## Licensing
 
@@ -84,8 +97,13 @@ npm run dev
 "our reader agrees with our writer" proves nothing: WAV header fields, sample
 interleaving and clipping; AIFF through macOS **`afinfo`** (which is what
 actually validates the 80-bit extended sample rate); a LAME-encoded MP3 through
-`afinfo` too; the resize maths; the canonical CRC-32 check value; and a real ZIP
-through **`unzip -t`** and python's `zipfile`.
+`afinfo` too; the Ogg page/lacing/CRC structure; the trim clock parser; the
+resize maths; the canonical CRC-32 check value; and a real ZIP through
+**`unzip -t`** and python's `zipfile`.
+
+Opus is the one format checked **in-browser only** — its container is validated
+by round-tripping through both `decodeAudioData` and an `<audio>` element, since
+CoreAudio has no Ogg parser for `afinfo` to use.
 
 ## How it's built
 
@@ -94,7 +112,7 @@ through **`unzip -t`** and python's `zipfile`.
 | Shell | Vite + React + TypeScript, PWA, Tailwind v4 |
 | Chrome | `@unisim/sdk` — `UniversalAppsNavBar`, shared footer, suite switcher |
 | State | zustand (`src/stores/converterStore.ts`) |
-| Audio | `OfflineAudioContext` — decode, resample, re-channel, normalise — then WAV / AIFF writers or LAME for MP3 |
+| Audio | `OfflineAudioContext` — decode, trim, resample, re-channel, normalise — then WAV / AIFF writers, LAME for MP3, or WebCodecs + our Ogg muxer for Opus |
 | Images | `createImageBitmap` + canvas — decode, downscale, re-encode |
 | Batching | `src/lib/zip.ts` — a dependency-free STORED-entry ZIP writer for "Download all" |
 

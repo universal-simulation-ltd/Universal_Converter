@@ -1,11 +1,11 @@
-import { useState } from 'react'
-import { AUDIO_ACCEPT, AUDIO_FORMATS, audioFormatMeta } from '../../lib/formats'
+import { useEffect, useState } from 'react'
+import { AUDIO_ACCEPT, AUDIO_FORMATS, audioFormatMeta, audioFormatSupported } from '../../lib/formats'
 import { formatDuration, parseClock } from '../../lib/humanise'
 import { MP3_BITRATES } from '../../lib/mp3'
 import { useConverterStore } from '../../stores/converterStore'
 import StudioShell from './StudioShell'
 import { Divider, Field, FormatChip, Panel, PanelActions, Segmented, Select, Toggle } from './PanelParts'
-import type { ChannelMode, SampleRate } from '../../lib/types'
+import type { AudioFormat, ChannelMode, SampleRate } from '../../lib/types'
 
 const SAMPLE_RATES: { value: SampleRate; label: string }[] = [
   { value: 'source', label: 'Keep original' },
@@ -43,8 +43,26 @@ function AudioPanel() {
   const running = useConverterStore((s) => s.running)
   const update = useConverterStore((s) => s.updateAudio)
 
+  // Opus rides on WebCodecs, which not every browser implements, so support is
+  // probed rather than assumed — the same treatment AVIF gets on the images tab.
+  const [supported, setSupported] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(AUDIO_FORMATS.map((f) => [f.id, f.engine !== 'ffmpeg' && f.id !== 'opus'])),
+  )
+
+  useEffect(() => {
+    let live = true
+    void Promise.all(
+      AUDIO_FORMATS.map(async (f) => [f.id, await audioFormatSupported(f.id)] as const),
+    ).then((pairs) => {
+      if (live) setSupported(Object.fromEntries(pairs) as Record<AudioFormat, boolean>)
+    })
+    return () => {
+      live = false
+    }
+  }, [])
+
   const target = audioFormatMeta(settings.format)
-  const engineReady = target.engine !== 'ffmpeg'
+  const engineReady = supported[settings.format] === true
 
   return (
     <Panel>
@@ -55,9 +73,15 @@ function AudioPanel() {
               key={f.id}
               label={f.label}
               selected={settings.format === f.id}
-              ready={f.engine !== 'ffmpeg'}
+              ready={supported[f.id] === true}
               disabled={running}
-              title={f.engine === 'ffmpeg' ? `${f.label} needs the ffmpeg engine (not wired up yet)` : undefined}
+              title={
+                supported[f.id]
+                  ? undefined
+                  : f.engine === 'ffmpeg'
+                    ? `${f.label} needs the ffmpeg engine (not wired up yet)`
+                    : `This browser can’t encode ${f.label}`
+              }
               onSelect={() => update({ format: f.id })}
             />
           ))}
@@ -65,8 +89,10 @@ function AudioPanel() {
         <p className="text-[11px] text-slate-500">{target.blurb}</p>
         {!engineReady && (
           <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800">
-            {target.label} needs the ffmpeg engine, which isn’t wired up yet. MP3, WAV and AIFF all
-            convert today.
+            {target.engine === 'ffmpeg'
+              ? `${target.label} needs the ffmpeg engine, which isn’t wired up yet.`
+              : `This browser can’t encode ${target.label}.`}{' '}
+            MP3, WAV and AIFF convert everywhere.
           </p>
         )}
       </Field>
