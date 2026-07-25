@@ -2,6 +2,7 @@ import { encodeAiff } from './aiff'
 import { audioFormatMeta } from './formats'
 import { formatDuration, withExtension } from './humanise'
 import { encodeMp3, nearestLameRate } from './mp3'
+import { encodeAac } from './aac'
 import { OPUS_SAMPLE_RATE, encodeOpus } from './opus'
 import type { AudioSettings, ConvertedFile } from './types'
 import { encodeWav } from './wav'
@@ -60,6 +61,13 @@ export async function convertAudio(
 
   if (settings.format === 'opus') {
     const blob = await encodeOpus(channels, rendered.sampleRate, settings.bitrateKbps, (fraction) =>
+      onProgress(0.5 + fraction * 0.5),
+    )
+    return { blob, name }
+  }
+
+  if (settings.format === 'm4a') {
+    const blob = await encodeAac(channels, rendered.sampleRate, settings.bitrateKbps, (fraction) =>
       onProgress(0.5 + fraction * 0.5),
     )
     return { blob, name }

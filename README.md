@@ -14,9 +14,9 @@ Live at **opensource.unisim.co.uk/converter** once deployed.
 | Tab | Targets | Engine |
 |---|---|---|
 | **Audio** | **MP3** (128–320 kbps CBR) | LAME compiled to JS ([`@breezystack/lamejs`](https://www.npmjs.com/package/@breezystack/lamejs)), dynamically imported on first use |
-| | **Opus** | The browser's own WebCodecs `AudioEncoder`, in an Ogg container we write ([`ogg.ts`](src/lib/ogg.ts)) — no library at all |
+| | **Opus**, **M4A** (AAC) | The browser's own WebCodecs `AudioEncoder`, in containers we write ([`ogg.ts`](src/lib/ogg.ts), [`mp4.ts`](src/lib/mp4.ts)) — no library at all |
 | | **WAV**, **AIFF** | Our own 16-bit PCM writers ([`wav.ts`](src/lib/wav.ts), [`aiff.ts`](src/lib/aiff.ts)) |
-| | FLAC, M4A, OGG (Vorbis) | **Disabled** — need the ffmpeg core (below) |
+| | FLAC, OGG (Vorbis) | **Disabled** — need the ffmpeg core (below) |
 | **Images** | **WebP**, **JPEG**, **PNG**, **AVIF** | The browser's own canvas encoder — convert, re-quality and resize |
 | **Video** | — | Phase 2 |
 
@@ -31,8 +31,7 @@ LAME rather than failing at the encoder.
 
 ## The ffmpeg question (and why MP3 didn't wait for it)
 
-FLAC, M4A and OGG (Vorbis) need real codecs, which in practice means
-`ffmpeg.wasm`. **The only published `@ffmpeg/core` is `GPL-2.0-or-later`** — it
+FLAC and OGG (Vorbis) need real codecs, which in practice means `ffmpeg.wasm`. **The only published `@ffmpeg/core` is `GPL-2.0-or-later`** — it
 bundles libx264 — so adding it relicenses this app. That's a decision, not a
 chore, and it's why those four chips are disabled rather than half-built:
 
@@ -43,18 +42,27 @@ chore, and it's why those four chips are disabled rather than half-built:
   the only missing piece was the Ogg container — about a page of code, and no
   third-party codec anywhere in the path. Support is probed at runtime
   (`opusSupported()`), same as AVIF on the images side.
-- **The remaining three still do.** Taking the GPL core is the suite's standing
+- **M4A didn't either.** Same encoder, different container: `mp4.ts` writes the
+  MP4 box tree (including the `stco` offset, which can only be filled in once
+  `moov`'s size is known, and an `elst` edit list so playback doesn't open on the
+  encoder's priming samples).
+- **The remaining two still do.** Taking the GPL core is the suite's standing
   recommendation (`next-products.md` §10); the alternative is a custom LGPL build
   with libx264 dropped, which is a real toolchain job.
 - **Video forces the issue.** H.264/MP4 output is exactly what libx264 provides,
   so Phase 2 can't dodge it.
 
-**Worth knowing before anyone reaches for ffmpeg again:** WebCodecs in Chrome
-also reports `mp4a.40.2` (AAC) as encodable, so **M4A** is likely reachable the
-same way — the blocker is an MP4/M4A muxer, which is a bigger job than Ogg but
-still not a licence question. FLAC and Vorbis it will *not* encode; FLAC's best
-non-ffmpeg candidate is [`libflacjs`](https://www.npmjs.com/package/libflacjs)
-(MIT).
+**A WebCodecs trap worth knowing:** `AudioEncoder.isConfigSupported()` is not
+reliable for AAC. On Chrome 148/macOS it answers `supported: true` for every
+bitrate, and then the encoder fails at runtime for some — **exactly 32 kbps per
+channel** errors out (64 kbps stereo and 32 kbps mono both die; 48 and 80 stereo
+are fine). So `aacSupported()` establishes support by **encoding one real frame**,
+and the bitrate control strikes through anything that fails. Related: never call
+`flush()` on an encoder that has already fired its `error` callback — it throws
+"Cannot call 'flush' on a closed codec" and buries the real cause.
+
+FLAC and Vorbis, WebCodecs will *not* encode. FLAC's best non-ffmpeg candidate is
+[`libflacjs`](https://www.npmjs.com/package/libflacjs) (MIT).
 
 When the core does land it's a contained change:
 
@@ -97,13 +105,16 @@ npm run dev
 "our reader agrees with our writer" proves nothing: WAV header fields, sample
 interleaving and clipping; AIFF through macOS **`afinfo`** (which is what
 actually validates the 80-bit extended sample rate); a LAME-encoded MP3 through
-`afinfo` too; the Ogg page/lacing/CRC structure; the trim clock parser; the
-resize maths; the canonical CRC-32 check value; and a real ZIP through
+`afinfo` too; the Ogg page/lacing/CRC structure; the MP4 box tree (box order,
+the `stco` offset landing on the first frame's bytes, the sample tables, the
+priming edit list); the trim clock parser; the resize maths; the canonical CRC-32 check value; and a real ZIP through
 **`unzip -t`** and python's `zipfile`.
 
-Opus is the one format checked **in-browser only** — its container is validated
-by round-tripping through both `decodeAudioData` and an `<audio>` element, since
-CoreAudio has no Ogg parser for `afinfo` to use.
+**Opus and M4A are checked in-browser** rather than by an external reader: both
+containers are validated by round-tripping through `decodeAudioData` *and* an
+`<audio>` element (independent Chromium paths), plus the structural tests above.
+CoreAudio has no Ogg parser, so `afinfo` can't help with Opus; M4A's round-trip
+confirms zero leading silence, which is the edit list doing its job.
 
 ## How it's built
 
@@ -112,7 +123,7 @@ CoreAudio has no Ogg parser for `afinfo` to use.
 | Shell | Vite + React + TypeScript, PWA, Tailwind v4 |
 | Chrome | `@unisim/sdk` — `UniversalAppsNavBar`, shared footer, suite switcher |
 | State | zustand (`src/stores/converterStore.ts`) |
-| Audio | `OfflineAudioContext` — decode, trim, resample, re-channel, normalise — then WAV / AIFF writers, LAME for MP3, or WebCodecs + our Ogg muxer for Opus |
+| Audio | `OfflineAudioContext` — decode, trim, resample, re-channel, normalise — then WAV / AIFF writers, LAME for MP3, or WebCodecs + our own Ogg / MP4 muxers for Opus and M4A |
 | Images | `createImageBitmap` + canvas — decode, downscale, re-encode |
 | Batching | `src/lib/zip.ts` — a dependency-free STORED-entry ZIP writer for "Download all" |
 

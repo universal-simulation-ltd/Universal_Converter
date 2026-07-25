@@ -114,9 +114,11 @@ export async function encodeOpus(
     }
   }
 
+  // Flushing a codec that already errored throws "Cannot call 'flush' on a
+  // closed codec", which buries the real cause — so surface that first.
+  if (encoderError) throw encoderError
   await encoder.flush()
   encoder.close()
-  if (encoderError) throw encoderError
   if (packets.length === 0) throw new Error('The Opus encoder returned nothing')
 
   onProgress(0.95)

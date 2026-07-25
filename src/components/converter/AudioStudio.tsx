@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AUDIO_ACCEPT, AUDIO_FORMATS, audioFormatMeta, audioFormatSupported } from '../../lib/formats'
 import { formatDuration, parseClock } from '../../lib/humanise'
+import { aacSupported } from '../../lib/aac'
 import { MP3_BITRATES } from '../../lib/mp3'
 import { useConverterStore } from '../../stores/converterStore'
 import StudioShell from './StudioShell'
@@ -61,6 +62,26 @@ function AudioPanel() {
     }
   }, [])
 
+  // Chrome's AAC encoder refuses some bitrates outright while still reporting
+  // them as supported, so each one offered here is trial-encoded and struck
+  // through if it fails. Only M4A needs this.
+  const [badBitrates, setBadBitrates] = useState<number[]>([])
+  useEffect(() => {
+    if (settings.format !== 'm4a') {
+      setBadBitrates([])
+      return
+    }
+    let live = true
+    void Promise.all(
+      MP3_BITRATES.map(async (b) => [b, await aacSupported(b, 2)] as const),
+    ).then((pairs) => {
+      if (live) setBadBitrates(pairs.filter(([, ok]) => !ok).map(([b]) => b))
+    })
+    return () => {
+      live = false
+    }
+  }, [settings.format])
+
   const target = audioFormatMeta(settings.format)
   const engineReady = supported[settings.format] === true
 
@@ -104,9 +125,13 @@ function AudioPanel() {
             value={settings.bitrateKbps}
             disabled={running || !engineReady}
             onChange={(bitrateKbps) => update({ bitrateKbps })}
+            unavailable={badBitrates}
+            unavailableTitle="This browser’s AAC encoder refuses this bitrate"
           />
           <p className="text-[10.5px] text-slate-400">
-            kbps, constant. 192 is transparent for most music; 320 is as good as MP3 gets.
+            {badBitrates.includes(settings.bitrateKbps)
+              ? 'This browser’s AAC encoder refuses this bitrate — pick another.'
+              : 'kbps, constant. 192 is transparent for most music; 320 is as good as it gets.'}
           </p>
         </Field>
       )}

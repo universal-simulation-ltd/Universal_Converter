@@ -71,27 +71,40 @@ export function Segmented<T extends string | number>({
   value,
   disabled,
   onChange,
+  unavailable,
+  unavailableTitle,
 }: {
   options: { value: T; label: string }[]
   value: T
   disabled: boolean
   onChange: (value: T) => void
+  /** Options the current encoder will refuse — struck through, not hidden. */
+  unavailable?: T[]
+  unavailableTitle?: string
 }) {
   return (
     <div className="flex overflow-hidden rounded-lg border border-slate-200">
-      {options.map((o) => (
-        <button
-          key={String(o.value)}
-          type="button"
-          disabled={disabled}
-          onClick={() => onChange(o.value)}
-          className={`flex-1 py-1.5 text-[11.5px] font-semibold transition-colors disabled:opacity-50 ${
-            value === o.value ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
+      {options.map((o) => {
+        const off = unavailable?.includes(o.value) ?? false
+        return (
+          <button
+            key={String(o.value)}
+            type="button"
+            disabled={disabled || off}
+            title={off ? unavailableTitle : undefined}
+            onClick={() => onChange(o.value)}
+            className={`flex-1 py-1.5 text-[11.5px] font-semibold transition-colors disabled:opacity-50 ${
+              value === o.value
+                ? 'bg-slate-900 text-white'
+                : off
+                  ? 'text-slate-400 line-through'
+                  : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {o.label}
+          </button>
+        )
+      })}
     </div>
   )
 }

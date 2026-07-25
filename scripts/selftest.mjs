@@ -22,6 +22,7 @@ import { targetSize } from '../src/lib/resize.ts'
 import { parseClock } from '../src/lib/humanise.ts'
 import { createZip, crc32 } from '../src/lib/zip.ts'
 import { HEADER_BOS, HEADER_EOS, buildPage, oggCrc, opusHead, opusTags } from '../src/lib/ogg.ts'
+import { buildMp4, boxTypeAt } from '../src/lib/mp4.ts'
 
 // A 1-second 440 Hz tone, the input for the encoder round-trips below.
 function tone(sampleRate = 44100, seconds = 1) {
@@ -216,6 +217,64 @@ function ascii(view, offset, length) {
   assert.equal(tagsView.getUint32(13, true), 0, 'zero user comments')
 
   console.log('✓ ogg — page header, lacing, 64-bit granule, Opus header packets')
+}
+
+// ── MP4 / M4A ────────────────────────────────────────────────────────────────
+// The one field that silently ruins an MP4 is stco: it holds the absolute byte
+// offset of the first frame, so it can only be written once moov's own size is
+// known. If it's wrong the file parses and plays silence.
+{
+  const frames = [new Uint8Array(100).fill(1), new Uint8Array(250).fill(2), new Uint8Array(75).fill(3)]
+  const description = new Uint8Array([0x12, 0x10]) // a real AudioSpecificConfig is 2 bytes for AAC-LC 44.1k stereo
+  const mp4 = buildMp4({
+    frames, description, sampleRate: 44100, channels: 2, samplesPerFrame: 1024, priming: 2112,
+  })
+  const view = new DataView(mp4.buffer, mp4.byteOffset, mp4.byteLength)
+
+  assert.equal(boxTypeAt(mp4, 0), 'ftyp')
+  assert.equal(String.fromCharCode(...mp4.slice(8, 12)), 'M4A ', 'major brand')
+
+  const ftypSize = view.getUint32(0)
+  assert.equal(boxTypeAt(mp4, ftypSize), 'moov')
+  const moovSize = view.getUint32(ftypSize)
+  assert.equal(boxTypeAt(mp4, ftypSize + moovSize), 'mdat')
+
+  // Find stco and check its offset lands exactly on the first frame's bytes.
+  const text = new TextDecoder('latin1').decode(mp4)
+  const stcoAt = text.indexOf('stco')
+  assert.ok(stcoAt > 0, 'stco present')
+  const firstFrameOffset = view.getUint32(stcoAt + 4 + 4 + 4) // type + version/flags + entry count
+  assert.equal(firstFrameOffset, ftypSize + moovSize + 8, 'stco points past mdat’s own header')
+  assert.deepEqual([...mp4.slice(firstFrameOffset, firstFrameOffset + 3)], [1, 1, 1], 'and the bytes there are frame one')
+
+  // stsz carries one size per frame, in order.
+  const stszAt = text.indexOf('stsz')
+  assert.equal(view.getUint32(stszAt + 4 + 4), 0, 'sample_size 0 = per-sample table follows')
+  assert.equal(view.getUint32(stszAt + 4 + 8), 3, 'sample count')
+  assert.deepEqual(
+    [0, 1, 2].map((i) => view.getUint32(stszAt + 4 + 12 + i * 4)),
+    [100, 250, 75],
+    'per-frame sizes',
+  )
+
+  // stts: every frame is the same length, so one entry describes them all.
+  const sttsAt = text.indexOf('stts')
+  assert.equal(view.getUint32(sttsAt + 8), 1, 'one time-to-sample entry')
+  assert.equal(view.getUint32(sttsAt + 12), 3, 'sample count')
+  assert.equal(view.getUint32(sttsAt + 16), 1024, 'samples per frame')
+
+  // The edit list trims the encoder priming so playback doesn't open on silence.
+  const elstAt = text.indexOf('elst')
+  assert.ok(elstAt > 0, 'edit list present when priming > 0')
+  assert.equal(view.getUint32(elstAt + 16), 2112, 'media_time starts after the priming samples')
+
+  const noPriming = buildMp4({
+    frames, description, sampleRate: 44100, channels: 2, samplesPerFrame: 1024, priming: 0,
+  })
+  assert.equal(new TextDecoder('latin1').decode(noPriming).indexOf('elst'), -1, 'no edit list when priming is 0')
+
+  assert.equal(mp4.length, ftypSize + moovSize + 8 + 425, 'total length = boxes + frames')
+  console.log('✓ mp4 — box order, stco offset, sample tables, priming edit list')
 }
 
 // ── CRC32 ────────────────────────────────────────────────────────────────────
