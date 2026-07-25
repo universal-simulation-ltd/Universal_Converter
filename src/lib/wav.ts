@@ -1,3 +1,5 @@
+import { toInt16 } from './pcm.ts'
+
 // A 16-bit PCM WAV writer. Pure — takes de-interleaved Float32 channels and
 // returns the bytes — so it is unit-testable outside a browser (see
 // scripts/selftest.mjs) and can be reused by the ffmpeg path for its WAV target.
@@ -51,10 +53,3 @@ function writeAscii(view: DataView, offset: number, text: string): void {
   for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i))
 }
 
-// Clip, then map to the asymmetric int16 range the way every PCM writer does:
-// negatives scale by 0x8000, positives by 0x7FFF, so full-scale 1.0 lands on
-// 32767 rather than wrapping to -32768.
-function toInt16(sample: number): number {
-  const clipped = sample < -1 ? -1 : sample > 1 ? 1 : sample
-  return clipped < 0 ? clipped * 0x8000 : clipped * 0x7fff
-}

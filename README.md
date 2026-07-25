@@ -15,8 +15,9 @@ Part of the [UNI·SIM Universal Apps](https://opensource.unisim.co.uk) suite.
 |---|---|---|
 | **Audio** | **MP3** (128–320 kbps CBR) | LAME compiled to JS ([`@breezystack/lamejs`](https://www.npmjs.com/package/@breezystack/lamejs)), dynamically imported on first use |
 | | **Opus**, **M4A** (AAC) | The browser's own WebCodecs `AudioEncoder`, in containers we write ([`ogg.ts`](src/lib/ogg.ts), [`mp4.ts`](src/lib/mp4.ts)) — no library at all |
+| | **FLAC** | libFLAC compiled to wasm ([`libflacjs`](https://www.npmjs.com/package/libflacjs), MIT), fetched on first use |
 | | **WAV**, **AIFF** | Our own 16-bit PCM writers ([`wav.ts`](src/lib/wav.ts), [`aiff.ts`](src/lib/aiff.ts)) |
-| | FLAC, OGG (Vorbis) | **Disabled** — need the ffmpeg core (below) |
+| | OGG (Vorbis) | **Disabled** — needs the ffmpeg core (below) |
 | **Images** | **WebP**, **JPEG**, **PNG**, **AVIF** | The browser's own canvas encoder — convert, re-quality and resize |
 | **Video** | — | Phase 2 |
 
@@ -31,9 +32,11 @@ LAME rather than failing at the encoder.
 
 ## The ffmpeg question (and why MP3 didn't wait for it)
 
-FLAC and OGG (Vorbis) need real codecs, which in practice means `ffmpeg.wasm`. **The only published `@ffmpeg/core` is `GPL-2.0-or-later`** — it
+OGG (Vorbis) is the last target that needs `ffmpeg.wasm` — and Vorbis is
+superseded by Opus, which already works, so the practical gap is video. **The only published `@ffmpeg/core` is `GPL-2.0-or-later`** — it
 bundles libx264 — so adding it relicenses this app. That's a decision, not a
-chore, and it's why those two chips are disabled rather than half-built:
+chore. Working around it, one format at a time, is why only one chip is still
+disabled:
 
 - **MP3 didn't need it.** LAME's JS port is LGPL-3.0, which is a *dependency*
   licence, not a project one, so the app stays MIT — and it's ~170 KB against the
@@ -46,9 +49,9 @@ chore, and it's why those two chips are disabled rather than half-built:
   MP4 box tree (including the `stco` offset, which can only be filled in once
   `moov`'s size is known, and an `elst` edit list so playback doesn't open on the
   encoder's priming samples).
-- **The remaining two still do.** Taking the GPL core is the suite's standing
-  recommendation (`next-products.md` §10); the alternative is a custom LGPL build
-  with libx264 dropped, which is a real toolchain job.
+- **FLAC didn't either.** `libflacjs` is MIT around libFLAC (BSD) — both
+  permissive, so the app stays MIT. ~230 KB, fetched on first FLAC conversion.
+- **Vorbis still would**, but Opus supersedes it and already works.
 - **Video forces the issue.** H.264/MP4 output is exactly what libx264 provides,
   so Phase 2 can't dodge it.
 
@@ -110,11 +113,19 @@ the `stco` offset landing on the first frame's bytes, the sample tables, the
 priming edit list); the trim clock parser; the resize maths; the canonical CRC-32 check value; and a real ZIP through
 **`unzip -t`** and python's `zipfile`.
 
-**Opus and M4A are checked in-browser** rather than by an external reader: both
-containers are validated by round-tripping through `decodeAudioData` *and* an
-`<audio>` element (independent Chromium paths), plus the structural tests above.
-CoreAudio has no Ogg parser, so `afinfo` can't help with Opus; M4A's round-trip
-confirms zero leading silence, which is the edit list doing its job.
+**Opus, M4A and FLAC are checked in-browser** rather than by an external reader.
+Opus and M4A round-trip through `decodeAudioData` *and* an `<audio>` element
+(independent Chromium paths) — M4A's confirms zero leading silence, which is the
+edit list doing its job. FLAC gets the strongest check available: converting
+white noise and comparing **every sample** against the input — 88,200 of 88,200
+bit-exact, which is the only way to substantiate calling it lossless.
+
+That test is what caught a real bug in the shared float→int16 conversion. See the
+comment in [`pcm.ts`](src/lib/pcm.ts): the scaling is asymmetric because it has to
+invert what the decoder does (measured, not assumed — positives come back as
+`v/32767`, negatives as `v/32768`), and it has to *round*, because `setInt16`
+truncates. Before the fix, 20,492 of 88,200 samples came back one LSB low, so
+"lossless" wasn't.
 
 ## How it's built
 
@@ -123,7 +134,7 @@ confirms zero leading silence, which is the edit list doing its job.
 | Shell | Vite + React + TypeScript, PWA, Tailwind v4 |
 | Chrome | `@unisim/sdk` — `UniversalAppsNavBar`, shared footer, suite switcher |
 | State | zustand (`src/stores/converterStore.ts`) |
-| Audio | `OfflineAudioContext` — decode, trim, resample, re-channel, normalise — then WAV / AIFF writers, LAME for MP3, or WebCodecs + our own Ogg / MP4 muxers for Opus and M4A |
+| Audio | `OfflineAudioContext` — decode, trim, resample, re-channel, normalise — then WAV / AIFF writers, LAME for MP3, libFLAC for FLAC, or WebCodecs + our own Ogg / MP4 muxers for Opus and M4A |
 | Images | `createImageBitmap` + canvas — decode, downscale, re-encode |
 | Batching | `src/lib/zip.ts` — a dependency-free STORED-entry ZIP writer for "Download all" |
 

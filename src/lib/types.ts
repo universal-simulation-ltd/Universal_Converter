@@ -7,9 +7,10 @@ export type ImageFormat = 'png' | 'jpeg' | 'webp' | 'avif'
 //  • 'built-in' — our own writer or the browser's own canvas/audio encoder. No
 //    download, works offline from the first visit.
 //  • 'lame'     — LAME compiled to JS, dynamically imported on first MP3.
+//  • 'libflac'  — libFLAC compiled to wasm, fetched from public/flac on first use.
 //  • 'ffmpeg'   — needs the ffmpeg.wasm core, which isn't wired. See the README:
 //    the only published core is GPL, so this is a licence decision, not a chore.
-export type Engine = 'built-in' | 'lame' | 'ffmpeg'
+export type Engine = 'built-in' | 'lame' | 'libflac' | 'ffmpeg'
 
 export type JobStatus = 'queued' | 'converting' | 'done' | 'failed' | 'unsupported'
 

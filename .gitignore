@@ -19,3 +19,6 @@ release
 
 # Internal project notes — not published (matches the other Universal Apps repos)
 CLAUDE.md
+
+# Synced from node_modules by scripts/sync-flac.mjs — never edit or commit
+/public/flac/

@@ -1,4 +1,5 @@
 import { aacSupported } from './aac'
+import { flacSupported } from './flac'
 import { opusSupported } from './opus'
 import type { AudioFormat, Engine, ImageFormat, MediaKind } from './types'
 
@@ -19,14 +20,15 @@ export interface FormatMeta<T extends string> {
 // ── Audio ────────────────────────────────────────────────────────────────────
 // WAV and AIFF are our own PCM writers; MP3 is LAME-in-JS, loaded on first use;
 // Opus and M4A are the browser's own WebCodecs encoders in containers we write
-// (Ogg and MP4). Only FLAC and OGG (Vorbis) still want the ffmpeg core. The UI reads `engine`
+// (Ogg and MP4); FLAC is libFLAC compiled to wasm, fetched on first use. Only
+// OGG (Vorbis) still wants the ffmpeg core. The UI reads `engine`
 // and `audioFormatSupported()` to decide what to disable, so enabling one more
 // is a one-line change here.
 export const AUDIO_FORMATS: FormatMeta<AudioFormat>[] = [
   { id: 'mp3',  label: 'MP3',  ext: 'mp3',  mime: 'audio/mpeg', lossy: true,  engine: 'lame',     blurb: 'Plays everywhere. The default choice for sharing audio.' },
   { id: 'wav',  label: 'WAV',  ext: 'wav',  mime: 'audio/wav',  lossy: false, engine: 'built-in', blurb: 'Uncompressed PCM — the safe interchange format. Large files.' },
   { id: 'aiff', label: 'AIFF', ext: 'aiff', mime: 'audio/aiff', lossy: false, engine: 'built-in', blurb: 'Uncompressed, Apple’s counterpart to WAV.' },
-  { id: 'flac', label: 'FLAC', ext: 'flac', mime: 'audio/flac', lossy: false, engine: 'ffmpeg',   blurb: 'Lossless and compressed — about half the size of WAV.' },
+  { id: 'flac', label: 'FLAC', ext: 'flac', mime: 'audio/flac', lossy: false, engine: 'libflac',  blurb: 'Lossless and compressed — about half the size of WAV.' },
   { id: 'm4a',  label: 'M4A',  ext: 'm4a',  mime: 'audio/mp4',  lossy: true,  engine: 'built-in', blurb: 'AAC in an MP4 container — Apple’s default, small and clean.' },
   { id: 'ogg',  label: 'OGG',  ext: 'ogg',  mime: 'audio/ogg',  lossy: true,  engine: 'ffmpeg',   blurb: 'Vorbis — open format, good quality per kilobyte.' },
   { id: 'opus', label: 'Opus', ext: 'opus', mime: 'audio/ogg',  lossy: true,  engine: 'built-in', blurb: 'Best quality at low bitrates. Ideal for speech and podcasts.' },
@@ -112,5 +114,8 @@ export function audioFormatSupported(format: AudioFormat): Promise<boolean> {
   if (meta.engine === 'ffmpeg') return Promise.resolve(false)
   if (format === 'opus') return opusSupported()
   if (format === 'm4a') return aacSupported()
+  // FLAC's encoder is a separate download; if it can't be fetched the chip
+  // disables itself rather than failing at conversion time.
+  if (format === 'flac') return flacSupported()
   return Promise.resolve(true)
 }
