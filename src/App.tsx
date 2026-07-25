@@ -3,7 +3,6 @@ import AppMenu from './components/Header/AppMenu'
 import ProductLogo from './components/Header/ProductLogo'
 import ConverterApp from './components/converter/ConverterApp'
 import { CONTAINER } from './lib/layout'
-import { APP_PRODUCTS } from './lib/suite'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_Converter'
 
@@ -15,7 +14,6 @@ export default function App() {
         productLogo={<ProductLogo />}
         productHomeHref={import.meta.env.BASE_URL}
         fileMenu={<AppMenu />}
-        products={APP_PRODUCTS}
         suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
         contentClassName={CONTAINER}
       />

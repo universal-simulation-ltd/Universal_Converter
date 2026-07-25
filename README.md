@@ -90,9 +90,10 @@ sizes — the 22 px suite-switcher glyph, the 24 px navbar tile
 (`public/favicon.svg`). The navbar copy carries slightly heavier strokes so it
 survives at 16 px. Keep the three in sync.
 
-`src/lib/suite.tsx` carries this product's switcher entry locally until it ships
-in `@unisim/sdk`'s own catalogue — move it there, delete that file, and drop the
-`products` prop in `App.tsx`.
+The switcher entry ships in **`@unisim/sdk` 0.73.0** — `id: 'converter'`, Every
+Day family, currently badged **Coming soon** because `/converter` doesn't resolve
+yet. Drop that flag in `SuiteSwitcher.tsx` when the Pages project and portal
+route are live.
 
 ## Deploying
 
