@@ -5,7 +5,7 @@ decoded and re-encoded in the tab, on your own machine. No account, no paywall,
 no queue on somebody else's server.
 
 Part of the [UNI·SIM Universal Apps](https://opensource.unisim.co.uk) suite.
-Live at **opensource.unisim.co.uk/converter** once deployed.
+**Live at [opensource.unisim.co.uk/converter](https://opensource.unisim.co.uk/converter).**
 
 ---
 
@@ -33,7 +33,7 @@ LAME rather than failing at the encoder.
 
 FLAC and OGG (Vorbis) need real codecs, which in practice means `ffmpeg.wasm`. **The only published `@ffmpeg/core` is `GPL-2.0-or-later`** — it
 bundles libx264 — so adding it relicenses this app. That's a decision, not a
-chore, and it's why those four chips are disabled rather than half-built:
+chore, and it's why those two chips are disabled rather than half-built:
 
 - **MP3 didn't need it.** LAME's JS port is LGPL-3.0, which is a *dependency*
   licence, not a project one, so the app stays MIT — and it's ~170 KB against the
@@ -99,7 +99,7 @@ npm run dev
 | `npm run dev` | Vite dev server |
 | `npm run build` | Typecheck + production build into `dist/` |
 | `npm run typecheck` | Types only |
-| `npm test` | Byte-level self-tests for the WAV, AIFF, MP3 and ZIP writers |
+| `npm test` | Byte-level self-tests for every writer: WAV, AIFF, MP3, Ogg, MP4, ZIP |
 
 `npm test` needs no browser and shells out to real third-party readers, because
 "our reader agrees with our writer" proves nothing: WAV header fields, sample
@@ -139,17 +139,19 @@ sizes — the 22 px suite-switcher glyph, the 24 px navbar tile
 (`public/favicon.svg`). The navbar copy carries slightly heavier strokes so it
 survives at 16 px. Keep the three in sync.
 
-The switcher entry ships in **`@unisim/sdk` 0.73.0** — `id: 'converter'`, Every
-Day family, currently badged **Coming soon** because `/converter` doesn't resolve
-yet. Drop that flag in `SuiteSwitcher.tsx` when the Pages project and portal
-route are live.
+The switcher entry ships in **`@unisim/sdk`** (added 0.73.0, un-badged in
+0.75.0) — `id: 'converter'`, Every Day family.
 
 ## Deploying
 
-Cloudflare Pages project served under `/converter` on
-`opensource.unisim.co.uk`. `public/_redirects` maps the prefixed paths back onto
-the flat `dist/` output; the portal Worker needs `/converter` in its `TARGETS`
-plus an orbit tile in the Every Day family.
+Git-connected Cloudflare Pages project — **every merge to `main` rebuilds
+production**, and PRs get preview URLs. The origin is
+`universal-converter-3z4.pages.dev`; the suffix is not a typo, Cloudflare issued
+it despite the project name never having been used before, so don't "correct" it
+in the portal Worker's `TARGETS`.
+
+`public/_redirects` maps the `/converter/*` paths back onto the flat `dist/`
+output — load-bearing, since Vite's `base` only rewrites URLs inside the HTML.
 
 ---
 
