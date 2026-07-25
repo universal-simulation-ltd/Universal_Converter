@@ -1,39 +1,123 @@
-import { CONTAINER } from '../../lib/layout'
-import DropZone from './DropZone'
-import FileQueue from './FileQueue'
-import OutputPanel from './OutputPanel'
-import PrivacyStrip from './PrivacyStrip'
+import { AUDIO_ACCEPT, AUDIO_FORMATS, audioFormatMeta } from '../../lib/formats'
+import { MP3_BITRATES } from '../../lib/mp3'
 import { useConverterStore } from '../../stores/converterStore'
+import StudioShell from './StudioShell'
+import { Divider, Field, FormatChip, Panel, PanelActions, Segmented, Select, Toggle } from './PanelParts'
+import type { ChannelMode, SampleRate } from '../../lib/types'
 
-// Phase 1 — the audio studio. Queue on the left, one settings panel on the
-// right, one primary action. Mirrors Universal QR's studio grid with the preview
-// column swapped for the file queue.
+const SAMPLE_RATES: { value: SampleRate; label: string }[] = [
+  { value: 'source', label: 'Keep original' },
+  { value: 48000, label: '48 kHz' },
+  { value: 44100, label: '44.1 kHz' },
+  { value: 22050, label: '22.05 kHz' },
+]
+
+const CHANNELS: { value: ChannelMode; label: string }[] = [
+  { value: 'source', label: 'Keep' },
+  { value: 'stereo', label: 'Stereo' },
+  { value: 'mono', label: 'Mono' },
+]
+
 export default function AudioStudio() {
-  const items = useConverterStore((s) => s.items)
-  const addFiles = useConverterStore((s) => s.addFiles)
+  const settings = useConverterStore((s) => s.audio)
+  const target = audioFormatMeta(settings.format)
 
   return (
-    <div className={`${CONTAINER} py-5 flex flex-col gap-4`}>
-      <PrivacyStrip />
+    <StudioShell
+      kind="audio"
+      accept={AUDIO_ACCEPT}
+      emptyTitle="Drop audio here to convert it"
+      moreTitle="Drop more audio here"
+      formatsLine="WAV, MP3, M4A/AAC, FLAC, OGG, Opus, AIFF, WebM — or click to browse"
+      engineBadge="on-device encoder · works offline"
+      targetExt={target.ext}
+      panel={<AudioPanel />}
+    />
+  )
+}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.55fr)_minmax(288px,0.85fr)] gap-4 items-start">
-        <div className="rounded-xl border border-slate-200 bg-white">
-          {items.length === 0 ? (
-            <div className="p-4">
-              <DropZone onFiles={addFiles} variant="empty" />
-            </div>
-          ) : (
-            <>
-              <FileQueue />
-              <div className="p-4">
-                <DropZone onFiles={addFiles} variant="more" />
-              </div>
-            </>
-          )}
+function AudioPanel() {
+  const settings = useConverterStore((s) => s.audio)
+  const running = useConverterStore((s) => s.running)
+  const update = useConverterStore((s) => s.updateAudio)
+
+  const target = audioFormatMeta(settings.format)
+  const engineReady = target.engine !== 'ffmpeg'
+
+  return (
+    <Panel>
+      <Field label="Convert to">
+        <div className="flex flex-wrap gap-1.5">
+          {AUDIO_FORMATS.map((f) => (
+            <FormatChip
+              key={f.id}
+              label={f.label}
+              selected={settings.format === f.id}
+              ready={f.engine !== 'ffmpeg'}
+              disabled={running}
+              title={f.engine === 'ffmpeg' ? `${f.label} needs the ffmpeg engine (not wired up yet)` : undefined}
+              onSelect={() => update({ format: f.id })}
+            />
+          ))}
         </div>
+        <p className="text-[11px] text-slate-500">{target.blurb}</p>
+        {!engineReady && (
+          <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800">
+            {target.label} needs the ffmpeg engine, which isn’t wired up yet. MP3, WAV and AIFF all
+            convert today.
+          </p>
+        )}
+      </Field>
 
-        <OutputPanel />
-      </div>
-    </div>
+      {target.lossy && (
+        <Field label="Bitrate">
+          <Segmented
+            options={MP3_BITRATES.map((b) => ({ value: b, label: `${b}` }))}
+            value={settings.bitrateKbps}
+            disabled={running || !engineReady}
+            onChange={(bitrateKbps) => update({ bitrateKbps })}
+          />
+          <p className="text-[10.5px] text-slate-400">
+            kbps, constant. 192 is transparent for most music; 320 is as good as MP3 gets.
+          </p>
+        </Field>
+      )}
+
+      <Field label="Sample rate">
+        <Select
+          options={SAMPLE_RATES}
+          value={settings.sampleRate}
+          disabled={running}
+          onChange={(sampleRate) => update({ sampleRate })}
+        />
+      </Field>
+
+      <Field label="Channels">
+        <Segmented
+          options={CHANNELS}
+          value={settings.channels}
+          disabled={running}
+          onChange={(channels) => update({ channels })}
+        />
+      </Field>
+
+      <Divider />
+
+      <Toggle
+        label="Normalise loudness"
+        hint="Lift the whole file so its loudest peak sits just under full scale"
+        on={settings.normalise}
+        disabled={running}
+        onChange={(normalise) => update({ normalise })}
+      />
+
+      <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] text-slate-500">
+        Trim and tag-copying arrive with the ffmpeg engine.
+      </p>
+
+      <Divider />
+
+      <PanelActions kind="audio" canConvert={engineReady} />
+    </Panel>
   )
 }

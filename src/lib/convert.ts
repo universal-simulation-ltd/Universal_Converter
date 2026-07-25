@@ -1,16 +1,18 @@
-import { formatMeta } from './formats'
+import { encodeAiff } from './aiff'
+import { audioFormatMeta } from './formats'
 import { withExtension } from './humanise'
-import type { ConvertedFile, OutputSettings } from './types'
+import { encodeMp3, nearestLameRate } from './mp3'
+import type { AudioSettings, ConvertedFile } from './types'
 import { encodeWav } from './wav'
 
 /**
  * Thrown when the chosen target needs the ffmpeg.wasm core, which isn't wired
- * up yet. The UI disables those chips, so this is a backstop rather than
- * something a user should be able to reach.
+ * up. The UI disables those chips, so this is a backstop rather than something
+ * a user should be able to reach.
  */
 export class EngineUnavailableError extends Error {
   constructor(format: string) {
-    super(`${format.toUpperCase()} output needs the conversion engine, which isn’t available yet`)
+    super(`${format.toUpperCase()} output needs the ffmpeg engine, which isn’t available yet`)
     this.name = 'EngineUnavailableError'
   }
 }
@@ -26,38 +28,50 @@ export const LARGE_FILE_BYTES = 250 * 1024 * 1024
 export type ProgressFn = (fraction: number) => void
 
 /**
- * Convert one file to `settings.format`.
+ * Convert one audio file to `settings.format`.
  *
- * Phase 1 covers the WAV target using the browser's own decoder — no download,
- * offline from the first visit. Every other target routes to ffmpeg.wasm, which
- * lands next; this function is the single seam where that plugs in.
+ * Decoding, resampling, re-channelling and normalising all happen in one
+ * offline render; the encoder is chosen per target. WAV and AIFF are our own
+ * writers, MP3 is LAME-in-JS (dynamically imported), and the compressed targets
+ * route to ffmpeg.wasm — the single seam where that plugs in.
  */
-export async function convertFile(
+export async function convertAudio(
   file: File,
-  settings: OutputSettings,
+  settings: AudioSettings,
   onProgress: ProgressFn = () => {},
 ): Promise<ConvertedFile> {
-  const meta = formatMeta(settings.format)
+  const meta = audioFormatMeta(settings.format)
   if (meta.engine === 'ffmpeg') throw new EngineUnavailableError(settings.format)
 
   const bytes = await file.arrayBuffer()
-  onProgress(0.1)
+  onProgress(0.08)
 
   const decoded = await decode(bytes)
-  onProgress(0.45)
+  onProgress(0.3)
 
   const rendered = await render(decoded, settings)
-  onProgress(0.8)
+  onProgress(0.5)
 
   const channels: Float32Array[] = []
   for (let c = 0; c < rendered.numberOfChannels; c++) channels.push(rendered.getChannelData(c))
-  const wav = encodeWav(channels, rendered.sampleRate)
-  onProgress(1)
 
-  return {
-    blob: new Blob([wav], { type: meta.mime }),
-    name: withExtension(file.name, meta.ext),
+  const name = withExtension(file.name, meta.ext)
+
+  if (settings.format === 'mp3') {
+    // Encoding dominates the wall-clock here, so the second half of the bar is
+    // all LAME's.
+    const blob = await encodeMp3(channels, rendered.sampleRate, settings.bitrateKbps, (fraction) =>
+      onProgress(0.5 + fraction * 0.5),
+    )
+    return { blob, name }
   }
+
+  const bytesOut =
+    settings.format === 'aiff'
+      ? encodeAiff(channels, rendered.sampleRate)
+      : encodeWav(channels, rendered.sampleRate)
+  onProgress(1)
+  return { blob: new Blob([bytesOut], { type: meta.mime }), name }
 }
 
 // A throwaway context purely for decoding — its own rate doesn't affect the
@@ -74,8 +88,11 @@ async function decode(bytes: ArrayBuffer): Promise<AudioBuffer> {
 // Resample, re-channel and (optionally) normalise in one offline render. The
 // destination's channel count does the up/down mix, so mono→stereo and
 // stereo→mono both come for free.
-async function render(decoded: AudioBuffer, settings: OutputSettings): Promise<AudioBuffer> {
-  const sampleRate = settings.sampleRate === 'source' ? decoded.sampleRate : settings.sampleRate
+async function render(decoded: AudioBuffer, settings: AudioSettings): Promise<AudioBuffer> {
+  const requested = settings.sampleRate === 'source' ? decoded.sampleRate : settings.sampleRate
+  // LAME accepts a fixed set of rates, so a 96 kHz source resamples on the way
+  // in rather than failing at the encoder.
+  const sampleRate = settings.format === 'mp3' ? nearestLameRate(requested) : requested
   const channelCount =
     settings.channels === 'source' ? decoded.numberOfChannels : settings.channels === 'mono' ? 1 : 2
   const frames = Math.max(1, Math.ceil(decoded.duration * sampleRate))

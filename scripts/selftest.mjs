@@ -1,12 +1,13 @@
-// Self-test for the two pure byte-level modules — the WAV writer and the ZIP
-// writer. Both produce files other software has to read, so they're checked
-// against the real format here rather than only in a browser.
+// Self-tests for the parts that produce bytes other software has to read: the
+// WAV, AIFF, MP3 and ZIP writers, plus the resize maths. Each is checked against
+// a real third-party reader — macOS `afinfo`, `unzip`, python's `zipfile` —
+// because "our reader agrees with our writer" proves nothing.
 //
 //   node scripts/selftest.mjs
 //
 // Node 24 strips the TypeScript types on import, so the source is tested
-// directly (no build step). The ZIP assertion shells out to `unzip`, which is
-// the point: a third-party reader must accept what we write.
+// directly, with no build step. That's also why the modules under test import
+// their leaf dependencies with an explicit `.ts` extension.
 
 import { execFileSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync } from 'node:fs'
@@ -15,7 +16,17 @@ import { join } from 'node:path'
 import assert from 'node:assert/strict'
 
 import { encodeWav } from '../src/lib/wav.ts'
+import { encodeAiff } from '../src/lib/aiff.ts'
+import { encodeMp3 } from '../src/lib/mp3.ts'
+import { targetSize } from '../src/lib/resize.ts'
 import { createZip, crc32 } from '../src/lib/zip.ts'
+
+// A 1-second 440 Hz tone, the input for the encoder round-trips below.
+function tone(sampleRate = 44100, seconds = 1) {
+  const samples = new Float32Array(sampleRate * seconds)
+  for (let i = 0; i < samples.length; i++) samples[i] = Math.sin((2 * Math.PI * 440 * i) / sampleRate) * 0.5
+  return samples
+}
 
 function ascii(view, offset, length) {
   let out = ''
@@ -56,6 +67,72 @@ function ascii(view, offset, length) {
   assert.equal(clipped.getInt16(46, true), -32768)
 
   console.log('✓ wav — header fields, interleaving, clipping')
+}
+
+// ── AIFF ─────────────────────────────────────────────────────────────────────
+// Checked with macOS `afinfo` rather than by re-reading our own bytes: the
+// 80-bit extended sample rate is exactly the field a hand-rolled reader would
+// get wrong in the same way the writer did.
+{
+  const samples = tone(44100, 1)
+  const buffer = encodeAiff([samples, samples], 44100)
+  const view = new DataView(buffer)
+
+  assert.equal(ascii(view, 0, 4), 'FORM')
+  assert.equal(ascii(view, 8, 4), 'AIFF')
+  assert.equal(ascii(view, 12, 4), 'COMM')
+  assert.equal(view.getUint16(20), 2, 'stereo (big-endian)')
+  assert.equal(view.getUint32(22), 44100, 'frames')
+  assert.equal(view.getUint16(26), 16, 'bit depth')
+  assert.equal(ascii(view, 38, 4), 'SSND')
+
+  const dir = mkdtempSync(join(tmpdir(), 'uniconv-'))
+  const path = join(dir, 'tone.aiff')
+  writeFileSync(path, Buffer.from(buffer))
+  const info = execFileSync('afinfo', [path], { encoding: 'utf8' })
+  assert.match(info, /44100 Hz/, 'afinfo reads the 80-bit extended sample rate back as 44100')
+  assert.match(info, /2 ch/, 'afinfo sees two channels')
+  assert.match(info, /estimated duration: 1\.0+ sec/, 'one second of audio')
+
+  console.log('✓ aiff — afinfo reads rate, channels and duration back')
+}
+
+// ── MP3 ──────────────────────────────────────────────────────────────────────
+{
+  const samples = tone(44100, 1)
+  const blob = await encodeMp3([samples, samples], 44100, 192)
+  const bytes = Buffer.from(await blob.arrayBuffer())
+
+  assert.equal(blob.type, 'audio/mpeg')
+  assert.ok(bytes.length > 8000, `a second of 192 kbps should be ~24 KB, got ${bytes.length}`)
+  // Every MP3 frame starts with 11 set sync bits; the first frame is at byte 0
+  // because LAME's JS port emits no ID3 header.
+  assert.equal(bytes[0], 0xff, 'frame sync byte 1')
+  assert.equal(bytes[1] & 0xe0, 0xe0, 'frame sync byte 2')
+
+  const dir = mkdtempSync(join(tmpdir(), 'uniconv-'))
+  const path = join(dir, 'tone.mp3')
+  writeFileSync(path, bytes)
+  const info = execFileSync('afinfo', [path], { encoding: 'utf8' })
+  assert.match(info, /MPEG.*Layer 3|\.mp3/i, 'afinfo recognises it as MPEG audio')
+  assert.match(info, /44100 Hz/, 'sample rate survives')
+
+  await assert.rejects(
+    () => encodeMp3([samples], 96000, 192),
+    /96000 Hz/,
+    'an unsupported LAME rate is refused with a message naming it',
+  )
+
+  console.log('✓ mp3 — LAME output is real MPEG audio afinfo can read')
+}
+
+// ── Image sizing ─────────────────────────────────────────────────────────────
+{
+  assert.deepEqual(targetSize(4000, 3000, 1920), { width: 1920, height: 1440 }, 'landscape fits the long edge')
+  assert.deepEqual(targetSize(3000, 4000, 1920), { width: 1440, height: 1920 }, 'portrait fits the long edge')
+  assert.deepEqual(targetSize(800, 600, 1920), { width: 800, height: 600 }, 'never scales up')
+  assert.deepEqual(targetSize(800, 600, 'source'), { width: 800, height: 600 }, 'source keeps size')
+  console.log('✓ image — resize keeps aspect ratio and never upscales')
 }
 
 // ── CRC32 ────────────────────────────────────────────────────────────────────

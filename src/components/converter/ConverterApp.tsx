@@ -1,13 +1,14 @@
 import { useConverterStore, type StudioTab } from '../../stores/converterStore'
 import { CONTAINER } from '../../lib/layout'
 import AudioStudio from './AudioStudio'
+import ImageStudio from './ImageStudio'
 import VideoStudio from './VideoStudio'
 
-// Top-level shell: an Audio | Video switch above the studios, plus a link out to
-// Universal Images for the format work that app already does better than a
-// generic converter would.
-//  • Audio — Phase 1. Convert between the common audio formats on-device.
-//  • Video — Phase 2. Trim / compress / extract audio on the same ffmpeg core.
+// Top-level shell: one switch above three studios, all sharing the same queue,
+// settings-panel vocabulary and privacy story.
+//  • Audio  — MP3 / WAV / AIFF today; the rest wait on the ffmpeg core.
+//  • Images — PNG / JPEG / WebP / AVIF, convert + resize, via the canvas encoder.
+//  • Video  — Phase 2, on the same ffmpeg core as the audio targets.
 export default function ConverterApp() {
   const tab = useConverterStore((s) => s.tab)
   const setTab = useConverterStore((s) => s.setTab)
@@ -16,19 +17,14 @@ export default function ConverterApp() {
     <div>
       <div className="border-b border-slate-200 bg-white">
         <div className={`${CONTAINER} flex items-center gap-1 pt-3 overflow-x-auto`}>
-          <TopTab id="audio" current={tab} onClick={setTab} label="Audio" hint="Free · on your device" />
+          <TopTab id="audio" current={tab} onClick={setTab} label="Audio" hint="MP3, WAV & AIFF · on your device" />
+          <TopTab id="image" current={tab} onClick={setTab} label="Images" hint="Convert & resize · on your device" />
           <TopTab id="video" current={tab} onClick={setTab} label="Video" hint="Trim, compress, extract audio" soon />
-          <a
-            href="https://opensource.unisim.co.uk/images"
-            className="group relative -mb-px flex flex-col items-start rounded-t-lg border-b-2 border-transparent px-4 py-2.5 text-left transition-colors hover:bg-slate-50"
-          >
-            <span className="text-sm font-semibold text-slate-600 group-hover:text-slate-900">Images ↗</span>
-            <span className="text-[11px] text-slate-400">Opens Universal Images</span>
-          </a>
         </div>
       </div>
 
       {tab === 'audio' && <AudioStudio />}
+      {tab === 'image' && <ImageStudio />}
       {tab === 'video' && <VideoStudio />}
     </div>
   )

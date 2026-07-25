@@ -1,17 +1,15 @@
 import { LARGE_FILE_BYTES } from '../../lib/convert'
-import { formatMeta } from '../../lib/formats'
-import { formatBytes, formatDuration } from '../../lib/humanise'
+import { formatBytes } from '../../lib/humanise'
 import { useConverterStore } from '../../stores/converterStore'
-import type { QueueItem } from '../../lib/types'
+import type { MediaKind, QueueItem } from '../../lib/types'
 
-export default function FileQueue() {
-  const items = useConverterStore((s) => s.items)
-  const settings = useConverterStore((s) => s.settings)
+export default function FileQueue({ kind, targetExt }: { kind: MediaKind; targetExt: string }) {
+  // Filter after selecting — see the note in StudioShell.
+  const items = useConverterStore((s) => s.items).filter((i) => i.kind === kind)
   const running = useConverterStore((s) => s.running)
   const removeItem = useConverterStore((s) => s.removeItem)
   const downloadItem = useConverterStore((s) => s.downloadItem)
 
-  const target = formatMeta(settings.format)
   const totalBytes = items.reduce((sum, i) => sum + i.file.size, 0)
   const doneCount = items.filter((i) => i.status === 'done').length
 
@@ -39,7 +37,7 @@ export default function FileQueue() {
           <Row
             key={item.id}
             item={item}
-            targetExt={target.ext}
+            targetExt={targetExt}
             busy={running}
             onRemove={() => removeItem(item.id)}
             onDownload={() => downloadItem(item.id)}
@@ -67,6 +65,13 @@ function Row({
   const failed = item.status === 'failed'
   const large = item.file.size > LARGE_FILE_BYTES && !skipped
 
+  // Once a file is converted, the saving that matters is the one the user can
+  // see: the new size, and how much smaller it got.
+  const savedPct =
+    item.result && item.file.size > 0
+      ? Math.round((1 - item.result.blob.size / item.file.size) * 100)
+      : null
+
   return (
     <li
       className={`grid grid-cols-[26px_minmax(0,1fr)_112px_72px_136px] items-center gap-3 border-t border-slate-200 px-4 py-3 max-sm:grid-cols-[26px_minmax(0,1fr)_128px] ${
@@ -88,7 +93,9 @@ function Row({
           {item.error ??
             [
               formatBytes(item.file.size),
-              item.durationSec != null ? formatDuration(item.durationSec) : null,
+              item.detail,
+              item.result ? `→ ${formatBytes(item.result.blob.size)}` : null,
+              savedPct != null && savedPct > 0 ? `${savedPct}% smaller` : null,
               large ? 'large file — may run out of memory' : null,
             ]
               .filter(Boolean)

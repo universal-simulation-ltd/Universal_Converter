@@ -1,13 +1,15 @@
 import { useRef, useState } from 'react'
-import { INPUT_ACCEPT } from '../../lib/formats'
 
 interface Props {
   onFiles: (files: File[]) => void
   /** 'empty' owns the whole column on first run; 'more' is the compact footer. */
   variant: 'empty' | 'more'
+  accept: string
+  title: string
+  formatsLine: string
 }
 
-export default function DropZone({ onFiles, variant }: Props) {
+export default function DropZone({ onFiles, variant, accept, title, formatsLine }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [over, setOver] = useState(false)
 
@@ -46,17 +48,13 @@ export default function DropZone({ onFiles, variant }: Props) {
         <path d="M7 9l5-5 5 5" />
         <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
       </svg>
-      <span className={`font-semibold text-slate-900 ${empty ? 'text-base' : 'text-[13.5px]'}`}>
-        {empty ? 'Drop audio here to convert it' : 'Drop more audio here'}
-      </span>
-      <span className="text-[11.5px] text-slate-500">
-        WAV, MP3, M4A/AAC, FLAC, OGG, Opus, AIFF, WebM — or click to browse
-      </span>
+      <span className={`font-semibold text-slate-900 ${empty ? 'text-base' : 'text-[13.5px]'}`}>{title}</span>
+      <span className="text-[11.5px] text-slate-500">{formatsLine}</span>
 
       <input
         ref={inputRef}
         type="file"
-        accept={INPUT_ACCEPT}
+        accept={accept}
         multiple
         className="hidden"
         onChange={(e) => {
