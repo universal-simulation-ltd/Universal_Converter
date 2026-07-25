@@ -43,6 +43,18 @@ export interface AudioSettings {
   sampleRate: SampleRate
   channels: ChannelMode
   normalise: boolean
+  trim: TrimSettings
+}
+
+/**
+ * Start/end offsets in seconds, applied to every file in the queue — the output
+ * panel is batch-wide by design, so "top and tail this batch of recordings" is
+ * the case this serves. `endSec: null` means "to the end of the file".
+ */
+export interface TrimSettings {
+  enabled: boolean
+  startSec: number
+  endSec: number | null
 }
 
 /** 'source' keeps the original pixel dimensions; a number is the longest edge. */
@@ -61,6 +73,7 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
   sampleRate: 'source',
   channels: 'source',
   normalise: false,
+  trim: { enabled: false, startSec: 0, endSec: null },
 }
 
 export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {

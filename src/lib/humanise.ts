@@ -39,3 +39,17 @@ export function withExtension(filename: string, ext: string): string {
   const stem = dot < 1 ? filename : filename.slice(0, dot)
   return `${stem}.${ext}`
 }
+
+/**
+ * Parse a trim field: "90", "1:30" or "1:02:03" → seconds. Returns null for
+ * anything that isn't a time, so the field can say so rather than silently
+ * converting from zero.
+ */
+export function parseClock(input: string): number | null {
+  const text = input.trim()
+  if (text === '') return null
+  if (!/^\d+(:[0-5]?\d){0,2}(\.\d+)?$/.test(text)) return null
+  const parts = text.split(':').map(Number)
+  if (parts.some((n) => Number.isNaN(n))) return null
+  return parts.reduce((total, part) => total * 60 + part, 0)
+}

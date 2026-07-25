@@ -1,6 +1,6 @@
 import { encodeAiff } from './aiff'
 import { audioFormatMeta } from './formats'
-import { withExtension } from './humanise'
+import { formatDuration, withExtension } from './humanise'
 import { encodeMp3, nearestLameRate } from './mp3'
 import type { AudioSettings, ConvertedFile } from './types'
 import { encodeWav } from './wav'
@@ -95,7 +95,9 @@ async function render(decoded: AudioBuffer, settings: AudioSettings): Promise<Au
   const sampleRate = settings.format === 'mp3' ? nearestLameRate(requested) : requested
   const channelCount =
     settings.channels === 'source' ? decoded.numberOfChannels : settings.channels === 'mono' ? 1 : 2
-  const frames = Math.max(1, Math.ceil(decoded.duration * sampleRate))
+
+  const { offset, duration } = trimWindow(decoded.duration, settings.trim)
+  const frames = Math.max(1, Math.ceil(duration * sampleRate))
 
   const ctx = new OfflineAudioContext(channelCount, frames, sampleRate)
   const source = ctx.createBufferSource()
@@ -106,8 +108,36 @@ async function render(decoded: AudioBuffer, settings: AudioSettings): Promise<Au
 
   source.connect(gain)
   gain.connect(ctx.destination)
-  source.start()
+  // start(when, offset, duration) does the trim inside the render — no separate
+  // pass, and nothing outside the window is ever encoded.
+  source.start(0, offset, duration)
   return ctx.startRendering()
+}
+
+/**
+ * Resolve the trim settings against one file's real length. Exported so the
+ * failure cases are testable: a start past the end of the file, or an end at or
+ * before the start, are user errors that deserve a sentence rather than a
+ * zero-length file.
+ */
+export function trimWindow(
+  fileDuration: number,
+  trim: AudioSettings['trim'],
+): { offset: number; duration: number } {
+  if (!trim.enabled) return { offset: 0, duration: fileDuration }
+
+  const offset = Math.max(0, trim.startSec)
+  if (offset >= fileDuration) {
+    throw new Error(
+      `This file is only ${formatDuration(fileDuration)} long, so a trim starting at ${formatDuration(offset)} leaves nothing`,
+    )
+  }
+
+  const end = trim.endSec == null ? fileDuration : Math.min(trim.endSec, fileDuration)
+  if (end <= offset) {
+    throw new Error('The trim ends before it starts — check the start and end times')
+  }
+  return { offset, duration: end - offset }
 }
 
 // Peak normalisation to -0.2 dBFS. Capped at 12 dB of lift so a near-silent

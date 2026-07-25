@@ -19,6 +19,7 @@ import { encodeWav } from '../src/lib/wav.ts'
 import { encodeAiff } from '../src/lib/aiff.ts'
 import { encodeMp3 } from '../src/lib/mp3.ts'
 import { targetSize } from '../src/lib/resize.ts'
+import { parseClock } from '../src/lib/humanise.ts'
 import { createZip, crc32 } from '../src/lib/zip.ts'
 
 // A 1-second 440 Hz tone, the input for the encoder round-trips below.
@@ -133,6 +134,20 @@ function ascii(view, offset, length) {
   assert.deepEqual(targetSize(800, 600, 1920), { width: 800, height: 600 }, 'never scales up')
   assert.deepEqual(targetSize(800, 600, 'source'), { width: 800, height: 600 }, 'source keeps size')
   console.log('✓ image — resize keeps aspect ratio and never upscales')
+}
+
+// ── Trim parsing ─────────────────────────────────────────────────────────────
+{
+  assert.equal(parseClock('90'), 90, 'bare seconds')
+  assert.equal(parseClock('1:30'), 90, 'mm:ss')
+  assert.equal(parseClock('1:02:03'), 3723, 'h:mm:ss')
+  assert.equal(parseClock(' 0:05 '), 5, 'surrounding space is fine')
+  assert.equal(parseClock('2.5'), 2.5, 'fractional seconds')
+  assert.equal(parseClock(''), null, 'empty is not zero — the field decides what that means')
+  assert.equal(parseClock('abc'), null)
+  assert.equal(parseClock('1:75'), null, 'minutes past 59 are a typo, not 75 seconds')
+  assert.equal(parseClock('-5'), null)
+  console.log('✓ trim — clock parsing accepts seconds, mm:ss and h:mm:ss, rejects the rest')
 }
 
 // ── CRC32 ────────────────────────────────────────────────────────────────────

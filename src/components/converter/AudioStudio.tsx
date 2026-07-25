@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { AUDIO_ACCEPT, AUDIO_FORMATS, audioFormatMeta } from '../../lib/formats'
+import { formatDuration, parseClock } from '../../lib/humanise'
 import { MP3_BITRATES } from '../../lib/mp3'
 import { useConverterStore } from '../../stores/converterStore'
 import StudioShell from './StudioShell'
@@ -111,13 +113,93 @@ function AudioPanel() {
         onChange={(normalise) => update({ normalise })}
       />
 
+      <Toggle
+        label="Trim"
+        hint="Keep only part of each file — same window for the whole queue"
+        on={settings.trim.enabled}
+        disabled={running}
+        onChange={(enabled) => update({ trim: { ...settings.trim, enabled } })}
+      />
+
+      {settings.trim.enabled && <TrimFields />}
+
       <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] text-slate-500">
-        Trim and tag-copying arrive with the ffmpeg engine.
+        Tag-copying arrives with the ffmpeg engine.
       </p>
 
       <Divider />
 
       <PanelActions kind="audio" canConvert={engineReady} />
     </Panel>
+  )
+}
+
+// Start/end as free text so "1:30" is as valid as "90". The parse is deliberately
+// strict: an unparseable field says so and holds the last good value, rather than
+// silently trimming from zero.
+function TrimFields() {
+  const trim = useConverterStore((s) => s.audio.trim)
+  const running = useConverterStore((s) => s.running)
+  const update = useConverterStore((s) => s.updateAudio)
+
+  const [startText, setStartText] = useState(trim.startSec ? formatDuration(trim.startSec) : '0:00')
+  const [endText, setEndText] = useState(trim.endSec == null ? '' : formatDuration(trim.endSec))
+
+  const startBad = startText.trim() !== '' && parseClock(startText) === null
+  const endBad = endText.trim() !== '' && parseClock(endText) === null
+
+  function commitStart(text: string) {
+    setStartText(text)
+    const seconds = text.trim() === '' ? 0 : parseClock(text)
+    if (seconds !== null) update({ trim: { ...trim, startSec: seconds } })
+  }
+
+  function commitEnd(text: string) {
+    setEndText(text)
+    if (text.trim() === '') {
+      update({ trim: { ...trim, endSec: null } })
+      return
+    }
+    const seconds = parseClock(text)
+    if (seconds !== null) update({ trim: { ...trim, endSec: seconds } })
+  }
+
+  const field =
+    'w-full rounded-lg border px-3 py-2 text-[12px] tabular-nums focus:outline-none focus-visible:outline-2 focus-visible:outline-orange-600 disabled:opacity-50'
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg bg-slate-50 p-3">
+      <div className="grid grid-cols-2 gap-2">
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-slate-500">Start</span>
+          <input
+            value={startText}
+            disabled={running}
+            onChange={(e) => commitStart(e.target.value)}
+            placeholder="0:00"
+            inputMode="numeric"
+            aria-invalid={startBad}
+            className={`${field} ${startBad ? 'border-red-400 text-red-700' : 'border-slate-200 bg-white text-slate-900'}`}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-slate-500">End</span>
+          <input
+            value={endText}
+            disabled={running}
+            onChange={(e) => commitEnd(e.target.value)}
+            placeholder="end of file"
+            inputMode="numeric"
+            aria-invalid={endBad}
+            className={`${field} ${endBad ? 'border-red-400 text-red-700' : 'border-slate-200 bg-white text-slate-900'}`}
+          />
+        </label>
+      </div>
+      <p className={`text-[10.5px] ${startBad || endBad ? 'text-red-700' : 'text-slate-400'}`}>
+        {startBad || endBad
+          ? 'Use mm:ss, h:mm:ss, or a number of seconds.'
+          : 'mm:ss, h:mm:ss or seconds. Leave End blank to run to the end of each file.'}
+      </p>
+    </div>
   )
 }
