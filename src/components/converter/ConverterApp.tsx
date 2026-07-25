@@ -6,7 +6,7 @@ import VideoStudio from './VideoStudio'
 
 // Top-level shell: one switch above three studios, all sharing the same queue,
 // settings-panel vocabulary and privacy story.
-//  • Audio  — MP3 / WAV / AIFF today; the rest wait on the ffmpeg core.
+//  • Audio  — MP3 / Opus / WAV / AIFF today; FLAC, M4A and Vorbis wait on ffmpeg.
 //  • Images — PNG / JPEG / WebP / AVIF, convert + resize, via the canvas encoder.
 //  • Video  — Phase 2, on the same ffmpeg core as the audio targets.
 export default function ConverterApp() {
@@ -17,7 +17,7 @@ export default function ConverterApp() {
     <div>
       <div className="border-b border-slate-200 bg-white">
         <div className={`${CONTAINER} flex items-center gap-1 pt-3 overflow-x-auto`}>
-          <TopTab id="audio" current={tab} onClick={setTab} label="Audio" hint="MP3, WAV & AIFF · on your device" />
+          <TopTab id="audio" current={tab} onClick={setTab} label="Audio" hint="MP3, Opus, WAV & AIFF · on your device" />
           <TopTab id="image" current={tab} onClick={setTab} label="Images" hint="Convert & resize · on your device" />
           <TopTab id="video" current={tab} onClick={setTab} label="Video" hint="Trim, compress, extract audio" soon />
         </div>
