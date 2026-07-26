@@ -26,6 +26,7 @@
 /converter/icon-180.png         /icon-180.png         200
 /converter/icon-192.png         /icon-192.png         200
 /converter/icon-512.png         /icon-512.png         200
+/converter/og-image.jpg         /og-image.jpg         200
 
 # SEO crawler files.
 /converter/robots.txt           /robots.txt           200
