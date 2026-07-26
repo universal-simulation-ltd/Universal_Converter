@@ -32,9 +32,10 @@ LAME rather than failing at the encoder.
 
 ## The ffmpeg question (and why MP3 didn't wait for it)
 
-OGG (Vorbis) is the last target that needs `ffmpeg.wasm` — and Vorbis is
-superseded by Opus, which already works, so the practical gap is video. **The only published `@ffmpeg/core` is `GPL-2.0-or-later`** — it
-bundles libx264 — so adding it relicenses this app. That's a decision, not a
+OGG (Vorbis) is the last audio target that needs `ffmpeg.wasm`, and Vorbis is
+superseded by Opus — which already works — so the practical gap is video alone.
+**The only published `@ffmpeg/core` is `GPL-2.0-or-later`** (it bundles libx264),
+so adding it relicenses this app. That's a decision, not a
 chore. Working around it, one format at a time, is why only one chip is still
 disabled:
 
@@ -63,9 +64,6 @@ are fine). So `aacSupported()` establishes support by **encoding one real frame*
 and the bitrate control strikes through anything that fails. Related: never call
 `flush()` on an encoder that has already fired its `error` callback — it throws
 "Cannot call 'flush' on a closed codec" and buries the real cause.
-
-FLAC and Vorbis, WebCodecs will *not* encode. FLAC's best non-ffmpeg candidate is
-[`libflacjs`](https://www.npmjs.com/package/libflacjs) (MIT).
 
 When the core does land it's a contained change:
 
@@ -104,7 +102,7 @@ npm run dev
 | `npm run dev` | Vite dev server |
 | `npm run build` | Typecheck + production build into `dist/` |
 | `npm run typecheck` | Types only |
-| `npm test` | Byte-level self-tests for every writer: WAV, AIFF, MP3, Ogg, MP4, ZIP |
+| `npm test` | Byte-level self-tests for every writer: WAV, AIFF, MP3, Ogg, MP4, ID3, ZIP |
 
 `npm test` needs no browser and shells out to real third-party readers, because
 "our reader agrees with our writer" proves nothing: WAV header fields, sample
