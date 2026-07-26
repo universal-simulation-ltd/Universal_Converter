@@ -174,9 +174,17 @@ function AudioPanel() {
 
       {settings.trim.enabled && <TrimFields />}
 
-      <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] text-slate-500">
-        Tag-copying arrives with the ffmpeg engine.
-      </p>
+      <Toggle
+        label="Keep title, artist &amp; album"
+        hint={
+          settings.format === 'mp3' || settings.format === 'opus'
+            ? 'Read from the original and written into the converted file'
+            : `Read from the original — ${audioFormatMeta(settings.format).label} output can’t carry them yet`
+        }
+        on={settings.keepTags}
+        disabled={running}
+        onChange={(keepTags) => update({ keepTags })}
+      />
 
       <Divider />
 

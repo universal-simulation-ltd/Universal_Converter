@@ -23,6 +23,7 @@ import { parseClock } from '../src/lib/humanise.ts'
 import { createZip, crc32 } from '../src/lib/zip.ts'
 import { HEADER_BOS, HEADER_EOS, buildPage, oggCrc, opusHead, opusTags } from '../src/lib/ogg.ts'
 import { buildMp4, boxTypeAt } from '../src/lib/mp4.ts'
+import { buildId3, readTags, vorbisComments } from '../src/lib/tags.ts'
 
 // A 1-second 440 Hz tone, the input for the encoder round-trips below.
 function tone(sampleRate = 44100, seconds = 1) {
@@ -275,6 +276,38 @@ function ascii(view, offset, length) {
 
   assert.equal(mp4.length, ftypSize + moovSize + 8 + 425, 'total length = boxes + frames')
   console.log('✓ mp4 — box order, stco offset, sample tables, priming edit list')
+}
+
+// ── Tags ─────────────────────────────────────────────────────────────────────
+// Written and read back through the same code path a real file takes, including
+// the two things that trip ID3 writers: synchsafe sizes and UTF-16 text.
+{
+  const tags = { title: 'Piano sketch — 04', artist: 'Dr Okafor', album: 'Rehearsals' }
+  const id3 = buildId3(tags)
+
+  assert.equal(String.fromCharCode(id3[0], id3[1], id3[2]), 'ID3')
+  assert.equal(id3[3], 3, 'v2.3')
+  // Synchsafe: no size byte may have its top bit set, which is what keeps a tag
+  // from ever looking like an MP3 frame sync.
+  for (const i of [6, 7, 8, 9]) assert.ok(id3[i] < 0x80, `size byte ${i} is synchsafe`)
+  const declared = (id3[6] << 21) | (id3[7] << 14) | (id3[8] << 7) | id3[9]
+  assert.equal(declared, id3.length - 10, 'declared size matches the frames written')
+
+  assert.deepEqual(readTags(id3), tags, 'round-trips, em dash and all')
+
+  // A file with no tags produces no block at all, rather than an empty one.
+  assert.equal(buildId3({}).length, 0)
+  assert.deepEqual(readTags(new Uint8Array([1, 2, 3])), {}, 'garbage in, no tags out — never throws')
+  assert.deepEqual(readTags(new Uint8Array(0)), {})
+
+  assert.deepEqual(
+    vorbisComments(tags),
+    ['TITLE=Piano sketch — 04', 'ARTIST=Dr Okafor', 'ALBUM=Rehearsals'],
+    'Vorbis comments for the FLAC/Opus side',
+  )
+  assert.deepEqual(vorbisComments({}), [])
+
+  console.log('✓ tags — ID3v2.3 synchsafe sizes, UTF-16 text, round trip, tolerant reads')
 }
 
 // ── CRC32 ────────────────────────────────────────────────────────────────────

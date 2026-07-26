@@ -6,6 +6,7 @@ import { encodeAac } from './aac'
 import { encodeFlac } from './flac'
 import { OPUS_SAMPLE_RATE, encodeOpus } from './opus'
 import type { AudioSettings, ConvertedFile } from './types'
+import { readTags, buildId3, vorbisComments, hasTags } from './tags'
 import { encodeWav } from './wav'
 
 /**
@@ -49,6 +50,10 @@ export async function convertAudio(
   const bytes = await file.arrayBuffer()
   onProgress(0.08)
 
+  // Read tags before decoding: the decoded buffer is raw samples, so this is the
+  // only point the source's title/artist/album still exist.
+  const tags = settings.keepTags ? readTags(new Uint8Array(bytes)) : {}
+
   const decoded = await decode(bytes)
   onProgress(0.3)
 
@@ -61,8 +66,12 @@ export async function convertAudio(
   const name = withExtension(file.name, meta.ext)
 
   if (settings.format === 'opus') {
-    const blob = await encodeOpus(channels, rendered.sampleRate, settings.bitrateKbps, (fraction) =>
-      onProgress(0.5 + fraction * 0.5),
+    const blob = await encodeOpus(
+      channels,
+      rendered.sampleRate,
+      settings.bitrateKbps,
+      (fraction) => onProgress(0.5 + fraction * 0.5),
+      vorbisComments(tags),
     )
     return { blob, name }
   }
@@ -84,9 +93,13 @@ export async function convertAudio(
   if (settings.format === 'mp3') {
     // Encoding dominates the wall-clock here, so the second half of the bar is
     // all LAME's.
-    const blob = await encodeMp3(channels, rendered.sampleRate, settings.bitrateKbps, (fraction) =>
+    const mp3 = await encodeMp3(channels, rendered.sampleRate, settings.bitrateKbps, (fraction) =>
       onProgress(0.5 + fraction * 0.5),
     )
+    // An ID3v2 tag block sits in front of the audio frames — LAME's JS port
+    // writes none of its own, so this is simply prepended.
+    const id3 = hasTags(tags) ? buildId3(tags) : null
+    const blob = id3 ? new Blob([id3 as BlobPart, mp3], { type: meta.mime }) : mp3
     return { blob, name }
   }
 

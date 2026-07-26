@@ -54,6 +54,7 @@ export async function encodeOpus(
   sampleRate: number,
   bitrateKbps: number,
   onProgress: (fraction: number) => void = () => {},
+  comments: string[] = [],
 ): Promise<Blob> {
   if (sampleRate !== OPUS_SAMPLE_RATE) {
     throw new Error(`Opus needs 48 kHz audio — got ${sampleRate}`)
@@ -122,14 +123,14 @@ export async function encodeOpus(
   if (packets.length === 0) throw new Error('The Opus encoder returned nothing')
 
   onProgress(0.95)
-  const blob = mux(packets, numberOfChannels, sampleRate, totalFrames)
+  const blob = mux(packets, numberOfChannels, sampleRate, totalFrames, comments)
   onProgress(1)
   return blob
 }
 
 // Wrap the packets in Ogg: OpusHead on its own beginning-of-stream page,
 // OpusTags on the next, then the audio, batched into pages.
-function mux(packets: Uint8Array[], channels: number, inputRate: number, totalFrames: number): Blob {
+function mux(packets: Uint8Array[], channels: number, inputRate: number, totalFrames: number, comments: string[]): Blob {
   const serial = 0x554e4943 // "UNIC" — any value works; it names this one stream
   const pages: Uint8Array[] = []
   let sequence = 0
@@ -143,7 +144,7 @@ function mux(packets: Uint8Array[], channels: number, inputRate: number, totalFr
   }))
 
   pages.push(buildPage({
-    packets: [opusTags('UNI·SIM Universal Converter')],
+    packets: [opusTags('UNI·SIM Universal Converter', comments)],
     granulePosition: 0,
     serial,
     sequence: sequence++,

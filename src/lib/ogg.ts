@@ -103,14 +103,30 @@ export function opusHead(channels: number, preSkip: number, inputSampleRate: num
   return head
 }
 
-/** The `OpusTags` comment packet — required, even when it carries nothing. */
-export function opusTags(vendor: string): Uint8Array {
-  const vendorBytes = new TextEncoder().encode(vendor)
-  const tags = new Uint8Array(8 + 4 + vendorBytes.length + 4)
+/**
+ * The `OpusTags` comment packet — required, even when it carries no comments.
+ * `comments` are Vorbis-style `KEY=value` strings.
+ */
+export function opusTags(vendor: string, comments: string[] = []): Uint8Array {
+  const encoder = new TextEncoder()
+  const vendorBytes = encoder.encode(vendor)
+  const entries = comments.map((c) => encoder.encode(c))
+  const length = 8 + 4 + vendorBytes.length + 4 + entries.reduce((sum, e) => sum + 4 + e.length, 0)
+
+  const tags = new Uint8Array(length)
   const view = new DataView(tags.buffer)
   tags.set([0x4f, 0x70, 0x75, 0x73, 0x54, 0x61, 0x67, 0x73], 0) // "OpusTags"
   view.setUint32(8, vendorBytes.length, true)
   tags.set(vendorBytes, 12)
-  view.setUint32(12 + vendorBytes.length, 0, true) // zero user comments
+
+  let at = 12 + vendorBytes.length
+  view.setUint32(at, entries.length, true)
+  at += 4
+  for (const entry of entries) {
+    view.setUint32(at, entry.length, true)
+    at += 4
+    tags.set(entry, at)
+    at += entry.length
+  }
   return tags
 }

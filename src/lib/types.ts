@@ -44,6 +44,8 @@ export interface AudioSettings {
   sampleRate: SampleRate
   channels: ChannelMode
   normalise: boolean
+  /** Carry title/artist/album across, where source and target both support them. */
+  keepTags: boolean
   trim: TrimSettings
 }
 
@@ -74,6 +76,7 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
   sampleRate: 'source',
   channels: 'source',
   normalise: false,
+  keepTags: true,
   trim: { enabled: false, startSec: 0, endSec: null },
 }
 

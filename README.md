@@ -78,9 +78,11 @@ When the core does land it's a contained change:
   a `CacheFirst` runtime rule caches it after the first conversion. **Don't
   remove those two rules.**
 
-Tag-copying lands with that engine too — absent from the panel rather than
-shipped as a control that does nothing. (Trim shipped without it: start/end are
-just arguments to the offline render.)
+Trim and tag-copying both shipped without it: trim is arguments to the offline
+render, and tags are read from ID3v2 / MP4 `ilst` / Vorbis comments and written
+into MP3 (ID3v2.3) and Opus (`OpusTags`). FLAC and M4A output can't carry them
+yet — each needs its own metadata writer, and the toggle's hint says so per
+format rather than promising something that doesn't happen.
 
 ## Licensing
 
@@ -110,7 +112,8 @@ interleaving and clipping; AIFF through macOS **`afinfo`** (which is what
 actually validates the 80-bit extended sample rate); a LAME-encoded MP3 through
 `afinfo` too; the Ogg page/lacing/CRC structure; the MP4 box tree (box order,
 the `stco` offset landing on the first frame's bytes, the sample tables, the
-priming edit list); the trim clock parser; the resize maths; the canonical CRC-32 check value; and a real ZIP through
+priming edit list); ID3v2.3 tags (synchsafe sizes, UTF-16 text, round trip); the
+trim clock parser; the resize maths; the canonical CRC-32 check value; and a real ZIP through
 **`unzip -t`** and python's `zipfile`.
 
 **Opus, M4A and FLAC are checked in-browser** rather than by an external reader.
@@ -136,6 +139,7 @@ truncates. Before the fix, 20,492 of 88,200 samples came back one LSB low, so
 | State | zustand (`src/stores/converterStore.ts`) |
 | Audio | `OfflineAudioContext` — decode, trim, resample, re-channel, normalise — then WAV / AIFF writers, LAME for MP3, libFLAC for FLAC, or WebCodecs + our own Ogg / MP4 muxers for Opus and M4A |
 | Images | `createImageBitmap` + canvas — decode, downscale, re-encode |
+| Tags | `src/lib/tags.ts` — reads ID3v2 / MP4 `ilst` / Vorbis comments, writes ID3v2.3 and Vorbis comments |
 | Batching | `src/lib/zip.ts` — a dependency-free STORED-entry ZIP writer for "Download all" |
 
 The design — glyph, icon set, palette, screen layout and the states — is
