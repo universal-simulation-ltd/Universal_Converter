@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "license": "MIT",
-  "description": "Universal Converter \u2014 convert audio and video entirely in your browser. Nothing is uploaded.",
+  "description": "Universal Converter — convert audio and video entirely in your browser. Nothing is uploaded.",
   "scripts": {
     "predev": "node scripts/sync-flac.mjs",
     "dev": "vite",
@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
-    "@unisim/sdk": "^0.77.0",
+    "@unisim/sdk": "^0.77.1",
     "libflacjs": "^5.6.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
