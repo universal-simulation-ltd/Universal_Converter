@@ -14,8 +14,11 @@ release
 # TypeScript incremental build artifacts
 *.tsbuildinfo
 
-# Per-user Claude Code settings
+# Per-user Claude Code settings. `launch.json` holds this machine's preview
+# port, which differs between the Mac and the Windows box — the committed
+# record of who gets which port is the table in Docs_UNI_SIM/dev-preview.md.
 .claude/settings.local.json
+.claude/launch.json
 
 # Internal project notes — not published (matches the other Universal Apps repos)
 CLAUDE.md
