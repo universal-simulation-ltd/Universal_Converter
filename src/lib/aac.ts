@@ -78,12 +78,28 @@ export function aacSupported(bitrateKbps = 128, channels = 2): Promise<boolean> 
   return trial
 }
 
-export async function encodeAac(
+export interface AacFrames {
+  frames: Uint8Array[]
+  /** AudioSpecificConfig — without it the esds describes nothing. */
+  description: Uint8Array
+  sampleRate: number
+  channels: number
+  samplesPerFrame: number
+}
+
+/**
+ * Encode to raw AAC frames, stopping short of a container.
+ *
+ * M4A wraps these in an audio-only MP4; the video muxer puts the same frames in
+ * a second track alongside the picture. Both want the frames and the
+ * AudioSpecificConfig, so the encoding lives here and the wrapping doesn't.
+ */
+export async function encodeAacFrames(
   channels: Float32Array[],
   sampleRate: number,
   bitrateKbps: number,
   onProgress: (fraction: number) => void = () => {},
-): Promise<Blob> {
+): Promise<AacFrames> {
   const numberOfChannels = Math.min(2, channels.length)
   if (!(await aacSupported(bitrateKbps, numberOfChannels))) {
     throw new Error(
@@ -160,14 +176,23 @@ export async function encodeAac(
   if (!description) throw new Error('The AAC encoder gave no codec configuration, so the file couldn’t be described')
 
   onProgress(0.95)
-  const mp4 = buildMp4({
+  return {
     frames,
     description,
     sampleRate,
     channels: numberOfChannels,
     samplesPerFrame: SAMPLES_PER_FRAME,
-    priming: PRIMING_SAMPLES,
-  })
+  }
+}
+
+export async function encodeAac(
+  channels: Float32Array[],
+  sampleRate: number,
+  bitrateKbps: number,
+  onProgress: (fraction: number) => void = () => {},
+): Promise<Blob> {
+  const encoded = await encodeAacFrames(channels, sampleRate, bitrateKbps, onProgress)
+  const mp4 = buildMp4({ ...encoded, priming: PRIMING_SAMPLES })
   onProgress(1)
   return new Blob([mp4 as BlobPart], { type: 'audio/mp4' })
 }

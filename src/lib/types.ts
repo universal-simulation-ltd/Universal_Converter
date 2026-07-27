@@ -1,7 +1,8 @@
-export type MediaKind = 'audio' | 'image'
+export type MediaKind = 'audio' | 'image' | 'video'
 
 export type AudioFormat = 'wav' | 'mp3' | 'aiff' | 'flac' | 'm4a' | 'ogg' | 'opus'
 export type ImageFormat = 'png' | 'jpeg' | 'webp' | 'avif'
+export type VideoFormat = 'mp4'
 
 // Which encoder backs a given target today.
 //  • 'built-in' — our own writer or the browser's own canvas/audio encoder. No
@@ -28,7 +29,7 @@ export interface QueueItem {
   status: JobStatus
   /** 0–1, only meaningful while `status === 'converting'`. */
   progress: number
-  /** Probed once on add: seconds for audio, "1920×1080" for images. */
+  /** Probed once on add: seconds for audio, "1920×1080" for images, both for video. */
   detail: string | null
   /** User-facing reason this row failed or was skipped. */
   error: string | null
@@ -70,6 +71,25 @@ export interface ImageSettings {
   maxEdge: MaxEdge
 }
 
+/**
+ * How much picture to keep. Names the *short* edge, so "1080p" is 1080 tall for
+ * a landscape clip and 1080 wide for one shot on a phone held upright.
+ */
+export type MaxHeight = 'source' | 480 | 720 | 1080 | 1440 | 2160
+
+/** Bitrate is derived from frame size and rate, not set directly — see video.ts. */
+export type VideoQuality = 'high' | 'balanced' | 'small'
+
+export interface VideoSettings {
+  format: VideoFormat
+  maxHeight: MaxHeight
+  quality: VideoQuality
+  /** Off writes a silent file — smaller, and sometimes the point. */
+  keepAudio: boolean
+  audioBitrateKbps: number
+  trim: TrimSettings
+}
+
 export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
   format: 'mp3',
   bitrateKbps: 192,
@@ -84,4 +104,13 @@ export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
   format: 'webp',
   quality: 0.82,
   maxEdge: 'source',
+}
+
+export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
+  format: 'mp4',
+  maxHeight: 'source',
+  quality: 'balanced',
+  keepAudio: true,
+  audioBitrateKbps: 128,
+  trim: { enabled: false, startSec: 0, endSec: null },
 }

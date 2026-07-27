@@ -1,7 +1,7 @@
 import { aacSupported } from './aac'
 import { flacSupported } from './flac'
 import { opusSupported } from './opus'
-import type { AudioFormat, Engine, ImageFormat, MediaKind } from './types'
+import type { AudioFormat, Engine, ImageFormat, MediaKind, VideoFormat } from './types'
 
 export interface FormatMeta<T extends string> {
   id: T
@@ -45,6 +45,22 @@ export const IMAGE_FORMATS: FormatMeta<ImageFormat>[] = [
   { id: 'avif', label: 'AVIF', ext: 'avif', mime: 'image/avif', lossy: true,  engine: 'built-in', blurb: 'The smallest of the four, but slower to encode and newer to support.' },
 ]
 
+// ── Video ────────────────────────────────────────────────────────────────────
+// H.264 in MP4, from the browser's own WebCodecs `VideoEncoder` in a container
+// we write (mp4mux.ts) — the same bargain Opus and M4A struck, and the reason
+// video didn't have to wait on the ffmpeg licence decision either. WebM out
+// would want a second muxer and a second codec; MP4 is the one that plays
+// everywhere, so it's the one that shipped.
+export const VIDEO_FORMATS: FormatMeta<VideoFormat>[] = [
+  { id: 'mp4', label: 'MP4', ext: 'mp4', mime: 'video/mp4', lossy: true, engine: 'built-in', blurb: 'H.264 video with AAC audio — plays on everything.' },
+]
+
+export function videoFormatMeta(id: VideoFormat): FormatMeta<VideoFormat> {
+  const found = VIDEO_FORMATS.find((f) => f.id === id)
+  if (!found) throw new Error(`Unknown video format: ${id}`)
+  return found
+}
+
 export function audioFormatMeta(id: AudioFormat): FormatMeta<AudioFormat> {
   const found = AUDIO_FORMATS.find((f) => f.id === id)
   if (!found) throw new Error(`Unknown audio format: ${id}`)
@@ -64,21 +80,50 @@ export function imageFormatMeta(id: ImageFormat): FormatMeta<ImageFormat> {
 export const AUDIO_INPUT_EXTS = ['wav', 'mp3', 'm4a', 'mp4', 'aac', 'flac', 'ogg', 'oga', 'opus', 'aif', 'aiff', 'webm', 'weba', 'caf']
 export const IMAGE_INPUT_EXTS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif', 'ico', 'svg']
 
-export const AUDIO_ACCEPT = 'audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus,.aif,.aiff,.webm,.caf'
-export const IMAGE_ACCEPT = 'image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.avif,.svg'
+// Narrower than the audio list on purpose. Video needs its container taken
+// apart frame by frame (mp4read.ts), and only the ISO base media family — MP4,
+// M4V, MOV — is one this reader can walk. MKV and AVI are different containers
+// entirely and genuinely do need the ffmpeg core, so they're refused on drop
+// with a sentence rather than accepted and failed later.
+export const VIDEO_INPUT_EXTS = ['mp4', 'm4v', 'mov', 'qt']
 
+export const AUDIO_ACCEPT = 'audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus,.aif,.aiff,.webm,.caf,.mp4,.mov'
+export const IMAGE_ACCEPT = 'image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.avif,.svg'
+export const VIDEO_ACCEPT = 'video/mp4,video/quicktime,.mp4,.m4v,.mov'
+
+/** The tab a loose file belongs on, used when nothing else says. */
 export function kindOf(ext: string): MediaKind | null {
   if (AUDIO_INPUT_EXTS.includes(ext)) return 'audio'
   if (IMAGE_INPUT_EXTS.includes(ext)) return 'image'
+  if (VIDEO_INPUT_EXTS.includes(ext)) return 'video'
   return null
+}
+
+/**
+ * Whether a file is welcome on the tab it was dropped on.
+ *
+ * This is not `kindOf(ext) === kind`, and the difference is the point: an MP4
+ * is a video, but dropping one on the audio tab is a perfectly good way to ask
+ * for its soundtrack — `decodeAudioData` reads the audio track directly, so the
+ * whole audio pipeline works on it unchanged. That's what "extract the audio"
+ * means here; it needs no separate mode.
+ */
+export function acceptsOn(ext: string, kind: MediaKind): boolean {
+  if (kind === 'audio') return AUDIO_INPUT_EXTS.includes(ext) || VIDEO_INPUT_EXTS.includes(ext)
+  if (kind === 'image') return IMAGE_INPUT_EXTS.includes(ext)
+  return VIDEO_INPUT_EXTS.includes(ext)
 }
 
 /** The message shown on a row we refuse to queue. Names a way forward. */
 export function unsupportedMessage(ext: string, kind: MediaKind): string {
   const named = ext ? ext.toUpperCase() : 'That file type'
-  return kind === 'audio'
-    ? `${named} isn’t supported yet — try WAV, MP3, M4A, FLAC or OGG`
-    : `${named} isn’t supported yet — try PNG, JPEG, WebP, GIF or AVIF`
+  if (kind === 'image') return `${named} isn’t supported yet — try PNG, JPEG, WebP, GIF or AVIF`
+  if (kind === 'video') {
+    return ext === 'mkv' || ext === 'avi' || ext === 'wmv' || ext === 'flv'
+      ? `${named} is a container this converter can’t take apart — re-wrap it as MP4 or MOV first`
+      : `${named} isn’t supported yet — try MP4, M4V or MOV`
+  }
+  return `${named} isn’t supported yet — try WAV, MP3, M4A, FLAC or OGG`
 }
 
 // Canvas encoders fail *silently* — an unsupported type falls back to PNG

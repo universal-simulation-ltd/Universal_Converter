@@ -2,35 +2,38 @@ import { create } from 'zustand'
 import { convertAudio } from '../lib/convert'
 import { saveBlob } from '../lib/download'
 import { extensionOf, formatDuration } from '../lib/humanise'
-import { kindOf, unsupportedMessage } from '../lib/formats'
+import { acceptsOn, unsupportedMessage } from '../lib/formats'
 import { convertImage, probeDimensions } from '../lib/image'
-import { probeDuration } from '../lib/probe'
+import { convertVideo } from '../lib/video'
+import { probeDuration, probeVideo } from '../lib/probe'
 import {
   DEFAULT_AUDIO_SETTINGS,
   DEFAULT_IMAGE_SETTINGS,
+  DEFAULT_VIDEO_SETTINGS,
   type AudioSettings,
   type ImageSettings,
   type MediaKind,
   type QueueItem,
+  type VideoSettings,
 } from '../lib/types'
 import { createZip } from '../lib/zip'
 
-export type StudioTab = MediaKind | 'video'
-
 interface ConverterState {
-  tab: StudioTab
+  tab: MediaKind
   items: QueueItem[]
   audio: AudioSettings
   image: ImageSettings
+  video: VideoSettings
   /** True while a queue is running; the panel goes read-only. */
   running: boolean
 
-  setTab: (tab: StudioTab) => void
+  setTab: (tab: MediaKind) => void
   addFiles: (files: File[], kind: MediaKind) => void
   removeItem: (id: string) => void
   clearQueue: (kind?: MediaKind) => void
   updateAudio: (patch: Partial<AudioSettings>) => void
   updateImage: (patch: Partial<ImageSettings>) => void
+  updateVideo: (patch: Partial<VideoSettings>) => void
   resetSettings: () => void
 
   convertAll: (kind: MediaKind) => Promise<void>
@@ -47,6 +50,7 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
   items: [],
   audio: DEFAULT_AUDIO_SETTINGS,
   image: DEFAULT_IMAGE_SETTINGS,
+  video: DEFAULT_VIDEO_SETTINGS,
   running: false,
 
   setTab: (tab) => set({ tab }),
@@ -57,7 +61,7 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
   addFiles: (files, kind) => {
     const added: QueueItem[] = files.map((file) => {
       const ext = extensionOf(file.name)
-      const supported = kindOf(ext) === kind
+      const supported = acceptsOn(ext, kind)
       return {
         id: newId(),
         file,
@@ -79,7 +83,9 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
       const probe =
         item.kind === 'audio'
           ? probeDuration(item.file).then((s) => (s == null ? null : formatDuration(s)))
-          : probeDimensions(item.file)
+          : item.kind === 'video'
+            ? probeVideo(item.file)
+            : probeDimensions(item.file)
       void probe.then((detail) => {
         set({ items: get().items.map((i) => (i.id === item.id ? { ...i, detail } : i)) })
       })
@@ -95,7 +101,14 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
 
   updateImage: (patch) => set({ image: { ...get().image, ...patch } }),
 
-  resetSettings: () => set({ audio: DEFAULT_AUDIO_SETTINGS, image: DEFAULT_IMAGE_SETTINGS }),
+  updateVideo: (patch) => set({ video: { ...get().video, ...patch } }),
+
+  resetSettings: () =>
+    set({
+      audio: DEFAULT_AUDIO_SETTINGS,
+      image: DEFAULT_IMAGE_SETTINGS,
+      video: DEFAULT_VIDEO_SETTINGS,
+    }),
 
   convertAll: async (kind) => {
     if (get().running) return
@@ -120,7 +133,9 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
           const result =
             kind === 'audio'
               ? await convertAudio(item.file, get().audio, onProgress)
-              : await convertImage(item.file, get().image, onProgress)
+              : kind === 'video'
+                ? await convertVideo(item.file, get().video, onProgress)
+                : await convertImage(item.file, get().image, onProgress)
           patch(id, { status: 'done', progress: 1, result })
         } catch (err) {
           patch(id, {
@@ -144,6 +159,6 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
     const done = get().items.filter((i) => i.kind === kind && i.result)
     if (done.length === 0) return
     const zip = await createZip(done.map((i) => ({ name: i.result!.name, blob: i.result!.blob })))
-    saveBlob(zip, kind === 'audio' ? 'converted-audio.zip' : 'converted-images.zip')
+    saveBlob(zip, `converted-${kind === 'image' ? 'images' : kind}.zip`)
   },
 }))
