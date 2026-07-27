@@ -17,7 +17,13 @@ export default function ConverterApp() {
   return (
     <div>
       <div className="border-b border-slate-200 bg-white">
-        <div className={`${CONTAINER} flex items-center gap-1 pt-3 overflow-x-auto`}>
+        {/* No `overflow-x-auto` here. Setting one axis to `auto` computes the
+            other to `auto` as well, and the tabs' `-mb-px` overflows this box
+            by exactly 1px — which is enough for a permanent vertical scrollbar
+            on platforms with classic (space-taking) scrollbars. The three
+            labels fit unaided at every width now that the hints drop out below
+            `sm`, so nothing needs to scroll. */}
+        <div className={`${CONTAINER} flex items-center gap-1 pt-3`}>
           <TopTab id="audio" current={tab} onClick={setTab} label="Audio" hint="MP3, M4A, Opus, FLAC, WAV & AIFF · on your device" />
           <TopTab id="image" current={tab} onClick={setTab} label="Images" hint="Convert & resize · on your device" />
           <TopTab id="video" current={tab} onClick={setTab} label="Video" hint="Trim, resize & compress · on your device" />
@@ -56,7 +62,9 @@ function TopTab({
       }`}
     >
       <span className={`text-sm font-semibold ${active ? 'text-slate-900' : 'text-slate-600 group-hover:text-slate-900'}`}>{label}</span>
-      <span className="text-[11px] text-slate-400">{hint}</span>
+      {/* Phones get the bare label — three of them fit on one row at 320px,
+          where the hints would wrap into a three-line switcher. */}
+      <span className="hidden text-[11px] text-slate-400 sm:block">{hint}</span>
     </button>
   )
 }
