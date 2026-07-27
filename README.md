@@ -1,8 +1,8 @@
 # Universal Converter
 
-Convert audio and images in your browser. **Nothing is uploaded** — files are
-decoded and re-encoded in the tab, on your own machine. No account, no paywall,
-no queue on somebody else's server.
+Convert audio, images and video in your browser. **Nothing is uploaded** — files
+are decoded and re-encoded in the tab, on your own machine. No account, no
+paywall, no queue on somebody else's server.
 
 Part of the [UNI·SIM Universal Apps](https://opensource.unisim.co.uk) suite.
 **Live at [opensource.unisim.co.uk/converter](https://opensource.unisim.co.uk/converter).**
@@ -19,25 +19,29 @@ Part of the [UNI·SIM Universal Apps](https://opensource.unisim.co.uk) suite.
 | | **WAV**, **AIFF** | Our own 16-bit PCM writers ([`wav.ts`](src/lib/wav.ts), [`aiff.ts`](src/lib/aiff.ts)) |
 | | OGG (Vorbis) | **Disabled** — needs the ffmpeg core (below) |
 | **Images** | **WebP**, **JPEG**, **PNG**, **AVIF** | The browser's own canvas encoder — convert, re-quality and resize |
-| **Video** | — | Phase 2 |
+| **Video** | **MP4** (H.264 + AAC) | The browser's own WebCodecs `VideoEncoder`, between a demuxer and a muxer we write ([`mp4read.ts`](src/lib/mp4read.ts), [`mp4mux.ts`](src/lib/mp4mux.ts)) — trim, scale and compress |
 
 Input is anything the browser can decode: MP3, M4A/AAC, FLAC, OGG, Opus, WAV,
-AIFF, WebM for audio; PNG, JPEG, WebP, GIF, BMP, AVIF, SVG for images. Both tabs
-share one queue, one settings vocabulary and one privacy story; AVIF is probed at
-runtime because canvas support for it varies by browser.
+AIFF, WebM for audio; PNG, JPEG, WebP, GIF, BMP, AVIF, SVG for images; MP4, M4V
+and MOV for video. All three tabs share one queue, one settings vocabulary and
+one privacy story; AVIF and H.264 are probed at runtime because support for them
+varies by browser.
+
+**Dropping a video on the audio tab extracts its soundtrack.** `decodeAudioData`
+reads an MP4's audio track directly, so the whole audio pipeline — trim,
+resample, normalise, any of the seven targets — works on a video file unchanged.
+That's why there's no separate "extract audio" mode.
 
 Decoding, resampling, re-channelling and normalising all happen in a single
 `OfflineAudioContext` render, so a 96 kHz FLAC drops to 44.1 kHz on the way into
 LAME rather than failing at the encoder.
 
-## The ffmpeg question (and why MP3 didn't wait for it)
+## The ffmpeg question (and why nothing waited for it)
 
-OGG (Vorbis) is the last audio target that needs `ffmpeg.wasm`, and Vorbis is
-superseded by Opus — which already works — so the practical gap is video alone.
 **The only published `@ffmpeg/core` is `GPL-2.0-or-later`** (it bundles libx264),
-so adding it relicenses this app. That's a decision, not a
-chore. Working around it, one format at a time, is why only one chip is still
-disabled:
+so adding it relicenses this app. That's a decision, not a chore — and it is
+still un-taken. Working around it, one format at a time, is why only one chip is
+disabled and why video shipped anyway:
 
 - **MP3 didn't need it.** LAME's JS port is LGPL-3.0, which is a *dependency*
   licence, not a project one, so the app stays MIT — and it's ~170 KB against the
@@ -53,8 +57,24 @@ disabled:
 - **FLAC didn't either.** `libflacjs` is MIT around libFLAC (BSD) — both
   permissive, so the app stays MIT. ~230 KB, fetched on first FLAC conversion.
 - **Vorbis still would**, but Opus supersedes it and already works.
-- **Video forces the issue.** H.264/MP4 output is exactly what libx264 provides,
-  so Phase 2 can't dodge it.
+- **Video didn't either — and this was the surprise.** libx264 is only needed if
+  you bring your own H.264 encoder; Chrome, Edge and Safari 16.4+ already have
+  one behind WebCodecs. What was actually missing was the container work either
+  side of it, because WebCodecs decodes *frames*, not files: nothing in the
+  browser will hand you an `EncodedVideoChunk` from an MP4, and nothing will turn
+  chunks back into one. So [`mp4read.ts`](src/lib/mp4read.ts) walks the box tree
+  and resolves `stts`/`stsc`/`stsz`/`stco`/`stss`/`ctts` into a flat sample list,
+  and [`mp4mux.ts`](src/lib/mp4mux.ts) writes the picture and sound tracks back
+  out. No third-party codec anywhere in the path, and the app stays MIT.
+
+**What the core would still buy**, honestly:
+
+- **MKV, AVI and WMV input.** Different containers entirely — the reader here is
+  ISO base media only, so those are refused on drop with a sentence rather than
+  accepted and failed half way through. Fragmented MP4 is refused the same way.
+- **OGG (Vorbis) output**, superseded by Opus.
+- **Video in browsers with no WebCodecs H.264 encoder** — Firefox today. The tab
+  probes for one and says so plainly instead of failing at conversion time.
 
 **A WebCodecs trap worth knowing:** `AudioEncoder.isConfigSupported()` is not
 reliable for AAC. On Chrome 148/macOS it answers `supported: true` for every
@@ -65,7 +85,7 @@ and the bitrate control strikes through anything that fails. Related: never call
 `flush()` on an encoder that has already fired its `error` callback — it throws
 "Cannot call 'flush' on a closed codec" and buries the real cause.
 
-When the core does land it's a contained change:
+If the core ever does land it's a contained change:
 
 - [`src/lib/formats.ts`](src/lib/formats.ts) — flip each row's `engine` field; the
   panel enables chips off that alone.
@@ -82,12 +102,21 @@ into MP3 (ID3v2.3) and Opus (`OpusTags`). FLAC and M4A output can't carry them
 yet — each needs its own metadata writer, and the toggle's hint says so per
 format rather than promising something that doesn't happen.
 
+**Video trims cut at a keyframe.** A delta frame means nothing without the frames
+it was coded against, so the decoder is fed from the last keyframe at or before
+the cut and the frames ahead of it are dropped after decoding rather than never
+decoded — which is why the trim hint says "begins at the nearest keyframe"
+instead of promising a frame-exact cut it can't make without re-encoding the
+whole GOP.
+
 ## Licensing
 
-**MIT**, like the other Universal Apps, and accurate today: nothing here derives
-from FFmpeg. LAME is a separate LGPL-3.0 package, which MIT code may depend on.
-Taking the GPL ffmpeg core would change that — relicense the app to GPL at that
-point and say so here and in `LICENSE`. **Decide before adding it, not after.**
+**MIT**, like the other Universal Apps, and accurate today — including for
+video: nothing here derives from FFmpeg. The H.264 encoder is the browser's own,
+reached through WebCodecs; only the container parsing and writing are ours. LAME
+is a separate LGPL-3.0 package, which MIT code may depend on. Taking the GPL
+ffmpeg core would change all of that — relicense the app to GPL at that point and
+say so here and in `LICENSE`. **Decide before adding it, not after.**
 
 ## Develop
 
@@ -137,6 +166,7 @@ truncates. Before the fix, 20,492 of 88,200 samples came back one LSB low, so
 | State | zustand (`src/stores/converterStore.ts`) |
 | Audio | `OfflineAudioContext` — decode, trim, resample, re-channel, normalise — then WAV / AIFF writers, LAME for MP3, libFLAC for FLAC, or WebCodecs + our own Ogg / MP4 muxers for Opus and M4A |
 | Images | `createImageBitmap` + canvas — decode, downscale, re-encode |
+| Video | `mp4read.ts` → WebCodecs `VideoDecoder` → canvas scale → `VideoEncoder` → `mp4mux.ts`; the audio track goes through the audio pipeline above and is muxed back alongside. Box primitives shared in `src/lib/box.ts`, sizing maths in `src/lib/framesize.ts` |
 | Tags | `src/lib/tags.ts` — reads ID3v2 / MP4 `ilst` / Vorbis comments, writes ID3v2.3 and Vorbis comments |
 | Batching | `src/lib/zip.ts` — a dependency-free STORED-entry ZIP writer for "Download all" |
 

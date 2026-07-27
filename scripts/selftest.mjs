@@ -23,6 +23,9 @@ import { parseClock } from '../src/lib/humanise.ts'
 import { createZip, crc32 } from '../src/lib/zip.ts'
 import { HEADER_BOS, HEADER_EOS, buildPage, oggCrc, opusHead, opusTags } from '../src/lib/ogg.ts'
 import { buildMp4, boxTypeAt } from '../src/lib/mp4.ts'
+import { buildMp4Movie, TIMESCALE } from '../src/lib/mp4mux.ts'
+import { readMp4 } from '../src/lib/mp4read.ts'
+import { targetFrameSize, videoBitrate } from '../src/lib/framesize.ts'
 import { buildId3, readTags, vorbisComments } from '../src/lib/tags.ts'
 
 // A 1-second 440 Hz tone, the input for the encoder round-trips below.
@@ -30,6 +33,19 @@ function tone(sampleRate = 44100, seconds = 1) {
   const samples = new Float32Array(sampleRate * seconds)
   for (let i = 0; i < samples.length; i++) samples[i] = Math.sin((2 * Math.PI * 440 * i) / sampleRate) * 0.5
   return samples
+}
+
+// `afinfo` is macOS-only. Rather than take the whole suite down on Linux, the
+// checks that need it say loudly that they didn't run — a skip that announces
+// itself is honest; one that prints a tick is not.
+let skipped = 0
+function afinfo(path) {
+  try {
+    return execFileSync('afinfo', [path], { encoding: 'utf8' })
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err
+    return null
+  }
 }
 
 function ascii(view, offset, length) {
@@ -93,12 +109,16 @@ function ascii(view, offset, length) {
   const dir = mkdtempSync(join(tmpdir(), 'uniconv-'))
   const path = join(dir, 'tone.aiff')
   writeFileSync(path, Buffer.from(buffer))
-  const info = execFileSync('afinfo', [path], { encoding: 'utf8' })
-  assert.match(info, /44100 Hz/, 'afinfo reads the 80-bit extended sample rate back as 44100')
-  assert.match(info, /2 ch/, 'afinfo sees two channels')
-  assert.match(info, /estimated duration: 1\.0+ sec/, 'one second of audio')
-
-  console.log('✓ aiff — afinfo reads rate, channels and duration back')
+  const info = afinfo(path)
+  if (info) {
+    assert.match(info, /44100 Hz/, 'afinfo reads the 80-bit extended sample rate back as 44100')
+    assert.match(info, /2 ch/, 'afinfo sees two channels')
+    assert.match(info, /estimated duration: 1\.0+ sec/, 'one second of audio')
+    console.log('✓ aiff — afinfo reads rate, channels and duration back')
+  } else {
+    skipped++
+    console.log('⚠ aiff — header checked, but afinfo is macOS-only so the 80-bit rate went unverified')
+  }
 }
 
 // ── MP3 ──────────────────────────────────────────────────────────────────────
@@ -117,9 +137,13 @@ function ascii(view, offset, length) {
   const dir = mkdtempSync(join(tmpdir(), 'uniconv-'))
   const path = join(dir, 'tone.mp3')
   writeFileSync(path, bytes)
-  const info = execFileSync('afinfo', [path], { encoding: 'utf8' })
-  assert.match(info, /MPEG.*Layer 3|\.mp3/i, 'afinfo recognises it as MPEG audio')
-  assert.match(info, /44100 Hz/, 'sample rate survives')
+  const info = afinfo(path)
+  if (info) {
+    assert.match(info, /MPEG.*Layer 3|\.mp3/i, 'afinfo recognises it as MPEG audio')
+    assert.match(info, /44100 Hz/, 'sample rate survives')
+  } else {
+    skipped++
+  }
 
   await assert.rejects(
     () => encodeMp3([samples], 96000, 192),
@@ -127,7 +151,9 @@ function ascii(view, offset, length) {
     'an unsupported LAME rate is refused with a message naming it',
   )
 
-  console.log('✓ mp3 — LAME output is real MPEG audio afinfo can read')
+  console.log(info
+    ? '✓ mp3 — LAME output is real MPEG audio afinfo can read'
+    : '⚠ mp3 — frame sync checked, but afinfo is macOS-only so the stream went unverified')
 }
 
 // ── Image sizing ─────────────────────────────────────────────────────────────
@@ -359,4 +385,146 @@ function ascii(view, offset, length) {
   console.log('✓ zip — unzip -t passes, names and bytes round-trip')
 }
 
-console.log('\nall self-tests passed')
+// ── Video sizing ─────────────────────────────────────────────────────────────
+{
+  assert.deepEqual(targetFrameSize(1920, 1080, 720), { width: 1280, height: 720 }, 'landscape caps the height')
+  assert.deepEqual(targetFrameSize(1080, 1920, 720), { width: 720, height: 1280 }, 'portrait caps the width — a phone clip stays upright')
+  assert.deepEqual(targetFrameSize(640, 480, 1080), { width: 640, height: 480 }, 'never scales up')
+  assert.deepEqual(targetFrameSize(1921, 1081, 'source'), { width: 1922, height: 1082 }, 'odd dimensions round to even for the macroblock grid')
+  assert.ok(
+    videoBitrate(3840, 2160, 30, 'balanced') > videoBitrate(1280, 720, 30, 'balanced'),
+    '4K gets a bigger budget than 720p at the same quality',
+  )
+  assert.ok(
+    videoBitrate(1280, 720, 60, 'balanced') > videoBitrate(1280, 720, 30, 'balanced'),
+    'twice the frame rate asks for more bits',
+  )
+  assert.ok(videoBitrate(64, 64, 1, 'small') >= 200_000, 'a postage stamp still gets a watchable floor')
+  assert.ok(videoBitrate(7680, 4320, 60, 'high') <= 60_000_000, '8K/60 is capped to something an encoder will accept')
+  console.log('✓ video — frame sizing keeps orientation, bitrate scales with pixels and rate')
+}
+
+// ── MP4 movie: muxer → demuxer ───────────────────────────────────────────────
+// The one place in this suite where our reader checking our writer is the point
+// rather than a cop-out: mp4read.ts exists to take apart files mp4.ts-shaped
+// code produced, and the sample tables are cross-compressed against five
+// different axes, so a writer and a reader that disagree about any of them show
+// up here as wrong bytes at a wrong offset. The frame payloads are recognisable
+// so a mistake lands as "sample 3 starts at the wrong byte", not a vague fail.
+{
+  const frames = [9, 5, 7, 4, 6].map((size, i) => new Uint8Array(size).fill(i + 1))
+  const step = Math.round(TIMESCALE / 25) // 25 fps
+  const samples = frames.map((bytes, i) => ({
+    bytes,
+    timestamp: i * step,
+    duration: step,
+    keyframe: i === 0 || i === 3,
+  }))
+  const avcC = new Uint8Array([1, 0x64, 0x00, 0x1f, 0xff, 0xe1, 0, 4, 0x67, 0x64, 0, 0x1f, 1, 0, 4, 0x68, 0xee, 0x3c, 0x80])
+  const aacFrames = [3, 3, 3].map((size, i) => new Uint8Array(size).fill(0xa0 + i))
+  const asc = new Uint8Array([0x12, 0x10])
+
+  const movie = buildMp4Movie({
+    video: { samples, description: avcC, width: 640, height: 480 },
+    audio: { frames: aacFrames, description: asc, sampleRate: 48000, channels: 2, samplesPerFrame: 1024 },
+  })
+  const view = new DataView(movie.buffer, movie.byteOffset, movie.byteLength)
+
+  assert.equal(boxTypeAt(movie, 0), 'ftyp')
+  const ftypSize = view.getUint32(0)
+  assert.equal(String.fromCharCode(...movie.slice(8, 12)), 'isom', 'major brand')
+  assert.equal(boxTypeAt(movie, ftypSize), 'moov')
+  const moovSize = view.getUint32(ftypSize)
+  assert.equal(boxTypeAt(movie, ftypSize + moovSize), 'mdat', 'moov precedes mdat, so a player can start without seeking to the end')
+
+  const text = new TextDecoder('latin1').decode(movie)
+  for (const type of ['mvhd', 'tkhd', 'vmhd', 'smhd', 'avc1', 'avcC', 'mp4a', 'esds', 'stss', 'stts', 'stsc', 'stsz', 'stco']) {
+    assert.ok(text.includes(type), `${type} is present`)
+  }
+  assert.ok(!text.includes('ctts'), 'no composition offsets when presentation order is decode order')
+
+  const tracks = readMp4(movie)
+  assert.equal(tracks.length, 2, 'two tracks')
+
+  const video = tracks.find((t) => t.kind === 'video')
+  assert.ok(video, 'video track found by its vide handler')
+  assert.equal(video.width, 640)
+  assert.equal(video.height, 480)
+  assert.equal(video.codec, 'avc1.64001f', 'codec string built from the avcC profile/constraint/level')
+  assert.deepEqual([...video.description], [...avcC], 'avcC round-trips byte for byte')
+  assert.equal(video.samples.length, 5)
+  assert.deepEqual(video.samples.map((s) => s.size), [9, 5, 7, 4, 6], 'stsz sizes')
+  assert.deepEqual(video.samples.map((s) => s.sync), [true, false, false, true, false], 'stss keyframes')
+  assert.deepEqual(video.samples.map((s) => s.pts), [0, step, step * 2, step * 3, step * 4], 'stts times')
+
+  // The offsets are the real test: each has to land on that frame's own bytes.
+  for (let i = 0; i < frames.length; i++) {
+    const at = video.samples[i].offset
+    assert.deepEqual(
+      [...movie.slice(at, at + video.samples[i].size)],
+      [...frames[i]],
+      `sample ${i} starts at the byte its stco/stsz say it does`,
+    )
+  }
+
+  const audio = tracks.find((t) => t.kind === 'audio')
+  assert.ok(audio, 'audio track found by its soun handler')
+  assert.equal(audio.sampleRate, 48000, '16.16 fixed-point sample rate')
+  assert.equal(audio.channels, 2)
+  assert.deepEqual([...audio.description], [...asc], 'AudioSpecificConfig dug back out of the nested esds descriptors')
+  assert.equal(audio.samples.length, 3)
+  const firstAudio = audio.samples[0].offset
+  assert.equal(movie[firstAudio], 0xa0, 'the audio track\'s own chunk offset points past the video frames')
+
+  // A variable-frame-rate clip must not collapse into one stts run.
+  const vfr = buildMp4Movie({
+    video: {
+      samples: [
+        { bytes: new Uint8Array(2), timestamp: 0, duration: 1000, keyframe: true },
+        { bytes: new Uint8Array(2), timestamp: 1000, duration: 9000, keyframe: true },
+      ],
+      description: avcC,
+      width: 320,
+      height: 240,
+    },
+    audio: null,
+  })
+  const vfrTrack = readMp4(vfr)[0]
+  assert.deepEqual(vfrTrack.samples.map((s) => s.duration), [1000, 9000], 'run-length durations survive a rate change')
+  assert.ok(!new TextDecoder('latin1').decode(vfr).includes('stss'), 'stss is omitted when every frame is a keyframe')
+
+  console.log('✓ mp4 movie — box order, both tracks, sample offsets land on their own frames')
+}
+
+// ── MP4 reader against the audio writer ──────────────────────────────────────
+// mp4.ts's output is the one MP4 in this project an independent reader has
+// already blessed (the box-tree checks above, and an <audio> round trip in the
+// browser), so reading it back is the closest thing to an external fixture the
+// demuxer can get without shipping a binary.
+{
+  const frames = Array.from({ length: 7 }, (_, i) => new Uint8Array(4).fill(i + 1))
+  const description = new Uint8Array([0x12, 0x10])
+  const m4a = buildMp4({ frames, description, sampleRate: 44100, channels: 2, samplesPerFrame: 1024, priming: 2112 })
+
+  const tracks = readMp4(m4a)
+  assert.equal(tracks.length, 1, 'one track in an M4A')
+  assert.equal(tracks[0].kind, 'audio')
+  assert.equal(tracks[0].codec, 'mp4a.40.2')
+  assert.equal(tracks[0].sampleRate, 44100)
+  assert.equal(tracks[0].samples.length, 7)
+  assert.deepEqual([...tracks[0].description], [...description])
+  const at = tracks[0].samples[3].offset
+  assert.deepEqual([...m4a.slice(at, at + 4)], [4, 4, 4, 4], 'the fourth frame is where the tables say')
+
+  assert.throws(
+    () => readMp4(new Uint8Array([0, 0, 0, 8, 0x66, 0x74, 0x79, 0x70])),
+    /no MP4 movie header/,
+    'a file with no moov is refused by name rather than parsed into nothing',
+  )
+
+  console.log('✓ mp4 reader — reads the M4A writer\'s own output back')
+}
+
+console.log(skipped > 0
+  ? `\nself-tests passed — ${skipped} macOS-only check(s) skipped, see the warnings above`
+  : '\nall self-tests passed')

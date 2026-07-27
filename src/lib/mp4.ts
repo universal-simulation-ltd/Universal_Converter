@@ -1,3 +1,5 @@
+import { ZERO_MATRIX, ascii, box, concat, u16, u32, u32s, u8 } from './box.ts'
+
 // A minimal MP4 (M4A) writer for a single AAC audio track — enough to wrap the
 // frames WebCodecs gives us. Pure and DOM-free so scripts/selftest.mjs can check
 // the box tree without a browser.
@@ -20,58 +22,6 @@
 //             stts, stsc, stsz, stco
 //   mdat                      the frames themselves
 
-const ZERO_MATRIX = [0x00010000, 0, 0, 0, 0x00010000, 0, 0, 0, 0x40000000]
-
-function box(type: string, ...parts: Uint8Array[]): Uint8Array {
-  const payloadLength = parts.reduce((sum, p) => sum + p.length, 0)
-  const out = new Uint8Array(8 + payloadLength)
-  new DataView(out.buffer).setUint32(0, out.length)
-  for (let i = 0; i < 4; i++) out[4 + i] = type.charCodeAt(i)
-  let offset = 8
-  for (const part of parts) {
-    out.set(part, offset)
-    offset += part.length
-  }
-  return out
-}
-
-function u8(...values: number[]): Uint8Array {
-  return new Uint8Array(values)
-}
-
-function u16(value: number): Uint8Array {
-  const out = new Uint8Array(2)
-  new DataView(out.buffer).setUint16(0, value)
-  return out
-}
-
-function u32(value: number): Uint8Array {
-  const out = new Uint8Array(4)
-  new DataView(out.buffer).setUint32(0, value)
-  return out
-}
-
-function u32s(values: number[]): Uint8Array {
-  const out = new Uint8Array(values.length * 4)
-  const view = new DataView(out.buffer)
-  values.forEach((v, i) => view.setUint32(i * 4, v))
-  return out
-}
-
-function ascii(text: string): Uint8Array {
-  return new TextEncoder().encode(text)
-}
-
-function concat(parts: Uint8Array[]): Uint8Array {
-  const out = new Uint8Array(parts.reduce((sum, p) => sum + p.length, 0))
-  let offset = 0
-  for (const part of parts) {
-    out.set(part, offset)
-    offset += part.length
-  }
-  return out
-}
-
 export interface Mp4Input {
   /** Raw AAC frames, in order, without ADTS headers. */
   frames: Uint8Array[]
@@ -86,6 +36,29 @@ export interface Mp4Input {
    * start with silence the encoder added. Pass 0 to skip the edit list.
    */
   priming: number
+}
+
+/**
+ * The `mp4a` sample entry — the audio track's codec description, wrapping an
+ * `esds` that nests an ES_Descriptor around a DecoderConfigDescriptor (object
+ * type 0x40 = AAC, stream type 0x15 = audio) and the AudioSpecificConfig.
+ *
+ * Shared with mp4mux.ts, which writes the same audio track alongside video.
+ */
+export function mp4aSampleEntry(description: Uint8Array, sampleRate: number, channels: number): Uint8Array {
+  const dsi = concat([u8(0x05, description.length), description])
+  const dcd = concat([
+    u8(0x04, 13 + dsi.length, 0x40, 0x15),
+    u8(0, 0, 0),          // buffer size
+    u32(0), u32(0),       // max + average bitrate (0 = unknown)
+    dsi,
+  ])
+  const sl = u8(0x06, 0x01, 0x02)
+  const esDescriptor = concat([u8(0x03, 3 + dcd.length + sl.length, 0, 1, 0), dcd, sl])
+  const esds = box('esds', u8(0, 0, 0, 0), esDescriptor)
+
+  return box('mp4a', u8(0, 0, 0, 0, 0, 0), u16(1), u32s([0, 0]), u16(channels), u16(16),
+    u16(0), u16(0), u32(sampleRate << 16), esds)
 }
 
 export function buildMp4(input: Mp4Input): Uint8Array {
@@ -121,22 +94,7 @@ export function buildMp4(input: Mp4Input): Uint8Array {
     const smhd = box('smhd', u8(0, 0, 0, 0), u16(0), u16(0))
     const dinf = box('dinf', box('dref', u8(0, 0, 0, 0), u32(1), box('url ', u8(0, 0, 0, 1))))
 
-    // esds: an ES_Descriptor wrapping a DecoderConfigDescriptor (object type
-    // 0x40 = AAC, stream type 0x15 = audio) and the AudioSpecificConfig.
-    const dsi = concat([u8(0x05, description.length), description])
-    const dcd = concat([
-      u8(0x04, 13 + dsi.length, 0x40, 0x15),
-      u8(0, 0, 0),          // buffer size
-      u32(0), u32(0),       // max + average bitrate (0 = unknown)
-      dsi,
-    ])
-    const sl = u8(0x06, 0x01, 0x02)
-    const esDescriptor = concat([u8(0x03, 3 + dcd.length + sl.length, 0, 1, 0), dcd, sl])
-    const esds = box('esds', u8(0, 0, 0, 0), esDescriptor)
-
-    const mp4a = box('mp4a', u8(0, 0, 0, 0, 0, 0), u16(1), u32s([0, 0]), u16(channels), u16(16),
-      u16(0), u16(0), u32(sampleRate << 16), esds)
-    const stsd = box('stsd', u8(0, 0, 0, 0), u32(1), mp4a)
+    const stsd = box('stsd', u8(0, 0, 0, 0), u32(1), mp4aSampleEntry(description, sampleRate, channels))
 
     const stts = box('stts', u8(0, 0, 0, 0), u32(1), u32(frames.length), u32(samplesPerFrame))
     const stsc = box('stsc', u8(0, 0, 0, 0), u32(1), u32(1), u32(frames.length), u32(1))
@@ -158,7 +116,4 @@ export function buildMp4(input: Mp4Input): Uint8Array {
   return concat([ftyp, moov, mdat])
 }
 
-/** Read a box's type at a byte offset — used by the tests, and for debugging. */
-export function boxTypeAt(bytes: Uint8Array, offset: number): string {
-  return String.fromCharCode(bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7])
-}
+export { boxTypeAt } from './box.ts'

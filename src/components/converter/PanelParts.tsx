@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useConverterStore } from '../../stores/converterStore'
 import type { MediaKind } from '../../lib/types'
 
@@ -28,6 +28,47 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 
 export function Divider() {
   return <div className="h-px bg-slate-200" />
+}
+
+// A disclosure for settings most people never touch. `summary` keeps the panel
+// honest while it's shut: whatever is folded away is still readable at a glance,
+// so a stray trim or a mono downmix can't apply invisibly.
+export function Collapsible({
+  label,
+  summary,
+  defaultOpen = false,
+  children,
+}: {
+  label: string
+  summary?: string
+  defaultOpen?: boolean
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+
+  return (
+    <div className="flex flex-col gap-4">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-2 text-left focus:outline-none focus-visible:outline-2 focus-visible:outline-orange-600"
+      >
+        <span className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-slate-600">{label}</span>
+        {!open && summary && (
+          <span className="min-w-0 flex-1 truncate text-[10.5px] text-slate-400">{summary}</span>
+        )}
+        <svg
+          viewBox="0 0 12 12"
+          aria-hidden="true"
+          className={`ml-auto h-3 w-3 shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`}
+        >
+          <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {open && <div className="flex flex-col gap-4">{children}</div>}
+    </div>
+  )
 }
 
 export function FormatChip({
