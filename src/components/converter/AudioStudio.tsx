@@ -5,8 +5,8 @@ import { aacSupported } from '../../lib/aac'
 import { MP3_BITRATES } from '../../lib/mp3'
 import { useConverterStore } from '../../stores/converterStore'
 import StudioShell from './StudioShell'
-import { Divider, Field, FormatChip, Panel, PanelActions, Segmented, Select, Toggle } from './PanelParts'
-import type { AudioFormat, ChannelMode, SampleRate } from '../../lib/types'
+import { Collapsible, Divider, Field, FormatChip, Panel, PanelActions, Segmented, Select, Toggle } from './PanelParts'
+import { DEFAULT_AUDIO_SETTINGS, type AudioFormat, type ChannelMode, type SampleRate } from '../../lib/types'
 
 const SAMPLE_RATES: { value: SampleRate; label: string }[] = [
   { value: 'source', label: 'Keep original' },
@@ -85,6 +85,20 @@ function AudioPanel() {
   const target = audioFormatMeta(settings.format)
   const engineReady = supported[settings.format] === true
 
+  // Anything the user has moved away from its default, spelled out for the
+  // collapsed header — and a reason to start the section open, so settings
+  // carried over from an earlier conversion are never hidden.
+  const changed: string[] = []
+  if (target.lossy && settings.bitrateKbps !== DEFAULT_AUDIO_SETTINGS.bitrateKbps)
+    changed.push(`${settings.bitrateKbps} kbps`)
+  if (settings.sampleRate !== 'source')
+    changed.push(SAMPLE_RATES.find((r) => r.value === settings.sampleRate)?.label ?? '')
+  if (settings.channels !== 'source')
+    changed.push(CHANNELS.find((c) => c.value === settings.channels)?.label ?? '')
+  if (settings.normalise) changed.push('Normalised')
+  if (settings.trim.enabled) changed.push('Trimmed')
+  if (!settings.keepTags) changed.push('No tags')
+
   return (
     <Panel>
       <Field label="Convert to">
@@ -118,73 +132,81 @@ function AudioPanel() {
         )}
       </Field>
 
-      {target.lossy && (
-        <Field label="Bitrate">
-          <Segmented
-            options={MP3_BITRATES.map((b) => ({ value: b, label: `${b}` }))}
-            value={settings.bitrateKbps}
-            disabled={running || !engineReady}
-            onChange={(bitrateKbps) => update({ bitrateKbps })}
-            unavailable={badBitrates}
-            unavailableTitle="This browser’s AAC encoder refuses this bitrate"
-          />
-          <p className="text-[10.5px] text-slate-400">
-            {badBitrates.includes(settings.bitrateKbps)
-              ? 'This browser’s AAC encoder refuses this bitrate — pick another.'
-              : 'kbps, constant. 192 is transparent for most music; 320 is as good as it gets.'}
-          </p>
-        </Field>
-      )}
-
-      <Field label="Sample rate">
-        <Select
-          options={SAMPLE_RATES}
-          value={settings.sampleRate}
-          disabled={running}
-          onChange={(sampleRate) => update({ sampleRate })}
-        />
-      </Field>
-
-      <Field label="Channels">
-        <Segmented
-          options={CHANNELS}
-          value={settings.channels}
-          disabled={running}
-          onChange={(channels) => update({ channels })}
-        />
-      </Field>
-
       <Divider />
 
-      <Toggle
-        label="Normalise loudness"
-        hint="Lift the whole file so its loudest peak sits just under full scale"
-        on={settings.normalise}
-        disabled={running}
-        onChange={(normalise) => update({ normalise })}
-      />
+      <Collapsible
+        label="Advanced"
+        summary={changed.length ? changed.join(' · ') : 'Default settings'}
+        defaultOpen={changed.length > 0}
+      >
+        {target.lossy && (
+          <Field label="Bitrate">
+            <Segmented
+              options={MP3_BITRATES.map((b) => ({ value: b, label: `${b}` }))}
+              value={settings.bitrateKbps}
+              disabled={running || !engineReady}
+              onChange={(bitrateKbps) => update({ bitrateKbps })}
+              unavailable={badBitrates}
+              unavailableTitle="This browser’s AAC encoder refuses this bitrate"
+            />
+            <p className="text-[10.5px] text-slate-400">
+              {badBitrates.includes(settings.bitrateKbps)
+                ? 'This browser’s AAC encoder refuses this bitrate — pick another.'
+                : 'kbps, constant. 192 is transparent for most music; 320 is as good as it gets.'}
+            </p>
+          </Field>
+        )}
 
-      <Toggle
-        label="Trim"
-        hint="Keep only part of each file — same window for the whole queue"
-        on={settings.trim.enabled}
-        disabled={running}
-        onChange={(enabled) => update({ trim: { ...settings.trim, enabled } })}
-      />
+        <Field label="Sample rate">
+          <Select
+            options={SAMPLE_RATES}
+            value={settings.sampleRate}
+            disabled={running}
+            onChange={(sampleRate) => update({ sampleRate })}
+          />
+        </Field>
 
-      {settings.trim.enabled && <TrimFields />}
+        <Field label="Channels">
+          <Segmented
+            options={CHANNELS}
+            value={settings.channels}
+            disabled={running}
+            onChange={(channels) => update({ channels })}
+          />
+        </Field>
 
-      <Toggle
-        label="Keep title, artist &amp; album"
-        hint={
-          settings.format === 'mp3' || settings.format === 'opus'
-            ? 'Read from the original and written into the converted file'
-            : `Read from the original — ${audioFormatMeta(settings.format).label} output can’t carry them yet`
-        }
-        on={settings.keepTags}
-        disabled={running}
-        onChange={(keepTags) => update({ keepTags })}
-      />
+        <Divider />
+
+        <Toggle
+          label="Normalise loudness"
+          hint="Lift the whole file so its loudest peak sits just under full scale"
+          on={settings.normalise}
+          disabled={running}
+          onChange={(normalise) => update({ normalise })}
+        />
+
+        <Toggle
+          label="Trim"
+          hint="Keep only part of each file — same window for the whole queue"
+          on={settings.trim.enabled}
+          disabled={running}
+          onChange={(enabled) => update({ trim: { ...settings.trim, enabled } })}
+        />
+
+        {settings.trim.enabled && <TrimFields />}
+
+        <Toggle
+          label="Keep title, artist &amp; album"
+          hint={
+            settings.format === 'mp3' || settings.format === 'opus'
+              ? 'Read from the original and written into the converted file'
+              : `Read from the original — ${audioFormatMeta(settings.format).label} output can’t carry them yet`
+          }
+          on={settings.keepTags}
+          disabled={running}
+          onChange={(keepTags) => update({ keepTags })}
+        />
+      </Collapsible>
 
       <Divider />
 
