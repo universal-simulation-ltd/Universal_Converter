@@ -13,7 +13,7 @@ export default function App() {
         product="converter"
         productLogo={<ProductLogo />}
         productHomeHref={import.meta.env.BASE_URL}
-        fileMenu={<AppMenu />}
+        actions={<AppMenu />}
         suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
         contentClassName={CONTAINER}
       />
