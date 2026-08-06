@@ -1,8 +1,8 @@
 import { encodeAiff } from './aiff'
 import { audioFormatMeta } from './formats'
-import { formatDuration, withExtension } from './humanise'
+import { withExtension } from './humanise'
 import { encodeMp3, nearestLameRate } from './mp3'
-import { encodeAac } from './aac'
+import { encodeAac, trimWindow } from '@unisim/media'
 import { encodeFlac } from './flac'
 import { OPUS_SAMPLE_RATE, encodeOpus } from './opus'
 import type { AudioSettings, ConvertedFile } from './types'
@@ -157,31 +157,11 @@ async function render(decoded: AudioBuffer, settings: AudioSettings): Promise<Au
   return ctx.startRendering()
 }
 
-/**
- * Resolve the trim settings against one file's real length. Exported so the
- * failure cases are testable: a start past the end of the file, or an end at or
- * before the start, are user errors that deserve a sentence rather than a
- * zero-length file.
- */
-export function trimWindow(
-  fileDuration: number,
-  trim: AudioSettings['trim'],
-): { offset: number; duration: number } {
-  if (!trim.enabled) return { offset: 0, duration: fileDuration }
-
-  const offset = Math.max(0, trim.startSec)
-  if (offset >= fileDuration) {
-    throw new Error(
-      `This file is only ${formatDuration(fileDuration)} long, so a trim starting at ${formatDuration(offset)} leaves nothing`,
-    )
-  }
-
-  const end = trim.endSec == null ? fileDuration : Math.min(trim.endSec, fileDuration)
-  if (end <= offset) {
-    throw new Error('The trim ends before it starts — check the start and end times')
-  }
-  return { offset, duration: end - offset }
-}
+// `trimWindow` moved to @unisim/media with the video pipeline: the video path
+// needs it, and reaching it here would have dragged LAME, libFLAC and the Opus
+// writer into a package that has no business importing any of them. Re-exported
+// so the audio side's call sites and its tests are unchanged.
+export { trimWindow } from '@unisim/media'
 
 // Peak normalisation to -0.2 dBFS. Capped at 12 dB of lift so a near-silent
 // recording doesn't come back as a wall of hiss.

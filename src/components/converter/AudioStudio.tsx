@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AUDIO_ACCEPT, AUDIO_FORMATS, audioFormatMeta, audioFormatSupported } from '../../lib/formats'
 import { formatDuration, parseClock } from '../../lib/humanise'
-import { aacSupported } from '../../lib/aac'
+import { aacSupported } from '@unisim/media'
 import { MP3_BITRATES } from '../../lib/mp3'
 import { useConverterStore } from '../../stores/converterStore'
 import StudioShell from './StudioShell'

@@ -1,3 +1,10 @@
+// Three of these moved to @unisim/media with the video pipeline — the package
+// needs them (a trim window's error message is a clock time; an output filename
+// is an extension swap) and duplicating them here would be exactly the drift
+// §10.6 warns about. They are re-exported so every call site in this app is
+// unchanged, and so there is still one obvious place to look for them.
+export { formatDuration, parseClock, withExtension } from '@unisim/media'
+
 /** "14.2 MB" — file sizes, always one decimal above a kilobyte. */
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -6,18 +13,6 @@ export function formatBytes(bytes: number): string {
   const mb = kb / 1024
   if (mb < 1024) return `${mb.toFixed(1)} MB`
   return `${(mb / 1024).toFixed(2)} GB`
-}
-
-/** "12:41" / "1:04:18" — clock time, hours only when there are any. */
-export function formatDuration(seconds: number): string {
-  const s = Math.max(0, Math.round(seconds))
-  const h = Math.floor(s / 3600)
-  const m = Math.floor((s % 3600) / 60)
-  const sec = s % 60
-  const mm = h > 0 ? String(m).padStart(2, '0') : String(m)
-  return h > 0
-    ? `${h}:${mm}:${String(sec).padStart(2, '0')}`
-    : `${mm}:${String(sec).padStart(2, '0')}`
 }
 
 /** "48 kHz" — sample rates read in kHz, dropping a trailing .0. */
@@ -33,23 +28,3 @@ export function extensionOf(filename: string): string {
   return filename.slice(dot + 1).toLowerCase()
 }
 
-/** Swap a filename's extension, keeping any dots in the stem. */
-export function withExtension(filename: string, ext: string): string {
-  const dot = filename.lastIndexOf('.')
-  const stem = dot < 1 ? filename : filename.slice(0, dot)
-  return `${stem}.${ext}`
-}
-
-/**
- * Parse a trim field: "90", "1:30" or "1:02:03" → seconds. Returns null for
- * anything that isn't a time, so the field can say so rather than silently
- * converting from zero.
- */
-export function parseClock(input: string): number | null {
-  const text = input.trim()
-  if (text === '') return null
-  if (!/^\d+(:[0-5]?\d){0,2}(\.\d+)?$/.test(text)) return null
-  const parts = text.split(':').map(Number)
-  if (parts.some((n) => Number.isNaN(n))) return null
-  return parts.reduce((total, part) => total * 60 + part, 0)
-}

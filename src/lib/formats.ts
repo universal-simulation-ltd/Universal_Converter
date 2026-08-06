@@ -1,4 +1,4 @@
-import { aacSupported } from './aac'
+import { aacSupported } from '@unisim/media'
 import { flacSupported } from './flac'
 import { opusSupported } from './opus'
 import type { AudioFormat, Engine, ImageFormat, MediaKind, VideoFormat } from './types'

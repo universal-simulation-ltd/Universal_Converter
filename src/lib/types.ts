@@ -1,8 +1,19 @@
+// The video half of this vocabulary moved to @unisim/media when the pipeline was
+// extracted (2026-08-06) — the settings, the trim window and the converted-file
+// shape now have one definition shared with Universal Video rather than one per
+// app. They are re-exported from here so nothing else in this app had to change
+// its imports, and so `import … from '../lib/types'` still means what it did.
+import type { ConvertedFile, TrimSettings } from '@unisim/media'
+
+export type {
+  ConvertedFile, TrimSettings, VideoSettings, VideoFormat, MaxHeight, VideoQuality,
+} from '@unisim/media'
+export { DEFAULT_VIDEO_SETTINGS } from '@unisim/media'
+
 export type MediaKind = 'audio' | 'image' | 'video'
 
 export type AudioFormat = 'wav' | 'mp3' | 'aiff' | 'flac' | 'm4a' | 'ogg' | 'opus'
 export type ImageFormat = 'png' | 'jpeg' | 'webp' | 'avif'
-export type VideoFormat = 'mp4'
 
 // Which encoder backs a given target today.
 //  • 'built-in' — our own writer or the browser's own canvas/audio encoder. No
@@ -14,11 +25,6 @@ export type VideoFormat = 'mp4'
 export type Engine = 'built-in' | 'lame' | 'libflac' | 'ffmpeg'
 
 export type JobStatus = 'queued' | 'converting' | 'done' | 'failed' | 'unsupported'
-
-export interface ConvertedFile {
-  blob: Blob
-  name: string
-}
 
 export interface QueueItem {
   id: string
@@ -50,17 +56,6 @@ export interface AudioSettings {
   trim: TrimSettings
 }
 
-/**
- * Start/end offsets in seconds, applied to every file in the queue — the output
- * panel is batch-wide by design, so "top and tail this batch of recordings" is
- * the case this serves. `endSec: null` means "to the end of the file".
- */
-export interface TrimSettings {
-  enabled: boolean
-  startSec: number
-  endSec: number | null
-}
-
 /** 'source' keeps the original pixel dimensions; a number is the longest edge. */
 export type MaxEdge = 'source' | 640 | 1280 | 1920 | 2560
 
@@ -69,25 +64,6 @@ export interface ImageSettings {
   /** 0–1, only used by the lossy formats. */
   quality: number
   maxEdge: MaxEdge
-}
-
-/**
- * How much picture to keep. Names the *short* edge, so "1080p" is 1080 tall for
- * a landscape clip and 1080 wide for one shot on a phone held upright.
- */
-export type MaxHeight = 'source' | 480 | 720 | 1080 | 1440 | 2160
-
-/** Bitrate is derived from frame size and rate, not set directly — see video.ts. */
-export type VideoQuality = 'high' | 'balanced' | 'small'
-
-export interface VideoSettings {
-  format: VideoFormat
-  maxHeight: MaxHeight
-  quality: VideoQuality
-  /** Off writes a silent file — smaller, and sometimes the point. */
-  keepAudio: boolean
-  audioBitrateKbps: number
-  trim: TrimSettings
 }
 
 export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
@@ -104,13 +80,4 @@ export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
   format: 'webp',
   quality: 0.82,
   maxEdge: 'source',
-}
-
-export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
-  format: 'mp4',
-  maxHeight: 'source',
-  quality: 'balanced',
-  keepAudio: true,
-  audioBitrateKbps: 128,
-  trim: { enabled: false, startSec: 0, endSec: null },
 }

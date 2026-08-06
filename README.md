@@ -14,12 +14,12 @@ Part of the [UNI·SIM Universal Apps](https://opensource.unisim.co.uk) suite.
 | Tab | Targets | Engine |
 |---|---|---|
 | **Audio** | **MP3** (128–320 kbps CBR) | LAME compiled to JS ([`@breezystack/lamejs`](https://www.npmjs.com/package/@breezystack/lamejs)), dynamically imported on first use |
-| | **Opus**, **M4A** (AAC) | The browser's own WebCodecs `AudioEncoder`, in containers we write ([`ogg.ts`](src/lib/ogg.ts), [`mp4.ts`](src/lib/mp4.ts)) — no library at all |
+| | **Opus**, **M4A** (AAC) | The browser's own WebCodecs `AudioEncoder`, in containers we write ([`ogg.ts`](src/lib/ogg.ts), and MP4 via [`@unisim/media`](https://www.npmjs.com/package/@unisim/media)) — no library at all |
 | | **FLAC** | libFLAC compiled to wasm ([`libflacjs`](https://www.npmjs.com/package/libflacjs), MIT), fetched on first use |
 | | **WAV**, **AIFF** | Our own 16-bit PCM writers ([`wav.ts`](src/lib/wav.ts), [`aiff.ts`](src/lib/aiff.ts)) |
 | | OGG (Vorbis) | **Disabled** — needs the ffmpeg core (below) |
 | **Images** | **WebP**, **JPEG**, **PNG**, **AVIF** | The browser's own canvas encoder — convert, re-quality and resize |
-| **Video** | **MP4** (H.264 + AAC) | The browser's own WebCodecs `VideoEncoder`, between a demuxer and a muxer we write ([`mp4read.ts`](src/lib/mp4read.ts), [`mp4mux.ts`](src/lib/mp4mux.ts)) — trim, scale and compress |
+| **Video** | **MP4** (H.264 + AAC) | The browser's own WebCodecs `VideoEncoder`, between a demuxer and a muxer we write — trim, scale and compress. Lives in [`@unisim/media`](https://www.npmjs.com/package/@unisim/media) now, shared with [Universal Video](https://opensource.unisim.co.uk/video) |
 
 Input is anything the browser can decode: MP3, M4A/AAC, FLAC, OGG, Opus, WAV,
 AIFF, WebM for audio; PNG, JPEG, WebP, GIF, BMP, AVIF, SVG for images; MP4, M4V
@@ -62,10 +62,13 @@ disabled and why video shipped anyway:
   one behind WebCodecs. What was actually missing was the container work either
   side of it, because WebCodecs decodes *frames*, not files: nothing in the
   browser will hand you an `EncodedVideoChunk` from an MP4, and nothing will turn
-  chunks back into one. So [`mp4read.ts`](src/lib/mp4read.ts) walks the box tree
-  and resolves `stts`/`stsc`/`stsz`/`stco`/`stss`/`ctts` into a flat sample list,
-  and [`mp4mux.ts`](src/lib/mp4mux.ts) writes the picture and sound tracks back
-  out. No third-party codec anywhere in the path, and the app stays MIT.
+  chunks back into one. So `mp4read` walks the box tree and resolves
+  `stts`/`stsc`/`stsz`/`stco`/`stss`/`ctts` into a flat sample list, and
+  `mp4mux` writes the picture and sound tracks back out. No third-party codec
+  anywhere in the path, and the app stays MIT.
+
+  Those files now live in **`@unisim/media`** rather than in this repo — see
+  "Where the pipeline lives" below.
 
 **What the core would still buy**, honestly:
 
@@ -157,6 +160,27 @@ invert what the decoder does (measured, not assumed — positives come back as
 truncates. Before the fix, 20,492 of 88,200 samples came back one LSB low, so
 "lossless" wasn't.
 
+## Where the pipeline lives
+
+The MP4 reader, the MP4/M4A writers, the movie muxer, the AAC encoder and the
+frame-sizing maths are **not in this repo any more.** They moved to
+**[`@unisim/media`](https://www.npmjs.com/package/@unisim/media)** on 2026-08-06,
+when [Universal Video](https://opensource.unisim.co.uk/video) became its own app
+and the pipeline acquired a second consumer.
+
+- The files were **moved, not rewritten** — the source, and its self-tests, are
+  the ones that shipped here in `2e0fabd`. This app's behaviour is unchanged.
+- Their self-tests moved too. Run `npm test` in
+  `backoffice/universal-platform/packages/media` for the container coverage;
+  what is left in `scripts/selftest.mjs` here covers the audio writers, the ZIP
+  writer and the tags — plus one block checking this app really does call the
+  package rather than a stale copy.
+- `src/lib/types.ts`, `src/lib/humanise.ts` and `src/lib/convert.ts` **re-export**
+  the shared pieces, so every call site inside this app is unchanged.
+
+`@unisim/media` is MIT, has no runtime dependencies, and pulls in no wasm — the
+whole point of it is that the browser already has the codecs.
+
 ## How it's built
 
 | | |
@@ -166,7 +190,7 @@ truncates. Before the fix, 20,492 of 88,200 samples came back one LSB low, so
 | State | zustand (`src/stores/converterStore.ts`) |
 | Audio | `OfflineAudioContext` — decode, trim, resample, re-channel, normalise — then WAV / AIFF writers, LAME for MP3, libFLAC for FLAC, or WebCodecs + our own Ogg / MP4 muxers for Opus and M4A |
 | Images | `createImageBitmap` + canvas — decode, downscale, re-encode |
-| Video | `mp4read.ts` → WebCodecs `VideoDecoder` → canvas scale → `VideoEncoder` → `mp4mux.ts`; the audio track goes through the audio pipeline above and is muxed back alongside. Box primitives shared in `src/lib/box.ts`, sizing maths in `src/lib/framesize.ts` |
+| Video | `@unisim/media`: `mp4read` → WebCodecs `VideoDecoder` → canvas scale → `VideoEncoder` → `mp4mux`; the audio track goes through the audio pipeline above and is muxed back alongside |
 | Tags | `src/lib/tags.ts` — reads ID3v2 / MP4 `ilst` / Vorbis comments, writes ID3v2.3 and Vorbis comments |
 | Batching | `src/lib/zip.ts` — a dependency-free STORED-entry ZIP writer for "Download all" |
 

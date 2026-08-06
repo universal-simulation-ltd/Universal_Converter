@@ -4,7 +4,7 @@ import { saveBlob } from '../lib/download'
 import { extensionOf, formatDuration } from '../lib/humanise'
 import { acceptsOn, unsupportedMessage } from '../lib/formats'
 import { convertImage, probeDimensions } from '../lib/image'
-import { convertVideo } from '../lib/video'
+import { convertVideo } from '@unisim/media'
 import { probeDuration, probeVideo } from '../lib/probe'
 import {
   DEFAULT_AUDIO_SETTINGS,

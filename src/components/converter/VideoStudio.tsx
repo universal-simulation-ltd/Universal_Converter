@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { VIDEO_ACCEPT, VIDEO_FORMATS, videoFormatMeta } from '../../lib/formats'
 import { formatDuration, parseClock } from '../../lib/humanise'
-import { videoSupported } from '../../lib/video'
+import { videoSupported } from '@unisim/media'
 import { useConverterStore } from '../../stores/converterStore'
 import StudioShell from './StudioShell'
 import { Collapsible, Divider, Field, FormatChip, Panel, PanelActions, Segmented, Select, Toggle } from './PanelParts'
