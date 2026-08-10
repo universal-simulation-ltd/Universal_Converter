@@ -22,6 +22,14 @@ destination, and moving somebody while files are still landing is how you lose
 track of what you just dropped. Anything it cannot read is named individually
 rather than counted — "3 files skipped" makes you go and work out which three.
 
+The circle and the two-column shape are **Universal Compress's**, on purpose:
+both apps open on "drop anything and we will work out what it is", and two front
+doors to one idea that look different make the suite feel like unrelated tools.
+The ring is the *same component* — `DropRing` from `@unisim/sdk` — not a copy,
+so a change to it lands in both. The right-hand column answers *"will it take my
+file?"* before a drop, listing every extension each tab accepts and naming MKV
+and AVI as the two it refuses, and *"where did everything go?"* after one.
+
 ## Other exports
 
 Some conversions cross from one kind of media to another, and they live in their
