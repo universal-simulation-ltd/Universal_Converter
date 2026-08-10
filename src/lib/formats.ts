@@ -90,12 +90,30 @@ export const VIDEO_INPUT_EXTS = ['mp4', 'm4v', 'mov', 'qt']
 export const AUDIO_ACCEPT = 'audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus,.aif,.aiff,.webm,.caf,.mp4,.mov'
 export const IMAGE_ACCEPT = 'image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.avif,.svg'
 export const VIDEO_ACCEPT = 'video/mp4,video/quicktime,.mp4,.m4v,.mov'
+/** The All tab takes anything and works out where it goes. */
+export const ALL_ACCEPT = `${IMAGE_ACCEPT},${AUDIO_ACCEPT},${VIDEO_ACCEPT}`
 
-/** The tab a loose file belongs on, used when nothing else says. */
-export function kindOf(ext: string): MediaKind | null {
-  if (AUDIO_INPUT_EXTS.includes(ext)) return 'audio'
+/**
+ * The tab a loose file belongs on.
+ *
+ * ⚠️ VIDEO IS TESTED BEFORE AUDIO, and that ordering is the whole correctness
+ * of this function. `.mp4` appears in BOTH lists — deliberately, because
+ * dropping a video on the audio tab is how you ask for its soundtrack (see
+ * `acceptsOn`) — so testing audio first, as this did while it was dead code,
+ * sends every single MP4 to the audio tab and silently throws the picture away.
+ * `.m4a` is audio-only and is not in the video list, so it still routes right.
+ *
+ * `mime` is consulted first where it is meaningful, because a file with no
+ * extension at all is common on a Mac and the browser usually knows anyway.
+ */
+export function kindOf(ext: string, mime = ''): MediaKind | null {
+  const type = mime.toLowerCase()
+  if (type.startsWith('image/')) return 'image'
+  if (type.startsWith('video/')) return 'video'
+  if (type.startsWith('audio/')) return 'audio'
   if (IMAGE_INPUT_EXTS.includes(ext)) return 'image'
   if (VIDEO_INPUT_EXTS.includes(ext)) return 'video'
+  if (AUDIO_INPUT_EXTS.includes(ext)) return 'audio'
   return null
 }
 

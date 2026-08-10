@@ -9,6 +9,39 @@ Part of the [UNI·SIM Universal Apps](https://opensource.unisim.co.uk) suite.
 
 ---
 
+
+## The All tab
+
+The three studios each answer *"convert this kind of thing"* — which is the
+right question only once you have worked out which kind of thing you have. The
+**All** tab asks nothing: drop pictures, audio and video together and it sorts
+each one onto the tab that can do the work, then tells you what went where.
+
+It deliberately does **not** jump you to another tab. A mixed drop has no single
+destination, and moving somebody while files are still landing is how you lose
+track of what you just dropped. Anything it cannot read is named individually
+rather than counted — "3 files skipped" makes you go and work out which three.
+
+## Other exports
+
+Some conversions cross from one kind of media to another, and they live in their
+own card in the right column rather than in the panel above. That separation is
+the point: everything in the panel keeps what you dropped and changes its
+format, while everything here **throws something away**.
+
+- **Pictures → one PDF.** Every queued image becomes a page. Pages are JPEG, so
+  it is lossy and **transparency is flattened onto white**; long edges are capped
+  at 2000px so the file stays sendable; and it is a picture in a PDF, not a
+  document, so there is no selectable text.
+- **Video → sound only.** Takes the soundtrack out and gives you MP3, M4A or
+  WAV. **There is no video in the result** — that is said in the card, in a
+  box, before you press anything.
+
+The PDF writer is [`src/lib/pdf.ts`](src/lib/pdf.ts) and is about 150 lines with
+no dependency, in the same spirit as this app's own ZIP and Ogg writers. It does
+images and nothing else — no text, no fonts, no editing an existing PDF. If any
+of that is ever wanted, take a real PDF library then rather than growing it.
+
 ## What works
 
 | Tab | Targets | Engine |

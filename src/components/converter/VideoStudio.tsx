@@ -3,6 +3,7 @@ import { VIDEO_ACCEPT, VIDEO_FORMATS, videoFormatMeta } from '../../lib/formats'
 import { formatDuration, parseClock } from '../../lib/humanise'
 import { videoSupported } from '@unisim/media'
 import { useConverterStore } from '../../stores/converterStore'
+import OtherExports from './OtherExports'
 import StudioShell from './StudioShell'
 import { Collapsible, Divider, Field, FormatChip, Panel, PanelActions, Segmented, Select, Toggle } from './PanelParts'
 import { DEFAULT_VIDEO_SETTINGS, type MaxHeight, type VideoQuality } from '../../lib/types'
@@ -47,7 +48,12 @@ export default function VideoStudio() {
       formatsLine="MP4, M4V and MOV — or click to browse"
       engineBadge="on-device encoder · works offline"
       targetExt={target.ext}
-      panel={<VideoPanel />}
+      panel={
+        <div className="flex flex-col gap-4">
+          <VideoPanel />
+          <OtherExports kind="video" />
+        </div>
+      }
     />
   )
 }

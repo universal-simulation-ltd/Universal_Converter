@@ -27,6 +27,7 @@ import { targetSize } from '../src/lib/resize.ts'
 import { parseClock } from '@unisim/media'
 import { createZip, crc32 } from '../src/lib/zip.ts'
 import { HEADER_BOS, HEADER_EOS, buildPage, oggCrc, opusHead, opusTags } from '../src/lib/ogg.ts'
+import { buildPdf } from '../src/lib/pdf.ts'
 import { buildMp4, readMp4, trimWindow } from '@unisim/media'
 import { buildId3, readTags, vorbisComments } from '../src/lib/tags.ts'
 
@@ -365,6 +366,87 @@ function ascii(view, offset, length) {
     'the audio path’s trim window comes from the package now',
   )
   console.log('✓ @unisim/media — the shared pipeline resolves and round-trips from this app')
+}
+
+// ── PDF ──────────────────────────────────────────────────────────────────────
+// A file that downloads at a plausible size and opens to nothing is this
+// suite's known failure mode — a shaped-SVG export shipped exactly that once.
+// So the object graph, the xref offsets and the string escaping are checked
+// byte by byte, and then the file is handed to a reader that is not ours.
+{
+  // A one-pixel JPEG. What is under test is the PDF structure around it, not
+  // the picture, so the smallest legal-ish JFIF payload will do.
+  const jpeg = new Uint8Array([
+    0xff, 0xd8, 0xff, 0xdb, 0x00, 0x43, 0x00, ...new Array(64).fill(0x08),
+    0xff, 0xc0, 0x00, 0x0b, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00,
+    0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f, 0x00, 0xd2, 0xcf, 0x20,
+    0xff, 0xd9,
+  ])
+  const blob = buildPdf(
+    [{ jpeg, width: 1, height: 1 }, { jpeg, width: 2, height: 3 }],
+    'Self test (with (nested) parens) and an em dash',
+  )
+  const bytes = new Uint8Array(await blob.arrayBuffer())
+  const text = Buffer.from(bytes).toString('latin1')
+
+  assert.equal(blob.type, 'application/pdf')
+  assert.ok(text.startsWith('%PDF-1.4'), 'starts with the header')
+  // "%PDF-1.4\n" is nine bytes, then a comment line whose '%' is byte 9 and
+  // whose high bytes start at 10. Those high bytes are what tell a transfer
+  // that treats the file as text that it is binary.
+  assert.equal(bytes[9], 0x25, 'the second line is a comment')
+  assert.ok(bytes[10] > 127, 'the comment carries high bytes, marking the file binary')
+  assert.ok(text.endsWith('%%EOF\n'), 'ends with the trailer marker')
+  assert.ok(text.includes('/Type /Catalog'), 'has a catalog')
+  assert.ok(text.includes('/Count 2'), 'declares both pages')
+  assert.ok(text.includes('/MediaBox [0 0 2 3]'), 'the second page carries its own size')
+  assert.equal(text.split('/DCTDecode').length - 1, 2, 'both images embed as JPEG')
+
+  // The xref offsets are what silently breaks a PDF: a reader seeks to them,
+  // and a wrong one opens a blank document with no error at all. Every entry
+  // must land exactly on its own "<n> 0 obj".
+  const startxref = Number(text.split('startxref\n')[1].split('\n')[0])
+  assert.equal(text.slice(startxref, startxref + 4), 'xref', 'startxref points at the table')
+  const size = Number(text.split('/Size ')[1].split(' ')[0])
+  // Lines: [0] "xref", [1] "0 <count>", [2] the free entry for object 0, then
+  // one row per real object. Objects are 1-based, so the rows start at index 3.
+  const rows = text.slice(startxref).split('\n').slice(3, 3 + size - 1)
+  rows.forEach((row, i) => {
+    const at = Number(row.slice(0, 10))
+    const want = (i + 1) + ' 0 obj'
+    assert.equal(text.slice(at, at + want.length), want, 'xref entry ' + (i + 1) + ' points at object ' + (i + 1))
+  })
+
+  // A PDF string literal ends at the first unescaped ')', so an un-escaped
+  // paren in a filename corrupts everything after it.
+  assert.ok(text.includes('/Title (Self test \\(with \\(nested\\) parens\\) and an em dash)'),
+    'parens in the title are escaped')
+  assert.throws(() => buildPdf([], 'x'), /at least one page/)
+
+  const dir = mkdtempSync(join(tmpdir(), 'uc-pdf-'))
+  const file = join(dir, 'out.pdf')
+  writeFileSync(file, bytes)
+  const script = [
+    'import sys',
+    'd = open(sys.argv[1], "rb").read()',
+    'i = d.rfind(b"startxref")',
+    'off = int(d[i+9:].split()[0])',
+    'assert d[off:off+4] == b"xref", "xref not at startxref"',
+    'print("pages=%d" % d.count(b"/Type /Page "))',
+  ].join('\n')
+  try {
+    const out = execFileSync('python', ['-c', script, file], { encoding: 'utf8' }).trim()
+    assert.equal(out, 'pages=2', 'an outside reader walks to the same two pages')
+    console.log('✓ pdf — structure, xref offsets and escaping, confirmed by an outside reader')
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      skipped += 1
+      console.warn('! pdf — python not found, skipped the outside-reader check')
+      console.log('✓ pdf — structure, xref offsets and escaping')
+    } else {
+      throw err
+    }
+  }
 }
 
 console.log(skipped > 0

@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { convertAudio } from '../lib/convert'
 import { saveBlob } from '../lib/download'
 import { extensionOf, formatDuration } from '../lib/humanise'
-import { acceptsOn, unsupportedMessage } from '../lib/formats'
+import { acceptsOn, kindOf, unsupportedMessage } from '../lib/formats'
 import { convertImage, probeDimensions } from '../lib/image'
 import { convertVideo } from '@unisim/media'
 import { probeDuration, probeVideo } from '../lib/probe'
@@ -18,8 +18,17 @@ import {
 } from '../lib/types'
 import { createZip } from '../lib/zip'
 
+/**
+ * Which tab is showing. NOT `MediaKind`, on purpose: `MediaKind` is also the
+ * discriminator on every queue item, so widening it to fit an 'all' tab would
+ * leak a fourth case into `QueueItem.kind`, `acceptsOn`, `convertAll` and
+ * `downloadAll` — none of which have anything to convert for it. The All tab
+ * owns no queue; it sorts a drop and hands each file to a real tab.
+ */
+export type TabId = MediaKind | 'all'
+
 interface ConverterState {
-  tab: MediaKind
+  tab: TabId
   items: QueueItem[]
   audio: AudioSettings
   image: ImageSettings
@@ -27,8 +36,16 @@ interface ConverterState {
   /** True while a queue is running; the panel goes read-only. */
   running: boolean
 
-  setTab: (tab: MediaKind) => void
+  setTab: (tab: TabId) => void
   addFiles: (files: File[], kind: MediaKind) => void
+  /**
+   * Sort a mixed drop onto the right tabs and report what went where.
+   *
+   * Returns the counts rather than switching tab itself: the caller is the only
+   * thing that knows whether the person is watching, and silently jumping them
+   * to another tab mid-drop is how you lose track of what you just dropped.
+   */
+  addSorted: (files: File[]) => { audio: number; image: number; video: number; rejected: string[] }
   removeItem: (id: string) => void
   clearQueue: (kind?: MediaKind) => void
   updateAudio: (patch: Partial<AudioSettings>) => void
@@ -46,7 +63,9 @@ function newId(): string {
 }
 
 export const useConverterStore = create<ConverterState>((set, get) => ({
-  tab: 'audio',
+  // The front door, not a converter: somebody arriving does not yet know
+  // which of the three they need, and this tab is the one that answers that.
+  tab: 'all',
   items: [],
   audio: DEFAULT_AUDIO_SETTINGS,
   image: DEFAULT_IMAGE_SETTINGS,
@@ -90,6 +109,22 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
         set({ items: get().items.map((i) => (i.id === item.id ? { ...i, detail } : i)) })
       })
     }
+  },
+
+  addSorted: (files) => {
+    const buckets: Record<MediaKind, File[]> = { audio: [], image: [], video: [] }
+    const rejected: string[] = []
+    for (const file of files) {
+      const kind = kindOf(extensionOf(file.name), file.type)
+      if (kind) buckets[kind].push(file)
+      else rejected.push(file.name)
+    }
+    // One call per kind rather than per file: `addFiles` appends to one array,
+    // so three calls are three renders and fifty files would be fifty.
+    for (const kind of ['audio', 'image', 'video'] as const) {
+      if (buckets[kind].length) get().addFiles(buckets[kind], kind)
+    }
+    return { audio: buckets.audio.length, image: buckets.image.length, video: buckets.video.length, rejected }
   },
 
   removeItem: (id) => set({ items: get().items.filter((i) => i.id !== id) }),

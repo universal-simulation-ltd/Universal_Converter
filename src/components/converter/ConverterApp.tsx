@@ -1,12 +1,16 @@
 import { useConverterStore } from '../../stores/converterStore'
 import { CONTAINER } from '../../lib/layout'
+import AllStudio from './AllStudio'
 import AudioStudio from './AudioStudio'
 import ImageStudio from './ImageStudio'
 import VideoStudio from './VideoStudio'
-import type { MediaKind } from '../../lib/types'
+import type { TabId } from '../../stores/converterStore'
 
-// Top-level shell: one switch above three studios, all sharing the same queue,
+// Top-level shell: one switch above four studios, all sharing the same queue,
 // settings-panel vocabulary and privacy story.
+//  • All    — the front door. Takes anything and sorts it onto the tabs below;
+//             it owns no queue of its own.
+
 //  • Audio  — everything but OGG/Vorbis, which is the last ffmpeg-only target.
 //  • Images — PNG / JPEG / WebP / AVIF, convert + resize, via the canvas encoder.
 //  • Video  — H.264/MP4 via WebCodecs and our own demuxer and muxer.
@@ -24,12 +28,14 @@ export default function ConverterApp() {
             labels fit unaided at every width now that the hints drop out below
             `sm`, so nothing needs to scroll. */}
         <div className={`${CONTAINER} flex items-center gap-1 pt-3`}>
+          <TopTab id="all" current={tab} onClick={setTab} label="All" hint="Drop anything — it works out where it goes" />
           <TopTab id="audio" current={tab} onClick={setTab} label="Audio" hint="MP3, M4A, Opus, FLAC, WAV & AIFF · on your device" />
           <TopTab id="image" current={tab} onClick={setTab} label="Images" hint="Convert & resize · on your device" />
           <TopTab id="video" current={tab} onClick={setTab} label="Video" hint="Trim, resize & compress · on your device" />
         </div>
       </div>
 
+      {tab === 'all' && <AllStudio />}
       {tab === 'audio' && <AudioStudio />}
       {tab === 'image' && <ImageStudio />}
       {tab === 'video' && <VideoStudio />}
@@ -44,9 +50,9 @@ function TopTab({
   label,
   hint,
 }: {
-  id: MediaKind
-  current: MediaKind
-  onClick: (v: MediaKind) => void
+  id: TabId
+  current: TabId
+  onClick: (v: TabId) => void
   label: string
   hint: string
 }) {

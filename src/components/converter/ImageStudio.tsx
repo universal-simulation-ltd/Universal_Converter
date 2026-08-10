@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { IMAGE_ACCEPT, IMAGE_FORMATS, imageFormatMeta, imageFormatSupported } from '../../lib/formats'
 import { useConverterStore } from '../../stores/converterStore'
+import OtherExports from './OtherExports'
 import StudioShell from './StudioShell'
 import { Divider, Field, FormatChip, Panel, PanelActions, Segmented, Select } from './PanelParts'
 import type { ImageFormat, MaxEdge } from '../../lib/types'
@@ -32,7 +33,12 @@ export default function ImageStudio() {
       formatsLine="PNG, JPEG, WebP, GIF, BMP, AVIF, SVG — or click to browse"
       engineBadge="on-device encoder · works offline"
       targetExt={target.ext}
-      panel={<ImagePanel />}
+      panel={
+        <div className="flex flex-col gap-4">
+          <ImagePanel />
+          <OtherExports kind="image" />
+        </div>
+      }
     />
   )
 }
