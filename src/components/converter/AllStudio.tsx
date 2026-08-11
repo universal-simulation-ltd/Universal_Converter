@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DropRing, useFileDrop } from '@unisim/sdk'
+import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
 import { CONTAINER } from '../../lib/layout'
 import {
   ALL_ACCEPT, AUDIO_INPUT_EXTS, IMAGE_INPUT_EXTS, VIDEO_INPUT_EXTS,
@@ -33,10 +33,15 @@ export default function AllStudio() {
   const items = useConverterStore((s) => s.items)
   const [rejected, setRejected] = useState<string[]>([])
 
+  // `pageWide`: the ring is where to aim, not where you have to land. A file
+  // dropped on the header, the sorting column or the margin is sorted just the
+  // same — and without it the browser navigates away to the file it was handed,
+  // which throws away whatever was already queued.
   const drop = useFileDrop({
     onFiles: (files) => setRejected(addSorted(files).rejected),
     accept: ALL_ACCEPT,
     label: 'Drop any file here, or click to browse',
+    pageWide: true,
   })
 
   const waiting: Record<MediaKind, number> = {
@@ -73,6 +78,10 @@ export default function AllStudio() {
 
         <SortingColumn waiting={waiting} tabsUsed={tabsUsed} rejected={rejected} />
       </div>
+
+      {/* Drawn from `pageOver`, not `over`: over the ring itself the ring is
+          already saying it. */}
+      <DropAnywhere show={drop.pageOver} hint="Pictures, audio and video — each finds its own tab" />
     </div>
   )
 }

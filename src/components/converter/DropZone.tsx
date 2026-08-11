@@ -1,4 +1,4 @@
-import { useFileDrop } from '@unisim/sdk'
+import { DropAnywhere, useFileDrop } from '@unisim/sdk'
 
 interface Props {
   onFiles: (files: File[]) => void
@@ -18,9 +18,19 @@ interface Props {
  * bought: `onDragLeave` used to fire as the pointer crossed the icon or the
  * caption inside this box, so the highlight flickered while a file was held
  * over it. A depth counter, not a timer, is the fix, and it now lives once.
+ *
+ * `pageWide` for the same reason the All tab uses it: once the queue is long,
+ * the "add more" strip is a thin bar below the fold, and aiming at it is work
+ * the app can do for you. Only one of these is ever mounted (empty state OR the
+ * footer, and one studio tab at a time), so exactly one owns the page.
  */
 export default function DropZone({ onFiles, variant, accept, title, formatsLine }: Props) {
-  const drop = useFileDrop({ onFiles, accept, label: `${title} — click to browse` })
+  const drop = useFileDrop({
+    onFiles,
+    accept,
+    label: `${title} — click to browse`,
+    pageWide: true,
+  })
 
   const empty = variant === 'empty'
 
@@ -44,6 +54,11 @@ export default function DropZone({ onFiles, variant, accept, title, formatsLine 
       {/* Outside the zone on purpose: a hidden input INSIDE a click-to-browse
           zone re-enters that zone's own onClick when it is clicked. */}
       <input {...drop.inputProps} className="hidden" />
+
+      {/* The default "Drop anywhere" title, not this zone's own `title`: the
+          zone already says what it takes, and the one thing the person aiming
+          at the margin does not know is that they need not aim. */}
+      <DropAnywhere show={drop.pageOver} hint={formatsLine} />
     </>
   )
 }
