@@ -1,31 +1,55 @@
-// Universal Converter brand icon — icon-only by design. The SDK's
-// UniversalAppsNavBar renders the product name from its catalogue beside this
-// slot, so adding a wordmark here would duplicate it.
+// GENERATED FILE — do not edit by hand.
+// Source: backoffice/universal-platform/scripts/app-marks/marks.mjs
+// Regenerate: node scripts/app-marks/build.mjs (from backoffice/universal-platform)
+// Mark: Universal Converter — A conversion ring around a waveform — format in, format out.
+// Hover: The ring turns half a revolution while the waveform plays.
 //
-// The mark: a conversion ring (two arcs, two arrowheads) around an audio
-// waveform — "format in, format out", with the bars naming the phase that
-// shipped first. Same drawing as the suite-switcher glyph and the app icon;
-// keep all three in sync.
+// Icon-only by design: the SDK's UniversalAppsNavBar renders the product name
+// from its catalogue beside this slot, so a wordmark here would print it twice.
+
+const CSS = `
+  /* Resting states */
+  .uam-converter-ring { transform: rotate(0deg); transition: transform .7s cubic-bezier(0.16,1,0.3,1); transform-origin: 32px 32px; }
+  .uam-converter-bar1 { transform: scaleY(0.5); transition: transform .35s ease .05s; transform-origin: center; transform-box: fill-box; }
+  .uam-converter-bar2 { transform: scaleY(0.5); transition: transform .35s ease 0s; transform-origin: center; transform-box: fill-box; }
+  .uam-converter-bar3 { transform: scaleY(0.5); transition: transform .35s ease .1s; transform-origin: center; transform-box: fill-box; }
+
+  /* Active states */
+  .uam-host-converter:hover .uam-converter-ring,
+  .uam-host-converter:focus-visible .uam-converter-ring { transform: rotate(180deg); }
+  .uam-host-converter:hover .uam-converter-bar1,
+  .uam-host-converter:focus-visible .uam-converter-bar1 { transform: scaleY(1); }
+  .uam-host-converter:hover .uam-converter-bar2,
+  .uam-host-converter:focus-visible .uam-converter-bar2 { transform: scaleY(1); }
+  .uam-host-converter:hover .uam-converter-bar3,
+  .uam-host-converter:focus-visible .uam-converter-bar3 { transform: scaleY(1); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .uam-converter-ring,
+    .uam-converter-bar1,
+    .uam-converter-bar2,
+    .uam-converter-bar3 { transition: none !important; }
+  }
+`
+
 export default function ProductLogo() {
   return (
     <span
-      className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-orange-600 text-white"
+      className="uam-host-converter inline-flex h-6 w-6 shrink-0 items-center justify-center"
       aria-hidden="true"
     >
-      {/* Weights are heavier than the 32-px switcher glyph on purpose: the same
-          drawing at 16 px needs a thicker stroke and wider bars to stay legible. */}
-      <svg viewBox="0 0 32 32" className="w-4.5 h-4.5" aria-hidden="true">
-        <g fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M8 13.1A8.5 8.5 0 0 1 24 13.1" />
-          <path d="M21.2 11.4 24 13.1 22.4 16" />
-          <path d="M24 18.9A8.5 8.5 0 0 1 8 18.9" />
-          <path d="M10.8 20.6 8 18.9 9.6 16" />
+      <style>{CSS}</style>
+      <svg viewBox="0 0 64 64" className="h-6 w-6" aria-hidden="true">
+        <rect x="0" y="0" width="64" height="64" rx="14" fill="#0f172a" />
+        <g fill="none" strokeWidth={4.4} strokeLinecap="round" strokeLinejoin="round" stroke="#fe8c01" className="uam-converter-ring">
+          <path d="M16 26.2A17 17 0 0 1 48 26.2" />
+          <path d="M42.4 23.2 48 26.2 45.2 32" />
+          <path d="M48 37.8A17 17 0 0 1 16 37.8" />
+          <path d="M21.6 40.8 16 37.8 18.8 32" />
         </g>
-        <g fill="currentColor">
-          <rect x="11.9" y="13.4" width="2.4" height="5.2" rx="1.2" />
-          <rect x="15.2" y="11.2" width="2.4" height="9.6" rx="1.2" />
-          <rect x="18.5" y="14.2" width="2.4" height="3.6" rx="1.2" />
-        </g>
+        <rect x={25.2} y={27.2} width={3.6} height={9.6} rx={1.8} fill="#ff9a1f" className="uam-converter-bar1" />
+        <rect x={30.2} y={22.8} width={3.6} height={18.4} rx={1.8} fill="#ff9a1f" className="uam-converter-bar2" />
+        <rect x={35.2} y={28.4} width={3.6} height={7.2} rx={1.8} fill="#ff9a1f" className="uam-converter-bar3" />
       </svg>
     </span>
   )
