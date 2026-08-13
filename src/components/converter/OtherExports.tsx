@@ -24,6 +24,7 @@ import type { AudioFormat, MediaKind } from '../../lib/types'
 export default function OtherExports({ kind }: { kind: MediaKind }) {
   if (kind === 'image') return <ImagesToPdf />
   if (kind === 'video') return <VideoToAudio />
+  if (kind === 'document') return <DocumentsToOnePdf />
   // The audio tab has nowhere to cross TO. A card saying "nothing here" is
   // worse than no card.
   return null
@@ -100,6 +101,91 @@ function ImagesToPdf() {
       </button>
 
       {error && <p className="mt-2 text-xs text-red-700">{error}</p>}
+    </Shell>
+  )
+}
+
+/**
+ * Every queued document as ONE PDF, in queue order.
+ *
+ * The cross-kind export for the Files tab, and the same idea as pictures →
+ * one PDF above: several files in, one file out. What it throws away is the
+ * separateness — the documents' own names, and any chance of getting them back
+ * apart — which is why it lives here rather than in the panel.
+ *
+ * It reuses the ordinary pipeline rather than a second one: each file is read
+ * to a RichDoc, the docs are concatenated with a page break between them, and
+ * the result goes through the same writer with the same settings. A separate
+ * "merge" path would be a second layout engine to keep in step with this one.
+ */
+function DocumentsToOnePdf() {
+  const items = useConverterStore((s) => s.items)
+  const settings = useConverterStore((s) => s.document)
+  const [busy, setBusy] = useState(false)
+  const [done, setDone] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+  const [notes, setNotes] = useState<string[]>([])
+
+  const documents = items.filter((i) => i.kind === 'document' && i.status !== 'unsupported')
+
+  async function run() {
+    setBusy(true)
+    setError(null)
+    setNotes([])
+    setDone(0)
+    try {
+      const { readForMerge, mergeToPdf } = await import('../../lib/doc/merge')
+      const parts = []
+      for (const item of documents) {
+        parts.push(await readForMerge(item.file))
+        setDone((n) => n + 1)
+      }
+      const result = await mergeToPdf(parts, settings.pdf)
+      saveBlob(result.blob, 'documents.pdf')
+      setNotes(result.notices.map((n) => n.message))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not build the PDF.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Shell>
+      <p className="text-xs text-slate-700">
+        <span className="font-semibold text-slate-900">Join into one PDF</span> — every document in
+        the queue, one after another, in the order they are listed.
+      </p>
+      <ul className="mt-2 space-y-1 text-[11px] leading-snug text-slate-500">
+        <li>• Each document starts on a <span className="font-medium">new page</span>, with its
+          filename as a heading so you can still tell them apart.</li>
+        <li>• The result is <span className="font-medium">one file</span>. There is no way to get
+          the separate documents back out of it here.</li>
+        <li>• It uses the page, font and margin settings from the panel above.</li>
+      </ul>
+
+      <button
+        type="button"
+        disabled={busy || documents.length < 1}
+        onClick={() => void run()}
+        className="mt-3 w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+      >
+        {busy
+          ? `Reading… ${done}/${documents.length}`
+          : documents.length === 0
+            ? 'Add some documents first'
+            : `Join ${documents.length} document${documents.length === 1 ? '' : 's'} into one PDF`}
+      </button>
+
+      {error && <p className="mt-2 text-xs text-red-700">{error}</p>}
+      {notes.map((note) => (
+        <p
+          key={note}
+          className="mt-2 rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] leading-snug text-amber-900"
+        >
+          {note}
+        </p>
+      ))}
     </Shell>
   )
 }

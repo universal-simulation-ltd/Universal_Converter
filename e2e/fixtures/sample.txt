@@ -1,0 +1,7 @@
+A plain text file.
+
+This block is hard wrapped at about seventy columns so that the
+reader has to decide whether to join these lines back together
+into one flowing paragraph, which is what it should do here.
+
+TXTENDMARKER

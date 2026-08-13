@@ -1,8 +1,8 @@
 # Universal Converter
 
-Convert audio, images and video in your browser. **Nothing is uploaded** — files
-are decoded and re-encoded in the tab, on your own machine. No account, no
-paywall, no queue on somebody else's server.
+Convert audio, images, video and documents in your browser. **Nothing is
+uploaded** — files are read and rewritten in the tab, on your own machine. No
+account, no paywall, no queue on somebody else's server.
 
 Part of the [UNI·SIM Universal Apps](https://opensource.unisim.co.uk) suite.
 **Live at [opensource.unisim.co.uk/converter](https://opensource.unisim.co.uk/converter).**
@@ -44,11 +44,20 @@ format, while everything here **throws something away**.
 - **Video → sound only.** Takes the soundtrack out and gives you MP3, M4A or
   WAV. **There is no video in the result** — that is said in the card, in a
   box, before you press anything.
+- **Documents → one PDF.** Every queued document, one after another, each
+  starting on a new page with its filename as a heading. What it throws away is
+  the *separateness*: **the result is one file**, and there is no way to get the
+  documents back apart here.
 
-The PDF writer is [`src/lib/pdf.ts`](src/lib/pdf.ts) and is about 150 lines with
-no dependency, in the same spirit as this app's own ZIP and Ogg writers. It does
-images and nothing else — no text, no fonts, no editing an existing PDF. If any
-of that is ever wanted, take a real PDF library then rather than growing it.
+The PDF machinery is [`src/lib/pdfcore.ts`](src/lib/pdfcore.ts), still with no
+dependency and in the same spirit as this app's own ZIP and Ogg writers.
+
+> It used to say here that if text was ever wanted, the right move was to take a
+> real PDF library rather than grow this. The **Files tab** was that moment, and
+> the note was re-read before it was overruled — [the reasoning is written
+> down](#the-pdf-writer-and-why-it-isnt-a-library). Reading or editing an
+> existing PDF is still out: that needs a parser, and Universal PDF is the app
+> for it.
 
 ## What works
 
@@ -61,12 +70,16 @@ of that is ever wanted, take a real PDF library then rather than growing it.
 | | OGG (Vorbis) | **Disabled** — needs the ffmpeg core (below) |
 | **Images** | **WebP**, **JPEG**, **PNG**, **AVIF** | The browser's own canvas encoder — convert, re-quality and resize |
 | **Video** | **MP4** (H.264 + AAC) | The browser's own WebCodecs `VideoEncoder`, between a demuxer and a muxer we write — trim, scale and compress. Lives in [`@unisim/media`](https://www.npmjs.com/package/@unisim/media) now, shared with [Universal Video](https://opensource.unisim.co.uk/video) |
+| **Files** | **PDF** with selectable text, real pagination and working links | Our own readers and our own text-flow PDF writer — no dependency. See [The Files tab](#the-files-tab) |
+| | **Text**, **HTML**, **Markdown** | The same document model, rendered a different way |
+| | **CSV**, **JSON** | Only from a file that already has rows — see the note below |
 
 Input is anything the browser can decode: MP3, M4A/AAC, FLAC, OGG, Opus, WAV,
 AIFF, WebM for audio; PNG, JPEG, WebP, GIF, BMP, AVIF, SVG for images; MP4, M4V
-and MOV for video. All three tabs share one queue, one settings vocabulary and
-one privacy story; AVIF and H.264 are probed at runtime because support for them
-varies by browser.
+and MOV for video; DOCX, DOC, ODT, RTF, TXT, MD, HTML, CSV and JSON for
+documents. All four tabs share one queue, one settings vocabulary and one privacy
+story; AVIF and H.264 are probed at runtime because support for them varies by
+browser.
 
 **Dropping a video on the audio tab extracts its soundtrack.** `decodeAudioData`
 reads an MP4's audio track directly, so the whole audio pipeline — trim,
@@ -76,6 +89,118 @@ That's why there's no separate "extract audio" mode.
 Decoding, resampling, re-channelling and normalising all happen in a single
 `OfflineAudioContext` render, so a 96 kHz FLAC drops to 44.1 kHz on the way into
 LAME rather than failing at the encoder.
+
+## The Files tab
+
+Documents in, a laid-out PDF out — and, where it makes sense, text, HTML,
+Markdown, CSV or JSON instead. Everything happens in the tab; a contract, a
+payslip or a diagnosis never leaves the machine, which is the whole reason to
+do this in a browser rather than on somebody's upload form.
+
+| In | Out | How |
+|---|---|---|
+| **DOCX** | PDF · TXT · HTML · MD | A ZIP of XML. `document.xml` for the body, plus `styles.xml`, `numbering.xml` and the rels part — headings, nested lists, tables, bold/italic/underline, hyperlinks, embedded images and hard page breaks all survive |
+| **DOC** (Word 97–2003) | PDF · TXT · HTML · MD | **Text only.** A compound file with a piece table; see below |
+| **ODT** | PDF · TXT · HTML · MD | Same shape as DOCX over the OpenDocument vocabulary. `fo:break-before` on a paragraph style is a real page break |
+| **RTF** | PDF · TXT · HTML · MD | A brace-scoped tokeniser — bold, italic, underline, headings, lists |
+| **TXT** | PDF · HTML · MD | Guesses whether the file is hard-wrapped, and re-flows it if so |
+| **MD** | PDF · TXT · HTML | The parser is a port of Universal PDF's; see below |
+| **HTML** | PDF · TXT · MD | The browser's own `DOMParser`, which does not run scripts or fetch anything |
+| **CSV / TSV** | PDF · **JSON** · TXT · HTML · MD | RFC 4180, with the delimiter sniffed — a European Excel writes semicolons |
+| **JSON** | PDF · **CSV** · TXT · HTML · MD | An array of flat objects becomes a grid; anything else is pretty-printed |
+
+**CSV and JSON are only offered where they can be honoured.** They need rows and
+columns to start from, so they are reachable from a CSV or a JSON file and not
+from a Word document — the chips grey out with the reason rather than producing a
+one-column sheet of somebody's paragraphs. Where several files are queued, the
+targets on offer are the ones **every** file in the queue can reach.
+
+### Everything goes through one model
+
+Nine inputs and six outputs would be fifty-odd conversions wired directly. They
+go through **`RichDoc`** ([`src/lib/doc/model.ts`](src/lib/doc/model.ts))
+instead — headings, paragraphs, lists, tables, code, rules, images — so it is
+nine readers and six writers, and a tenth input costs one file rather than six.
+The model is deliberately the *intersection* of what these formats can express,
+not the union: anything outside it is flattened by the reader that knows what it
+meant, and the loss is **reported on the row**, not discovered on page four.
+
+### The PDF writer, and why it isn't a library
+
+`pdf.ts` used to end with a note saying that if text was ever wanted, the right
+move was to take a real PDF library rather than grow the writer. This tab was
+that moment, and the note was re-read before it was overruled:
+
+- The expensive half of "documents to PDF" is the **layout**, not the file
+  format — and Universal PDF already has that engine. Only its bottom inch
+  touches pdf-lib (`widthOfTextAtSize`, `drawText`, `drawRectangle`), so porting
+  it needed four primitives, not a library.
+- The **base-14 fonts are in every PDF reader**, so there is no embedding, no
+  subsetting and no CMap — the genuinely hard parts — in exchange for one table
+  of glyph widths per font ([`doc/metrics.ts`](src/lib/doc/metrics.ts)).
+- pdf-lib is ~380 KB gzipped, and this app's pitch is that it is small and works
+  **offline from the first visit**. A lazily-fetched library breaks the second
+  half of that. LAME and libFLAC are fetched on demand because there is no other
+  way to have MP3 and FLAC at all; there is another way to have text.
+
+So [`pdfcore.ts`](src/lib/pdfcore.ts) writes the objects and
+[`doc/write/pdf.ts`](src/lib/doc/write/pdf.ts) lays out the page — a port of
+Universal PDF's `markdownToPdf.ts`, kept structurally recognisable on purpose so
+a fix in either app is findable in the other. The images-to-PDF export was moved
+onto the same writer, because two PDF writers in one app is how you get two PDFs
+that disagree about their own metadata.
+
+**Smart quotes and dashes survive**, which Universal PDF's markdown export
+flattens to ASCII — WinAnsi has those glyphs and pdf-lib's standard fonts refuse
+them, so a converted Word document keeps its typography here.
+
+### What it can't do, said out loud
+
+- **Latin alphabets only.** No font embedding means no Greek, Cyrillic, Hebrew,
+  Arabic or CJK. Characters that can't be written are **counted and named** on
+  the row — you are shown the actual glyphs — rather than silently becoming `?`.
+- **A `.doc` gives up its text and nothing else.** The old format keeps its
+  formatting in CHPX/PAPX property runs through a page tree of 512-byte bins,
+  which is a second machine the size of the first, for bold. So the piece table
+  is walked, the words come out in the right order and the right encoding, and
+  bold, headings, lists, tables, page breaks and pictures do not. Two things are
+  disclosed on the row rather than left to be found: that, and the fact that
+  **tracked deletions may still appear** — a `.doc` stores deleted text as
+  ordinary text, and only Word can tell them apart.
+- **Not XLSX or PPTX.** A spreadsheet saved as CSV converts; a slide deck needs
+  exporting to PDF from the app that made it. Both are refused on drop, by name,
+  with the way forward — not accepted and failed later.
+- **PDF is an output, not an input.** Reading one needs a parser, which is a
+  different program: [Universal PDF](https://opensource.unisim.co.uk/pdf) is
+  the app for that.
+- Headers, footers, footnotes, comments, charts and anything positioned rather
+  than flowed are left behind. Where the file had one, the row says so.
+
+### Tested against real files
+
+[`e2e/files.e2e.mjs`](e2e/files.e2e.mjs) runs **114 checks** in a real browser —
+the pipeline over every input/output pair, then the tab itself clicked with a
+real file input and a real download. The fixtures are generated by
+[`e2e/fixtures/make-fixtures.mjs`](e2e/fixtures/make-fixtures.mjs): the DOCX is
+written by hand so the test controls exactly which features are exercised, and
+the **DOC, ODT and RTF are produced by LibreOffice** converting it — a
+hand-written `.doc` would be a compound file shaped the way I imagined one, which
+proves nothing about the reader.
+
+The PDF assertions read the raw bytes, which works because content streams are
+not compressed; `assertUncompressed` fails loudly the day that changes rather
+than letting the suite go quietly blind. Every fixture's output is also opened
+with **pdf.js** and its text extracted, because byte assertions can all pass on a
+file no reader accepts.
+
+```bash
+npm run test:files    # 114 checks in a headless Chromium
+npm run fixtures      # only to regenerate them; needs LibreOffice for DOC/ODT/RTF
+```
+
+The fixtures are committed, so the suite runs without LibreOffice installed.
+Playwright comes from `Universal_Beam/node_modules` rather than being a
+dependency here — the same borrowing the other apps' e2e specs do.
 
 ## The ffmpeg question (and why nothing waited for it)
 

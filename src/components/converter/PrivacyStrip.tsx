@@ -21,7 +21,13 @@ export default function PrivacyStrip({ kind, engineBadge }: { kind: MediaKind; e
           ? 'Your files are decoded and re-encoded here, in this tab.'
           : kind === 'video'
             ? 'Every frame is decoded and re-encoded here, in this tab.'
-            : 'Your images are decoded, resized and re-encoded here, in this tab.'}
+            : kind === 'document'
+              // Worth saying differently: a document is the thing people are
+              // most likely to be handling under an NDA or a duty of care, and
+              // "read and rewritten in this tab" is the specific reassurance —
+              // no server ever sees the contract, the payroll or the diagnosis.
+              ? 'Your documents are read and rewritten here, in this tab.'
+              : 'Your images are decoded, resized and re-encoded here, in this tab.'}
       </span>
       <span className="ml-auto rounded-full border border-slate-200 bg-white px-2.5 py-0.5 font-mono text-[10.5px] text-slate-600">
         {engineBadge}

@@ -12,7 +12,9 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
-    "test": "node scripts/selftest.mjs"
+    "test": "node scripts/selftest.mjs",
+    "test:files": "node e2e/files.e2e.mjs",
+    "fixtures": "node e2e/fixtures/make-fixtures.mjs"
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",

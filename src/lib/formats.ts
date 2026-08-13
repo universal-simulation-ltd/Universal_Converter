@@ -1,4 +1,5 @@
 import { aacSupported } from '@unisim/media'
+import { DOC_INPUT_EXTS } from './doc'
 import { flacSupported } from './flac'
 import { opusSupported } from './opus'
 import type { AudioFormat, Engine, ImageFormat, MediaKind, VideoFormat } from './types'
@@ -80,6 +81,10 @@ export function imageFormatMeta(id: ImageFormat): FormatMeta<ImageFormat> {
 export const AUDIO_INPUT_EXTS = ['wav', 'mp3', 'm4a', 'mp4', 'aac', 'flac', 'ogg', 'oga', 'opus', 'aif', 'aiff', 'webm', 'weba', 'caf']
 export const IMAGE_INPUT_EXTS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif', 'ico', 'svg']
 
+// Documents. The list lives in `doc/index.ts` beside the reader that opens each
+// one, so a new format is added in one place rather than two.
+export const DOCUMENT_INPUT_EXTS: readonly string[] = DOC_INPUT_EXTS
+
 // Narrower than the audio list on purpose. Video needs its container taken
 // apart frame by frame (mp4read.ts), and only the ISO base media family — MP4,
 // M4V, MOV — is one this reader can walk. MKV and AVI are different containers
@@ -90,8 +95,13 @@ export const VIDEO_INPUT_EXTS = ['mp4', 'm4v', 'mov', 'qt']
 export const AUDIO_ACCEPT = 'audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus,.aif,.aiff,.webm,.caf,.mp4,.mov'
 export const IMAGE_ACCEPT = 'image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.avif,.svg'
 export const VIDEO_ACCEPT = 'video/mp4,video/quicktime,.mp4,.m4v,.mov'
+// Extensions only, no `application/*` wildcard: the browser's own MIME guesses
+// for documents are unreliable (a .md is `text/markdown` on one machine and
+// nothing at all on another), and a wildcard here would offer to open every
+// binary on the disk.
+export const DOCUMENT_ACCEPT = DOCUMENT_INPUT_EXTS.map((e) => `.${e}`).join(',')
 /** The All tab takes anything and works out where it goes. */
-export const ALL_ACCEPT = `${IMAGE_ACCEPT},${AUDIO_ACCEPT},${VIDEO_ACCEPT}`
+export const ALL_ACCEPT = `${IMAGE_ACCEPT},${AUDIO_ACCEPT},${VIDEO_ACCEPT},${DOCUMENT_ACCEPT}`
 
 /**
  * The tab a loose file belongs on.
@@ -114,6 +124,14 @@ export function kindOf(ext: string, mime = ''): MediaKind | null {
   if (IMAGE_INPUT_EXTS.includes(ext)) return 'image'
   if (VIDEO_INPUT_EXTS.includes(ext)) return 'video'
   if (AUDIO_INPUT_EXTS.includes(ext)) return 'audio'
+  if (DOCUMENT_INPUT_EXTS.includes(ext)) return 'document'
+  // Extension LAST for documents, and MIME only as a fallback after it — the
+  // reverse of the media rule above, because the browser's document MIME
+  // guesses are the unreliable ones. A .md is `text/markdown` on one machine,
+  // `text/plain` on another and empty on a third, and only the extension says
+  // which reader to use. This line is what catches a file with no extension
+  // at all, which on a Mac is common.
+  if (type.startsWith('text/') || type === 'application/json') return 'document'
   return null
 }
 
@@ -129,6 +147,7 @@ export function kindOf(ext: string, mime = ''): MediaKind | null {
 export function acceptsOn(ext: string, kind: MediaKind): boolean {
   if (kind === 'audio') return AUDIO_INPUT_EXTS.includes(ext) || VIDEO_INPUT_EXTS.includes(ext)
   if (kind === 'image') return IMAGE_INPUT_EXTS.includes(ext)
+  if (kind === 'document') return DOCUMENT_INPUT_EXTS.includes(ext)
   return VIDEO_INPUT_EXTS.includes(ext)
 }
 
@@ -140,6 +159,27 @@ export function unsupportedMessage(ext: string, kind: MediaKind): string {
     return ext === 'mkv' || ext === 'avi' || ext === 'wmv' || ext === 'flv'
       ? `${named} is a container this converter can’t take apart — re-wrap it as MP4 or MOV first`
       : `${named} isn’t supported yet — try MP4, M4V or MOV`
+  }
+  if (kind === 'document') {
+    // The three everybody tries, each with the reason and a way forward rather
+    // than a flat refusal. A spreadsheet and a slide deck are the two most
+    // common things dropped on a Files tab that it genuinely cannot do.
+    if (ext === 'pdf') {
+      return 'PDF is what this tab converts TO. To edit or split one, use Universal PDF'
+    }
+    if (ext === 'xlsx' || ext === 'xls' || ext === 'ods') {
+      return `${named} is a spreadsheet — save it as CSV from your spreadsheet app and this will convert it`
+    }
+    if (ext === 'pptx' || ext === 'ppt' || ext === 'odp' || ext === 'key') {
+      return `${named} is a slide deck — export it to PDF from the app that made it`
+    }
+    if (ext === 'pages' || ext === 'numbers') {
+      return `${named} is an Apple format nothing else can open — export it to DOCX or PDF from Pages first`
+    }
+    if (ext === 'epub' || ext === 'mobi' || ext === 'azw3') {
+      return `${named} is an e-book — this converter doesn’t read those yet`
+    }
+    return `${named} isn’t supported yet — try DOCX, DOC, ODT, RTF, TXT, MD, HTML, CSV or JSON`
   }
   return `${named} isn’t supported yet — try WAV, MP3, M4A, FLAC or OGG`
 }

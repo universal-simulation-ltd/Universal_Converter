@@ -2,15 +2,15 @@ import { useState } from 'react'
 import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
 import { CONTAINER } from '../../lib/layout'
 import {
-  ALL_ACCEPT, AUDIO_INPUT_EXTS, IMAGE_INPUT_EXTS, VIDEO_INPUT_EXTS,
+  ALL_ACCEPT, AUDIO_INPUT_EXTS, DOCUMENT_INPUT_EXTS, IMAGE_INPUT_EXTS, VIDEO_INPUT_EXTS,
 } from '../../lib/formats'
-import { useConverterStore } from '../../stores/converterStore'
+import { KINDS, useConverterStore } from '../../stores/converterStore'
 import type { MediaKind } from '../../lib/types'
 
 /**
  * The All tab — the front door.
  *
- * The three studios each answer "convert this kind of thing", which is the
+ * The four studios each answer "convert this kind of thing", which is the
  * right question only once you have decided which kind of thing you have. This
  * tab asks nothing: drop whatever you have and it sorts each file onto the tab
  * that can do the work.
@@ -44,13 +44,11 @@ export default function AllStudio() {
     pageWide: true,
   })
 
-  const waiting: Record<MediaKind, number> = {
-    image: items.filter((i) => i.kind === 'image').length,
-    audio: items.filter((i) => i.kind === 'audio').length,
-    video: items.filter((i) => i.kind === 'video').length,
-  }
-  const total = waiting.image + waiting.audio + waiting.video
-  const tabsUsed = (['image', 'audio', 'video'] as const).filter((k) => waiting[k] > 0)
+  const waiting = Object.fromEntries(
+    KINDS.map((kind) => [kind, items.filter((i) => i.kind === kind).length]),
+  ) as Record<MediaKind, number>
+  const total = KINDS.reduce((sum, kind) => sum + waiting[kind], 0)
+  const tabsUsed = KINDS.filter((k) => waiting[k] > 0)
 
   return (
     <div className={`${CONTAINER} flex flex-col gap-4 py-5`}>
@@ -81,7 +79,7 @@ export default function AllStudio() {
 
       {/* Drawn from `pageOver`, not `over`: over the ring itself the ring is
           already saying it. */}
-      <DropAnywhere show={drop.pageOver} hint="Pictures, audio and video — each finds its own tab" />
+      <DropAnywhere show={drop.pageOver} hint="Pictures, audio, video and documents — each finds its own tab" />
     </div>
   )
 }
@@ -111,7 +109,7 @@ function EmptyCentre({ over }: { over: boolean }) {
       </svg>
       <span className="text-[15px] font-bold text-slate-900">Drop any file here</span>
       <span className="text-[11.5px] leading-relaxed text-slate-500">
-        Pictures · Audio · Video
+        Pictures · Audio · Video · Documents
       </span>
       <span className="mt-1 text-[11px] text-slate-400">or click to browse</span>
     </>
@@ -119,7 +117,7 @@ function EmptyCentre({ over }: { over: boolean }) {
 }
 
 function SortedCentre({ waiting, total }: { waiting: Record<MediaKind, number>; total: number }) {
-  const tabs = (['image', 'audio', 'video'] as const).filter((k) => waiting[k] > 0).length
+  const tabs = KINDS.filter((k) => waiting[k] > 0).length
   return (
     <>
       <span className="text-[34px] font-bold leading-none tabular-nums text-slate-900">{total}</span>
@@ -148,7 +146,7 @@ function SortingColumn({
   rejected: string[]
 }) {
   const setTab = useConverterStore((s) => s.setTab)
-  const total = waiting.image + waiting.audio + waiting.video
+  const total = KINDS.reduce((sum, kind) => sum + waiting[kind], 0)
 
   return (
     <div className="flex flex-col gap-4">
@@ -175,14 +173,27 @@ function SortingColumn({
                     the video tab, under Other exports. */}
                 <Capability label="Audio" body={`${list(AUDIO_INPUT_EXTS, ['mp4'])} — convert to MP3, M4A, Opus, FLAC, WAV or AIFF.`} />
                 <Capability label="Video" body={`${list(VIDEO_INPUT_EXTS)} — trim, resize and compress to H.264 MP4.`} />
+                <Capability label="Files" body={`${list(DOCUMENT_INPUT_EXTS, ['text', 'log', 'htm', 'markdown', 'tsv'])} — convert to a laid-out PDF, or to text, HTML, Markdown, CSV and JSON.`} />
               </ul>
-              {/* Named here rather than discovered on drop: MKV and AVI are the
-                  two everybody tries, and finding out after you have dragged a
+              {/* Named here rather than discovered on drop: these are the ones
+                  everybody tries, and finding out after you have dragged a
                   2 GB file across is the worst moment to be told. */}
               <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500">
                 <span className="font-semibold text-slate-700">Not MKV or AVI.</span> Those
                 containers need a different engine than the one that runs in a browser tab, so they
                 are refused on drop rather than accepted and failed halfway through.
+              </p>
+              <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500">
+                <span className="font-semibold text-slate-700">Not XLSX or PPTX.</span> Save a
+                spreadsheet as CSV and it converts; export a slide deck to PDF from the app that
+                made it. And PDF is what the Files tab converts <em>to</em> — to edit or split one,
+                use{' '}
+                <a
+                  href="https://opensource.unisim.co.uk/pdf"
+                  className="font-semibold text-orange-700 underline decoration-orange-300 underline-offset-2 hover:text-orange-800"
+                >
+                  Universal PDF
+                </a>.
               </p>
             </>
           ) : (
@@ -193,7 +204,7 @@ function SortingColumn({
                   : 'Each kind has its own settings, so pick a tab to carry on.'}
               </p>
               <div className="flex flex-col gap-2">
-                {(['image', 'audio', 'video'] as const).map((kind) =>
+                {KINDS.map((kind) =>
                   waiting[kind] > 0 ? (
                     <button
                       key={kind}
@@ -225,7 +236,7 @@ function SortingColumn({
             // drop is that you were not looking closely in the first place.
             <p className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] leading-relaxed text-amber-900">
               <span className="font-semibold">Not converted:</span> {rejected.join(', ')} — not a
-              picture, a sound or a video this can read.
+              picture, a sound, a video or a document this can read.
             </p>
           )}
         </div>
@@ -255,5 +266,9 @@ function list(exts: readonly string[], also: readonly string[] = []): string {
   return exts.filter((e) => !skip.has(e)).map((e) => e.toUpperCase()).join(', ')
 }
 
-const NOUN: Record<MediaKind, string> = { audio: 'sound file', image: 'picture', video: 'video' }
-const TAB_NAME: Record<MediaKind, string> = { audio: 'Audio', image: 'Images', video: 'Video' }
+const NOUN: Record<MediaKind, string> = {
+  audio: 'sound file', image: 'picture', video: 'video', document: 'document',
+}
+const TAB_NAME: Record<MediaKind, string> = {
+  audio: 'Audio', image: 'Images', video: 'Video', document: 'Files',
+}

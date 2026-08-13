@@ -10,7 +10,12 @@ export type {
 } from '@unisim/media'
 export { DEFAULT_VIDEO_SETTINGS } from '@unisim/media'
 
-export type MediaKind = 'audio' | 'image' | 'video'
+// 'document' joined the other three when the Files tab shipped. It is a
+// MediaKind despite not being media, because everything the word buys here —
+// its own queue, its own dropzone, its own settings panel, its own row in
+// `addSorted` — is exactly what a fourth studio needs, and a parallel concept
+// beside it would have meant a second version of all four.
+export type MediaKind = 'audio' | 'image' | 'video' | 'document'
 
 export type AudioFormat = 'wav' | 'mp3' | 'aiff' | 'flac' | 'm4a' | 'ogg' | 'opus'
 export type ImageFormat = 'png' | 'jpeg' | 'webp' | 'avif'
@@ -40,6 +45,16 @@ export interface QueueItem {
   /** User-facing reason this row failed or was skipped. */
   error: string | null
   result: ConvertedFile | null
+  /**
+   * What the conversion SUCCEEDED at doing but had to give up on the way —
+   * a .doc's formatting, a document's headers and footers, an alphabet the
+   * PDF's built-in fonts can't spell.
+   *
+   * Deliberately separate from `error`. These rows are `done` and their file is
+   * good; putting the sentence in `error` would paint a working conversion red,
+   * and leaving it out entirely is how somebody finds out on page four.
+   */
+  notes: string[]
 }
 
 export type SampleRate = 'source' | 22050 | 44100 | 48000

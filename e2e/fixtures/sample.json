@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Alice",
+    "score": 10,
+    "active": true,
+    "note": null
+  },
+  {
+    "name": "Bo",
+    "score": 20,
+    "active": false,
+    "extra": "only on this row"
+  }
+]

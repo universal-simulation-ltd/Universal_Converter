@@ -101,6 +101,24 @@ function Row({
               .filter(Boolean)
               .join(' · ')}
         </span>
+
+        {/* What the conversion had to give up. Amber and not red, because this
+            row SUCCEEDED — the file beside it is good and downloadable — and
+            painting it red would send somebody looking for a failure that did
+            not happen. Full sentences, in the row, not behind a tooltip: the
+            whole point is that it is read before the file is used. */}
+        {item.notes.length > 0 && (
+          <span className="mt-1 flex flex-col gap-1">
+            {item.notes.map((note) => (
+              <span
+                key={note}
+                className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[10.5px] leading-snug text-amber-900"
+              >
+                {note}
+              </span>
+            ))}
+          </span>
+        )}
       </span>
 
       <span className="font-mono text-[11px] text-slate-600 max-sm:hidden">
