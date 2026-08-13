@@ -501,7 +501,7 @@ console.log('\n── The UI, clicked for real ───────────
 
   await page.locator('input[type=file]').first()
     .setInputFiles(path.join(FIXTURES, 'sample.docx'))
-  await page.getByRole('button', { name: /Convert 1 file/ }).click()
+  await page.getByRole('button', { name: /Convert and save 1 file/ }).click()
   await page.getByText('Done', { exact: true }).waitFor({ timeout: 30000 })
   check('a real drop + click converts', true)
 
@@ -520,7 +520,7 @@ console.log('\n── The UI, clicked for real ───────────
 
   // A .doc must warn ON THE ROW, in the page, not just in the library result.
   await page.locator('input[type=file]').last().setInputFiles(path.join(FIXTURES, 'sample.doc'))
-  await page.getByRole('button', { name: /Convert 1 file/ }).click()
+  await page.getByRole('button', { name: /Convert and save 1 file/ }).click()
   await page.getByText('only its TEXT could be read', { exact: false }).waitFor({ timeout: 30000 })
   check('the .doc warning is shown on the row', true)
 

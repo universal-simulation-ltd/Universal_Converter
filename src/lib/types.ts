@@ -91,8 +91,13 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
   trim: { enabled: false, startSec: 0, endSec: null },
 }
 
+// PNG, not WebP. WebP is the better *file* — smaller at the same quality — but
+// the default has to be the one that opens everywhere, and a PNG does: every
+// image viewer, every document, every decade-old bit of software. Somebody who
+// wants the smaller file goes and picks WebP; somebody who does not know the
+// difference should not end up with a file their colleague cannot open.
 export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
-  format: 'webp',
+  format: 'png',
   quality: 0.82,
   maxEdge: 'source',
 }

@@ -237,7 +237,10 @@ export function PanelActions({ kind, canConvert }: { kind: MediaKind; canConvert
         onClick={() => void convertAll(kind)}
         className="w-full rounded-xl bg-gradient-to-br from-[#FE8C01] to-[#E05504] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-opacity hover:opacity-95 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        {running ? 'Converting…' : pending === 1 ? 'Convert 1 file' : `Convert ${pending} files`}
+        {/* "and save" is not decoration: a single file downloads itself the
+            moment it is done (see `convertAll`), and a button that starts a
+            download should say so before it is pressed. */}
+        {running ? 'Converting…' : pending === 1 ? 'Convert and save 1 file' : `Convert ${pending} files`}
       </button>
 
       <button

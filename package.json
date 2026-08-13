@@ -14,6 +14,7 @@
     "typecheck": "tsc -b --noEmit",
     "test": "node scripts/selftest.mjs",
     "test:files": "node e2e/files.e2e.mjs",
+    "test:images": "node e2e/images.e2e.mjs",
     "fixtures": "node e2e/fixtures/make-fixtures.mjs"
   },
   "dependencies": {

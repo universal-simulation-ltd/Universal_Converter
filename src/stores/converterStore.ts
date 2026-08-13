@@ -219,6 +219,16 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
           })
         }
       }
+
+      // One file in, one file out: the Save button after it carries no decision,
+      // so the download starts itself. Deliberately ONLY for a queue of one —
+      // a batch that saved itself would be a dozen downloads nobody asked for,
+      // which is what "Download all as ZIP" is for. The row's Save button stays
+      // put either way, so a second copy is always one click away.
+      if (pending.length === 1) {
+        const only = get().items.find((i) => i.id === pending[0])
+        if (only?.result) saveBlob(only.result.blob, only.result.name)
+      }
     } finally {
       set({ running: false })
     }

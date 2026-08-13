@@ -22,7 +22,10 @@
 // choice at this size, and saying so is the other half of it.)
 // ---------------------------------------------------------------------------
 
-import { PdfDocument, type PdfImage } from './pdfcore'
+// Explicit `.ts`, like every other leaf import reached from the self-tests:
+// `node scripts/selftest.mjs` strips types but does not resolve extensions, so
+// a bare './pdfcore' takes the whole suite down with ERR_MODULE_NOT_FOUND.
+import { PdfDocument, type PdfImage } from './pdfcore.ts'
 
 export type PdfPageSource = PdfImage
 

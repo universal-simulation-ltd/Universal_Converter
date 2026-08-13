@@ -35,7 +35,7 @@
 //     different program. Universal PDF is the app for that.
 // ---------------------------------------------------------------------------
 
-import { FONT_METRICS, type FontId } from './doc/metrics'
+import { FONT_METRICS, type FontId } from './doc/metrics.ts'
 
 export type { FontId }
 
