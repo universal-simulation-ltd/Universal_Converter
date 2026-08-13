@@ -187,6 +187,22 @@ console.log('\n── Defaults ────────────────�
   }
 }
 
+console.log('\n── The empty state is the ring, and it is clickable ─────────')
+{
+  // Same DropRing the All tab opens with. The queue tests below all reach the
+  // hidden input directly, which would pass just as happily with a decorative
+  // circle nobody can click — so the click is proved once, here.
+  check('the Images tab greets you with the ring',
+    await page.getByText('Drop images here').isVisible())
+  const chooser = await Promise.all([
+    page.waitForEvent('filechooser', { timeout: 5000 }),
+    page.getByText('Drop images here').click(),
+  ]).then(([c]) => c).catch(() => null)
+  check('clicking the ring opens the file browser', chooser !== null)
+  check('the format list sits under the ring, spelled out',
+    await page.getByText('PNG, JPEG, WebP, GIF, BMP, AVIF and SVG').isVisible())
+}
+
 console.log('\n── One file converts and saves itself ───────────────────────')
 {
   const got = await convertOne('sample.png')

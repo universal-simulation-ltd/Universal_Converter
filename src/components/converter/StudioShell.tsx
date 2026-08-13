@@ -44,15 +44,15 @@ export default function StudioShell({
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.55fr)_minmax(288px,0.85fr)] gap-4 items-start">
         <div className="rounded-xl border border-slate-200 bg-white">
           {items.length === 0 ? (
-            <div className="p-4">
-              <DropZone
-                onFiles={(files) => addFiles(files, kind)}
-                variant="empty"
-                accept={accept}
-                title={emptyTitle}
-                formatsLine={formatsLine}
-              />
-            </div>
+            // No padding wrapper: the empty state is the ring, and it centres
+            // itself in the card the same way the All tab's does.
+            <DropZone
+              onFiles={(files) => addFiles(files, kind)}
+              variant="empty"
+              accept={accept}
+              title={emptyTitle}
+              formatsLine={formatsLine}
+            />
           ) : (
             <>
               <FileQueue kind={kind} targetExt={targetExt} />

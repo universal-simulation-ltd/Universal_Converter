@@ -29,9 +29,9 @@ export default function AudioStudio() {
     <StudioShell
       kind="audio"
       accept={AUDIO_ACCEPT}
-      emptyTitle="Drop audio here to convert it"
+      emptyTitle="Drop audio here"
       moreTitle="Drop more audio here"
-      formatsLine="WAV, MP3, M4A/AAC, FLAC, OGG, Opus, AIFF, WebM — or click to browse"
+      formatsLine="WAV, MP3, M4A/AAC, FLAC, OGG, Opus, AIFF and WebM"
       engineBadge="on-device encoder · works offline"
       targetExt={target.ext}
       panel={<AudioPanel />}

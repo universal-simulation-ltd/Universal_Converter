@@ -58,9 +58,9 @@ export default function DocumentStudio() {
     <StudioShell
       kind="document"
       accept={DOCUMENT_ACCEPT}
-      emptyTitle="Drop documents here to convert them"
+      emptyTitle="Drop documents here"
       moreTitle="Drop more documents here"
-      formatsLine="DOCX, DOC, ODT, RTF, TXT, MD, HTML, CSV, JSON — or click to browse"
+      formatsLine="DOCX, DOC, ODT, RTF, TXT, MD, HTML, CSV and JSON"
       engineBadge="on-device reader & PDF writer · works offline"
       targetExt={target.id === 'md' ? 'md' : target.id}
       panel={

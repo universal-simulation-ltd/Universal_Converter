@@ -28,9 +28,9 @@ export default function ImageStudio() {
     <StudioShell
       kind="image"
       accept={IMAGE_ACCEPT}
-      emptyTitle="Drop images here to convert them"
+      emptyTitle="Drop images here"
       moreTitle="Drop more images here"
-      formatsLine="PNG, JPEG, WebP, GIF, BMP, AVIF, SVG — or click to browse"
+      formatsLine="PNG, JPEG, WebP, GIF, BMP, AVIF and SVG"
       engineBadge="on-device encoder · works offline"
       targetExt={target.ext}
       panel={

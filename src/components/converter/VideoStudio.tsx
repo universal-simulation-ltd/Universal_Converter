@@ -43,9 +43,9 @@ export default function VideoStudio() {
     <StudioShell
       kind="video"
       accept={VIDEO_ACCEPT}
-      emptyTitle="Drop video here to convert it"
+      emptyTitle="Drop video here"
       moreTitle="Drop more video here"
-      formatsLine="MP4, M4V and MOV — or click to browse"
+      formatsLine="MP4, M4V and MOV"
       engineBadge="on-device encoder · works offline"
       targetExt={target.ext}
       panel={

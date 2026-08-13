@@ -496,8 +496,9 @@ console.log('\n── The UI, clicked for real ───────────
 {
   await page.goto(APP, { waitUntil: 'networkidle' })
   await page.getByRole('tab', { name: 'Files' }).click()
-  check('Files tab shows its dropzone',
-    await page.getByText('Drop documents here to convert them').isVisible())
+  // The ring, since 2026-08-13 — the same DropRing the All tab opens with.
+  check('Files tab shows its drop ring',
+    await page.getByText('Drop documents here').isVisible())
 
   await page.locator('input[type=file]').first()
     .setInputFiles(path.join(FIXTURES, 'sample.docx'))
