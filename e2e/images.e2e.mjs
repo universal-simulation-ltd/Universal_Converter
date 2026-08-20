@@ -22,11 +22,56 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const TMP = path.join(HERE, '.tmp-images')
-const PLAYWRIGHT = pathToFileURL(
-  path.resolve(HERE, '../../Universal_Beam/node_modules/playwright/index.mjs'),
-).href
+// ⚠️ Found by LOOKING, not by hard-coding a sibling's name. This used to be
+// `../../Universal_Beam/node_modules/playwright/index.mjs`, which simply cannot
+// run on a machine where that checkout is absent — as the Mac's was on
+// 2026-08-20, taking both Converter e2e suites down with ERR_MODULE_NOT_FOUND
+// at import time. Universal Date Polling's suite had already worked this out and
+// carried a comment naming this file as the one that hadn't.
+//
+// It also LAUNCHES a browser before committing to a candidate: Playwright pins
+// an exact browser revision, so a sibling whose package imports perfectly can
+// still be paired with a build that was never downloaded here. Universal PDF's
+// suite hit exactly that, passing the import and dying on `.launch()`.
+function playwrightCandidates() {
+  const apps = path.resolve(HERE, '../..')
+  const out = []
+  for (const dir of fs.readdirSync(apps)) {
+    for (const entry of ['index.mjs', 'index.js']) {
+      const p = path.join(apps, dir, 'node_modules', 'playwright', entry)
+      if (fs.existsSync(p)) out.push(p)
+    }
+  }
+  return out
+}
 
-const { chromium } = await import(PLAYWRIGHT).then((m) => m.default ?? m)
+async function loadChromium() {
+  const problems = []
+  for (const file of playwrightCandidates()) {
+    let mod
+    try {
+      mod = await import(pathToFileURL(file).href).then((m) => m.default ?? m)
+    } catch (err) {
+      problems.push(`  ${file}\n    import: ${String(err).split('\n')[0]}`)
+      continue
+    }
+    try {
+      const probe = await mod.chromium.launch()
+      await probe.close()
+      return mod.chromium
+    } catch (err) {
+      problems.push(`  ${file}\n    launch: ${String(err).split('\n')[0]}`)
+    }
+  }
+  console.error(
+    'No usable Playwright found in a sibling Universal app.\n' +
+      (problems.join('\n') || '  (none installed)') +
+      '\n\nInstall one:  npm i -D playwright && npx playwright install chromium',
+  )
+  process.exit(2)
+}
+
+const chromium = await loadChromium()
 
 // ── Harness ──────────────────────────────────────────────────────────────────
 

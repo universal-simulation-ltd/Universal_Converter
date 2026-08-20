@@ -134,7 +134,7 @@ function DocumentsToOnePdf() {
     setNotes([])
     setDone(0)
     try {
-      const { readForMerge, mergeToPdf } = await import('../../lib/doc/merge')
+      const { readForMerge, mergeToPdf } = await import('../../lib/doc')
       const parts = []
       for (const item of documents) {
         parts.push(await readForMerge(item.file))

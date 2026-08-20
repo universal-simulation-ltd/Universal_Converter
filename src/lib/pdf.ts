@@ -22,45 +22,15 @@
 // choice at this size, and saying so is the other half of it.)
 // ---------------------------------------------------------------------------
 
-// Explicit `.ts`, like every other leaf import reached from the self-tests:
-// `node scripts/selftest.mjs` strips types but does not resolve extensions, so
-// a bare './pdfcore' takes the whole suite down with ERR_MODULE_NOT_FOUND.
-import { PdfDocument, type PdfImage } from './pdfcore.ts'
+// The PDF primitives and the JPEG re-encoder both moved to `@unisim/doc` with
+// the rest of the document stack — the document WRITER needs the same
+// re-encoder for a `{ kind: 'image' }` block, and one copy is the point of the
+// package. What is left in this file is the app feature that is genuinely this
+// app's: one full-bleed page per picture.
+import { PdfDocument, imageToJpeg, type PdfImage } from '@unisim/doc'
 
 export type PdfPageSource = PdfImage
-
-/**
- * Draw a file to a canvas and read it back as JPEG.
- *
- * The white fill is not cosmetic: a canvas starts transparent, and drawing a
- * PNG with alpha onto it and asking for JPEG gives BLACK where the transparency
- * was on some browsers and white on others. Filling first makes it white
- * everywhere, which is what somebody printing a page expects.
- */
-export async function imageToJpeg(file: Blob, quality: number, maxEdge: number | null): Promise<PdfPageSource> {
-  const bitmap = await createImageBitmap(file)
-  let { width, height } = bitmap
-  if (maxEdge && Math.max(width, height) > maxEdge) {
-    const scale = maxEdge / Math.max(width, height)
-    width = Math.max(1, Math.round(width * scale))
-    height = Math.max(1, Math.round(height * scale))
-  }
-
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('This browser would not give us a canvas to draw on.')
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(0, 0, width, height)
-  ctx.drawImage(bitmap, 0, 0, width, height)
-  bitmap.close?.()
-
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, 'image/jpeg', quality))
-  if (!blob) throw new Error('This browser could not encode a JPEG.')
-  return { jpeg: new Uint8Array(await blob.arrayBuffer()), width, height }
-}
+export { imageToJpeg }
 
 /**
  * Assemble pages into a PDF — one image per page, laid out at 72 dpi so a
