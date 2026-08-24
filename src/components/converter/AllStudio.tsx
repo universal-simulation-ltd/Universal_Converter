@@ -63,14 +63,7 @@ export default function AllStudio() {
             {/* Never `busy`: nothing converts on this tab. The ring twinkles
                 while it is waiting and goes still once it has something, which
                 is the honest pair of states for a sorting office. */}
-            <DropRing size="100%" over={drop.over} motion={total === 0 ? 'idle' : 'still'}>
-            {/* Backdrop. A CHILD of the ring, not behind it: DropRing
-                paints an opaque white interior, so anything behind it is
-                covered. Absolute keeps it out of the ring's flex column
-                so the copy stays centred. */}
-            <div className="pointer-events-none absolute inset-[14%] opacity-[0.3]" aria-hidden="true">
-              <AnyFileWatermark />
-            </div>
+            <DropRing size="100%" over={drop.over} motion={total === 0 ? 'idle' : 'still'} watermark={<AnyFileWatermark />}>
               {total === 0 ? <EmptyCentre over={drop.over} /> : <SortedCentre waiting={waiting} total={total} />}
             </DropRing>
           </div>

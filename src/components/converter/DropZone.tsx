@@ -56,14 +56,7 @@ export default function DropZone({ onFiles, variant, accept, title, formatsLine 
           className="relative w-full max-w-[300px] cursor-pointer rounded-full transition-transform focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-600"
           style={drop.over ? { transform: 'scale(1.02)' } : undefined}
         >
-          <DropRing size="100%" over={drop.over} motion="idle">
-            {/* Backdrop. A CHILD of the ring, not behind it: DropRing
-                paints an opaque white interior, so anything behind it is
-                covered. Absolute keeps it out of the ring's flex column
-                so the copy stays centred. */}
-            <div className="pointer-events-none absolute inset-[14%] opacity-[0.3]" aria-hidden="true">
-              <ConvertWatermark />
-            </div>
+          <DropRing size="100%" over={drop.over} motion="idle" watermark={<ConvertWatermark />}>
             <UploadGlyph over={drop.over} />
             <span className="text-[15px] font-bold leading-tight text-slate-900">{title}</span>
             <span className="mt-1 text-[11px] text-slate-400">or click to browse</span>
