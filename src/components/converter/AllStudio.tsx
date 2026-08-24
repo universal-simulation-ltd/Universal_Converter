@@ -6,6 +6,7 @@ import {
 } from '../../lib/formats'
 import { KINDS, useConverterStore } from '../../stores/converterStore'
 import type { MediaKind } from '../../lib/types'
+import { AnyFileWatermark } from './DropWatermarks'
 
 /**
  * The All tab — the front door.
@@ -63,6 +64,13 @@ export default function AllStudio() {
                 while it is waiting and goes still once it has something, which
                 is the honest pair of states for a sorting office. */}
             <DropRing size="100%" over={drop.over} motion={total === 0 ? 'idle' : 'still'}>
+            {/* Backdrop. A CHILD of the ring, not behind it: DropRing
+                paints an opaque white interior, so anything behind it is
+                covered. Absolute keeps it out of the ring's flex column
+                so the copy stays centred. */}
+            <div className="pointer-events-none absolute inset-[14%] opacity-[0.3]" aria-hidden="true">
+              <AnyFileWatermark />
+            </div>
               {total === 0 ? <EmptyCentre over={drop.over} /> : <SortedCentre waiting={waiting} total={total} />}
             </DropRing>
           </div>
@@ -172,7 +180,7 @@ function SortingColumn({
                     sorter does not use. Taking the sound out of a video is on
                     the video tab, under Other exports. */}
                 <Capability label="Audio" body={`${list(AUDIO_INPUT_EXTS, ['mp4'])} — convert to MP3, M4A, Opus, FLAC, WAV or AIFF.`} />
-                <Capability label="Video" body={`${list(VIDEO_INPUT_EXTS)} — trim, resize and compress to H.264 MP4.`} />
+                <Capability label="Video" body={`${list(VIDEO_INPUT_EXTS)} — trim, resize and compress to H.264 MP4, or turn into an animated GIF.`} />
                 <Capability label="Files" body={`${list(DOCUMENT_INPUT_EXTS, ['text', 'log', 'htm', 'markdown', 'tsv'])} — convert to a laid-out PDF, or to text, HTML, Markdown, CSV and JSON.`} />
               </ul>
               {/* Named here rather than discovered on drop: these are the ones
