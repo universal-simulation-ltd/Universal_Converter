@@ -32,14 +32,12 @@ export default function App() {
       <footer className="border-t border-slate-200 bg-white">
         <div className={`${CONTAINER} py-4 flex flex-row items-center gap-3 sm:gap-4 text-xs text-slate-500`}>
           <span>
-            100% free — every feature, no paywalls. Open source, hosted by{' '}
-            <a
-              href="https://www.unisim.co.uk"
-              target="_blank"
-              rel="noreferrer"
-              className="text-slate-700 hover:text-orange-700 underline-offset-2 hover:underline"
-            >
-              UNI SIM
+            With{' '}
+            <span aria-hidden="true" className="text-orange-600">&hearts;</span>
+            <span className="sr-only">love</span>{' '}
+            from{' '}
+            <a href="https://www.unisim.co.uk" target="_blank" rel="noreferrer" className="text-slate-700 hover:text-orange-700 underline-offset-2 hover:underline">
+              UNISIM.co.uk
             </a>
           </span>
           <a
