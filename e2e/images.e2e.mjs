@@ -302,13 +302,21 @@ console.log('\n── A different target, and a different source ─────
     svg.map((d) => d.suggestedFilename()).join(', '))
 }
 
-console.log('\n── An iPhone photo ──────────────────────────')
+console.log('\n── A HEIC decodes ───────────────────────────')
 {
   // The only input in the app that Chromium cannot decode AT ALL —
   // `createImageBitmap` and <img> both refuse a HEIC — so this is the one case
   // that proves the bundled decoder rather than the browser's. Without it, a
   // regression in the dynamic import shows up as a photo quietly queued as
   // "unsupported", which no other assertion here would notice.
+  //
+  // ⚠️ **This block was called "An iPhone photo" and it is NOT one.** The
+  // fixture is written by libheif from a generated gradient: one 8-bit `hvc1`
+  // item, no grid, no auxiliary images. A real iPhone photo is a `grid` of HEVC
+  // tiles with a thumbnail and (on HDR shots) 10-bit samples beside it. The
+  // first decoder shipped here, `heic2any`, passed this check and failed EVERY
+  // photo off an actual phone. **This proves the wiring, not the format.** The
+  // format is only ever proved by a file a phone wrote.
   const got = await convertOne('sample.heic')
   check('HEIC → PNG is named .png',
     got.length === 1 && got[0].suggestedFilename() === 'sample.png',

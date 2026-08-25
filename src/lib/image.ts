@@ -68,29 +68,39 @@ function isHeic(file: File): boolean {
 }
 
 /**
- * HEIC/HEIF → JPEG, so the rest of this file can treat an iPhone photo as any
- * other raster.
+ * HEIC/HEIF → an ImageBitmap, so the rest of this file can treat an iPhone
+ * photo as any other raster.
  *
  * This is the ONLY input in the app that needs a decoder shipped with it:
  * Safari reads HEIC natively, and no other engine will touch it at all —
- * `createImageBitmap` and <img> both simply fail. The decoder is ~150kB of
- * wasm-ish JS, so it is dynamic-imported on first HEIC and never costs anyone
- * who does not drop one. Universal Images made the same call with the same
- * library; keep them on the same one.
+ * `createImageBitmap` and <img> both simply fail. It is ~3 MB, so it is
+ * dynamic-imported on the first HEIC and never costs anyone who does not drop
+ * one.
  *
- * Quality 0.92 because this is an intermediate: the JPEG produced here is
- * immediately re-encoded to whatever was actually asked for, and a lower number
- * would put generation loss in front of a PNG target that has none of its own.
+ * ⚠️ **`heic-to` (libheif 1.19), NOT `heic2any`.** The first cut of this used
+ * heic2any, which is the library Universal Images has always used, and it
+ * decoded every HEIC written here — including a 4032×3024 one — while failing
+ * on EVERY REAL PHOTO OFF AN IPHONE. heic2any 0.0.4 is from 2020 and bundles a
+ * libheif from around 1.7; an iPhone stores its main image as a `grid` of HEVC
+ * tiles with auxiliary items beside it, and HDR shots are 10-bit, none of which
+ * that build handles. A synthetic fixture is a single 8-bit `hvc1` item and
+ * sails through, which is exactly why the e2e went green on something the app
+ * could not actually do. **A generated HEIC does not test HEIC.**
+ *
+ * `type: 'bitmap'` rather than a JPEG: the old path decoded to JPEG and then
+ * re-encoded that to the real target, so a PNG output carried JPEG artefacts it
+ * had no reason to. This hands back pixels.
  */
-async function heicToJpeg(file: File): Promise<Blob> {
-  const { default: heic2any } = await import('heic2any')
+async function heicToBitmap(file: File): Promise<ImageBitmap> {
+  const { heicTo } = await import('heic-to')
   try {
-    const out = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 })
-    // A Live Photo / burst is a SEQUENCE and comes back as an array of frames.
-    // The first one is the still everybody means by "the photo".
-    return Array.isArray(out) ? out[0]! : out
-  } catch {
-    throw new Error('This HEIC couldn’t be decoded — if it came off an iPhone, try sharing it as “Most Compatible”')
+    return await heicTo({ blob: file, type: 'bitmap' })
+  } catch (e) {
+    // ⚠️ NAME THE CAUSE. The first version swallowed it for a friendly line,
+    // and when real iPhone photos failed there was nothing on the row to say
+    // why — the message blamed the file and hid the decoder.
+    const why = e instanceof Error ? e.message : String(e)
+    throw new Error(`This HEIC couldn’t be decoded — ${why}`)
   }
 }
 
@@ -101,7 +111,7 @@ async function decode(file: File): Promise<ImageBitmap> {
   // Before the try, not inside its catch: on Safari `createImageBitmap` would
   // succeed on a HEIC and never reach a fallback, so the two engines would take
   // different paths and only one of them would be the tested one.
-  if (isHeic(file)) return await createImageBitmap(await heicToJpeg(file))
+  if (isHeic(file)) return await heicToBitmap(file)
 
   try {
     return await createImageBitmap(file)
