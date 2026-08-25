@@ -7,15 +7,19 @@ import { acceptsOn, kindOf, unsupportedMessage } from '../lib/formats'
 import { convertImage, probeDimensions } from '../lib/image'
 import { convertVideo } from '@unisim/media'
 import { probeDuration, probeVideo } from '../lib/probe'
+import { convertVideoToGif } from '../lib/videogif'
 import {
   DEFAULT_AUDIO_SETTINGS,
+  DEFAULT_GIF_SETTINGS,
   DEFAULT_IMAGE_SETTINGS,
   DEFAULT_VIDEO_SETTINGS,
   type AudioSettings,
+  type GifSettings,
   type ImageSettings,
   type MediaKind,
   type QueueItem,
   type VideoSettings,
+  type VideoTarget,
 } from '../lib/types'
 import { createZip } from '../lib/zip'
 
@@ -37,6 +41,17 @@ interface ConverterState {
   audio: AudioSettings
   image: ImageSettings
   video: VideoSettings
+  /**
+   * Which of the video tab's two targets is selected.
+   *
+   * Kept beside `video` rather than inside it because `VideoSettings` belongs to
+   * @unisim/media and describes an H.264 encode — see the note on `VideoTarget`.
+   * `video.trim` stays authoritative for BOTH targets: the trim fields in the
+   * panel are one control, and switching MP4 ⇄ GIF must not lose the window
+   * somebody typed.
+   */
+  videoTarget: VideoTarget
+  gif: GifSettings
   document: DocSettings
   /** True while a queue is running; the panel goes read-only. */
   running: boolean
@@ -56,6 +71,8 @@ interface ConverterState {
   updateAudio: (patch: Partial<AudioSettings>) => void
   updateImage: (patch: Partial<ImageSettings>) => void
   updateVideo: (patch: Partial<VideoSettings>) => void
+  setVideoTarget: (target: VideoTarget) => void
+  updateGif: (patch: Partial<GifSettings>) => void
   updateDocument: (patch: Partial<DocSettings>) => void
   resetSettings: () => void
 
@@ -79,6 +96,8 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
   audio: DEFAULT_AUDIO_SETTINGS,
   image: DEFAULT_IMAGE_SETTINGS,
   video: DEFAULT_VIDEO_SETTINGS,
+  videoTarget: 'mp4',
+  gif: DEFAULT_GIF_SETTINGS,
   document: DEFAULT_DOC_SETTINGS,
   running: false,
 
@@ -161,6 +180,10 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
 
   updateVideo: (patch) => set({ video: { ...get().video, ...patch } }),
 
+  setVideoTarget: (videoTarget) => set({ videoTarget }),
+
+  updateGif: (patch) => set({ gif: { ...get().gif, ...patch } }),
+
   updateDocument: (patch) => set({ document: { ...get().document, ...patch } }),
 
   resetSettings: () =>
@@ -168,6 +191,8 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
       audio: DEFAULT_AUDIO_SETTINGS,
       image: DEFAULT_IMAGE_SETTINGS,
       video: DEFAULT_VIDEO_SETTINGS,
+      videoTarget: 'mp4',
+      gif: DEFAULT_GIF_SETTINGS,
       document: DEFAULT_DOC_SETTINGS,
     }),
 
@@ -208,7 +233,11 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
             kind === 'audio'
               ? await convertAudio(item.file, get().audio, onProgress)
               : kind === 'video'
-                ? await convertVideo(item.file, get().video, onProgress)
+                ? get().videoTarget === 'gif'
+                  // The trim comes from `video`, not from `gif` — one window for
+                  // the tab, whichever target it is pointed at.
+                  ? await convertVideoToGif(item.file, get().gif, get().video.trim, onProgress)
+                  : await convertVideo(item.file, get().video, onProgress)
                 : await convertImage(item.file, get().image, onProgress)
           patch(id, { status: 'done', progress: 1, result })
         } catch (err) {

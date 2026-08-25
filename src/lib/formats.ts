@@ -2,7 +2,7 @@ import { aacSupported } from '@unisim/media'
 import { DOC_INPUT_EXTS } from './doc'
 import { flacSupported } from './flac'
 import { opusSupported } from './opus'
-import type { AudioFormat, Engine, ImageFormat, MediaKind, VideoFormat } from './types'
+import type { AudioFormat, Engine, ImageFormat, MediaKind, VideoTarget } from './types'
 
 export interface FormatMeta<T extends string> {
   id: T
@@ -52,11 +52,19 @@ export const IMAGE_FORMATS: FormatMeta<ImageFormat>[] = [
 // video didn't have to wait on the ffmpeg licence decision either. WebM out
 // would want a second muxer and a second codec; MP4 is the one that plays
 // everywhere, so it's the one that shipped.
-export const VIDEO_FORMATS: FormatMeta<VideoFormat>[] = [
+//
+// GIF is the odd one out and the only target in this whole app the browser will
+// not encode for us at all — there is no `toBlob('image/gif')` in any engine
+// and no animation encoder anywhere — so the palette, the LZW and the file are
+// all ours (gif.ts). It sits with MP4 rather than in "Other exports" because it
+// is still the moving picture you dropped, in another format; what it drops is
+// said in the blurb and again in the panel.
+export const VIDEO_FORMATS: FormatMeta<VideoTarget>[] = [
   { id: 'mp4', label: 'MP4', ext: 'mp4', mime: 'video/mp4', lossy: true, engine: 'built-in', blurb: 'H.264 video with AAC audio — plays on everything.' },
+  { id: 'gif', label: 'GIF', ext: 'gif', mime: 'image/gif', lossy: true, engine: 'built-in', blurb: 'Silent, 256 colours, and it animates inline in a chat, an email or a README.' },
 ]
 
-export function videoFormatMeta(id: VideoFormat): FormatMeta<VideoFormat> {
+export function videoFormatMeta(id: VideoTarget): FormatMeta<VideoTarget> {
   const found = VIDEO_FORMATS.find((f) => f.id === id)
   if (!found) throw new Error(`Unknown video format: ${id}`)
   return found

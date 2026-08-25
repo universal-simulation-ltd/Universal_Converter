@@ -2,16 +2,30 @@ import { useEffect, useState } from 'react'
 import { VIDEO_ACCEPT, VIDEO_FORMATS, videoFormatMeta } from '../../lib/formats'
 import { formatDuration, parseClock } from '../../lib/humanise'
 import { videoSupported } from '@unisim/media'
+import { gifExportSupported } from '../../lib/videogif'
 import { useConverterStore } from '../../stores/converterStore'
 import OtherExports from './OtherExports'
 import StudioShell from './StudioShell'
 import { Collapsible, Divider, Field, FormatChip, Panel, PanelActions, Segmented, Select, Toggle } from './PanelParts'
-import { DEFAULT_VIDEO_SETTINGS, type MaxHeight, type VideoQuality } from '../../lib/types'
+import {
+  DEFAULT_GIF_SETTINGS,
+  DEFAULT_VIDEO_SETTINGS,
+  type GifEdge,
+  type GifFps,
+  type MaxHeight,
+  type VideoQuality,
+  type VideoTarget,
+} from '../../lib/types'
 
 // Phase 2 — video, on WebCodecs rather than ffmpeg. Deliberately a tab rather
 // than a second app: it shares the queue, the settings vocabulary and the
 // privacy story with audio and images, which is the point of one converter
 // rather than three.
+//
+// Two targets now, and they do not want the same settings: an MP4 has a
+// bitrate, a resolution and a soundtrack, and a GIF has none of the three. So
+// the panel swaps its middle rather than greying half of it out — a quality
+// slider that cannot affect the file is worse than an absent one.
 
 const HEIGHTS: { value: MaxHeight; label: string }[] = [
   { value: 'source', label: 'Keep original size' },
@@ -35,9 +49,26 @@ const AUDIO_BITRATES: { value: number; label: string }[] = [
   { value: 256, label: '256' },
 ]
 
+// The GIF's own ladder, and a much shorter one. "Keep original size" is offered
+// last rather than first because on this target it is nearly always the wrong
+// answer — see DEFAULT_GIF_SETTINGS.
+const GIF_EDGES: { value: GifEdge; label: string }[] = [
+  { value: 640, label: '640 px' },
+  { value: 480, label: '480 px' },
+  { value: 320, label: '320 px' },
+  { value: 240, label: '240 px' },
+  { value: 'source', label: 'Keep original size' },
+]
+
+const GIF_RATES: { value: GifFps; label: string }[] = [
+  { value: 10, label: '10' },
+  { value: 15, label: '15' },
+  { value: 20, label: '20' },
+  { value: 25, label: '25' },
+]
+
 export default function VideoStudio() {
-  const settings = useConverterStore((s) => s.video)
-  const target = videoFormatMeta(settings.format)
+  const target = videoFormatMeta(useConverterStore((s) => s.videoTarget))
 
   return (
     <StudioShell
@@ -59,26 +90,93 @@ export default function VideoStudio() {
 }
 
 function VideoPanel() {
-  const settings = useConverterStore((s) => s.video)
+  const videoTarget = useConverterStore((s) => s.videoTarget)
   const running = useConverterStore((s) => s.running)
-  const update = useConverterStore((s) => s.updateVideo)
+  const setTarget = useConverterStore((s) => s.setVideoTarget)
 
-  // H.264 through WebCodecs isn't everywhere yet, so support is probed rather
-  // than assumed — the same treatment Opus gets on the audio tab and AVIF on
-  // the images tab.
-  const [supported, setSupported] = useState<boolean | null>(null)
+  // Both halves of WebCodecs are probed, and separately, because the two
+  // targets need different halves of it: an MP4 out needs the H.264 ENCODER,
+  // a GIF needs only the DECODER. A browser that can read a video but not write
+  // one can still make a GIF, and treating "no encoder" as "no video" would
+  // switch off the one target that still worked.
+  const [encoderReady, setEncoderReady] = useState<boolean | null>(null)
+  const [decoderReady, setDecoderReady] = useState<boolean | null>(null)
   useEffect(() => {
     let live = true
     void videoSupported().then((ok) => {
-      if (live) setSupported(ok)
+      if (live) setEncoderReady(ok)
+    })
+    void gifExportSupported().then((ok) => {
+      if (live) setDecoderReady(ok)
     })
     return () => {
       live = false
     }
   }, [])
 
-  const target = videoFormatMeta(settings.format)
-  const engineReady = supported !== false
+  // Unknown counts as ready: the probes resolve in a moment, and a chip that
+  // starts disabled and enables itself reads as broken.
+  const readyFor = (id: VideoTarget) => (id === 'gif' ? decoderReady !== false : encoderReady !== false)
+  const target = videoFormatMeta(videoTarget)
+  const engineReady = readyFor(videoTarget)
+
+  return (
+    <Panel>
+      <Field label="Convert to">
+        <div className="flex flex-wrap gap-1.5">
+          {VIDEO_FORMATS.map((f) => (
+            <FormatChip
+              key={f.id}
+              label={f.label}
+              selected={videoTarget === f.id}
+              ready={readyFor(f.id)}
+              disabled={running}
+              onSelect={() => setTarget(f.id)}
+            />
+          ))}
+        </div>
+        <p className="text-[11px] text-slate-500">{target.blurb}</p>
+
+        {videoTarget === 'gif' && (
+          <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] leading-snug text-amber-800">
+            <span className="font-semibold">A GIF has no sound</span>, and 256 colours in the whole
+            animation — so a gradient or a sunset will band a little. It is also much larger than
+            the same clip as MP4: a few seconds is a few megabytes. Keep it short.
+          </p>
+        )}
+
+        {videoTarget === 'mp4' && encoderReady === false && (
+          <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] leading-snug text-amber-800">
+            This browser has no WebCodecs H.264 encoder, so it can’t write an MP4.
+            {decoderReady === true
+              ? ' It can still read one, so GIF above will work here. Chrome and Edge do both.'
+              : ' Chrome and Edge have one. The audio and images tabs work everywhere.'}
+          </p>
+        )}
+
+        {videoTarget === 'gif' && decoderReady === false && (
+          <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] leading-snug text-amber-800">
+            This browser has no WebCodecs H.264 decoder, so it can’t take a video apart to make a
+            GIF — Chrome and Edge have one. The audio and images tabs work everywhere.
+          </p>
+        )}
+      </Field>
+
+      <Divider />
+
+      {videoTarget === 'gif' ? <GifAdvanced /> : <Mp4Advanced engineReady={engineReady} />}
+
+      <Divider />
+
+      <PanelActions kind="video" canConvert={engineReady} />
+    </Panel>
+  )
+}
+
+function Mp4Advanced({ engineReady }: { engineReady: boolean }) {
+  const settings = useConverterStore((s) => s.video)
+  const running = useConverterStore((s) => s.running)
+  const update = useConverterStore((s) => s.updateVideo)
 
   const changed: string[] = []
   if (settings.maxHeight !== 'source') {
@@ -94,100 +192,156 @@ function VideoPanel() {
   if (settings.trim.enabled) changed.push('Trimmed')
 
   return (
-    <Panel>
-      <Field label="Convert to">
-        <div className="flex flex-wrap gap-1.5">
-          {VIDEO_FORMATS.map((f) => (
-            <FormatChip
-              key={f.id}
-              label={f.label}
-              selected={settings.format === f.id}
-              ready={engineReady}
-              disabled={running}
-              onSelect={() => update({ format: f.id })}
-            />
-          ))}
-        </div>
-        <p className="text-[11px] text-slate-500">{target.blurb}</p>
-        {supported === false && (
-          <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800">
-            This browser has no WebCodecs H.264 encoder, so video can’t be converted here — Chrome
-            and Edge have one. The audio and images tabs work everywhere.
-          </p>
-        )}
+    <Collapsible
+      label="Advanced"
+      summary={changed.length ? changed.join(' · ') : 'Default settings'}
+      defaultOpen={changed.length > 0}
+    >
+      <Field label="Resolution">
+        <Select
+          options={HEIGHTS}
+          value={settings.maxHeight}
+          disabled={running}
+          onChange={(maxHeight) => update({ maxHeight })}
+        />
+        <p className="text-[10.5px] text-slate-400">
+          Names the shorter edge, so a clip filmed upright stays upright. Never scaled up.
+        </p>
+      </Field>
+
+      <Field label="Quality">
+        <Segmented
+          options={QUALITIES}
+          value={settings.quality}
+          disabled={running || !engineReady}
+          onChange={(quality) => update({ quality })}
+        />
+        <p className="text-[10.5px] text-slate-400">
+          Sets the bitrate from the frame size and rate, so 4K and 720p each get a budget that
+          suits them.
+        </p>
       </Field>
 
       <Divider />
 
-      <Collapsible
-        label="Advanced"
-        summary={changed.length ? changed.join(' · ') : 'Default settings'}
-        defaultOpen={changed.length > 0}
-      >
-        <Field label="Resolution">
-          <Select
-            options={HEIGHTS}
-            value={settings.maxHeight}
-            disabled={running}
-            onChange={(maxHeight) => update({ maxHeight })}
-          />
-          <p className="text-[10.5px] text-slate-400">
-            Names the shorter edge, so a clip filmed upright stays upright. Never scaled up.
-          </p>
-        </Field>
+      <Toggle
+        label="Keep the audio"
+        hint="Re-encoded to AAC alongside the picture. Off writes a silent file"
+        on={settings.keepAudio}
+        disabled={running}
+        onChange={(keepAudio) => update({ keepAudio })}
+      />
 
-        <Field label="Quality">
+      {settings.keepAudio && (
+        <Field label="Audio bitrate">
           <Segmented
-            options={QUALITIES}
-            value={settings.quality}
+            options={AUDIO_BITRATES}
+            value={settings.audioBitrateKbps}
             disabled={running || !engineReady}
-            onChange={(quality) => update({ quality })}
+            onChange={(audioBitrateKbps) => update({ audioBitrateKbps })}
           />
           <p className="text-[10.5px] text-slate-400">
-            Sets the bitrate from the frame size and rate, so 4K and 720p each get a budget that
-            suits them.
+            kbps, constant. 128 is plenty for anything but music.
           </p>
         </Field>
+      )}
 
-        <Divider />
+      <TrimToggle />
+    </Collapsible>
+  )
+}
 
-        <Toggle
-          label="Keep the audio"
-          hint="Re-encoded to AAC alongside the picture. Off writes a silent file"
-          on={settings.keepAudio}
+function GifAdvanced() {
+  const settings = useConverterStore((s) => s.gif)
+  const trim = useConverterStore((s) => s.video.trim)
+  const running = useConverterStore((s) => s.running)
+  const update = useConverterStore((s) => s.updateGif)
+
+  const changed: string[] = []
+  if (settings.maxEdge !== DEFAULT_GIF_SETTINGS.maxEdge) {
+    changed.push(GIF_EDGES.find((e) => e.value === settings.maxEdge)?.label ?? '')
+  }
+  if (settings.fps !== DEFAULT_GIF_SETTINGS.fps) changed.push(`${settings.fps} fps`)
+  if (settings.dither) changed.push('Dithered')
+  if (!settings.loop) changed.push('Plays once')
+  if (trim.enabled) changed.push('Trimmed')
+
+  return (
+    <Collapsible
+      label="Advanced"
+      summary={changed.length ? changed.join(' · ') : `${DEFAULT_GIF_SETTINGS.maxEdge} px · ${DEFAULT_GIF_SETTINGS.fps} fps`}
+      defaultOpen={changed.length > 0}
+    >
+      <Field label="Size">
+        <Select
+          options={GIF_EDGES}
+          value={settings.maxEdge}
           disabled={running}
-          onChange={(keepAudio) => update({ keepAudio })}
+          onChange={(maxEdge) => update({ maxEdge })}
         />
+        <p className="text-[10.5px] text-slate-400">
+          The longest edge, so an upright clip stays upright. Never scaled up. Halving this is the
+          single biggest thing you can do to the file size.
+        </p>
+      </Field>
 
-        {settings.keepAudio && (
-          <Field label="Audio bitrate">
-            <Segmented
-              options={AUDIO_BITRATES}
-              value={settings.audioBitrateKbps}
-              disabled={running || !engineReady}
-              onChange={(audioBitrateKbps) => update({ audioBitrateKbps })}
-            />
-            <p className="text-[10.5px] text-slate-400">
-              kbps, constant. 128 is plenty for anything but music.
-            </p>
-          </Field>
-        )}
-
-        <Toggle
-          label="Trim"
-          hint="Keep only part of each file — same window for the whole queue"
-          on={settings.trim.enabled}
+      <Field label="Frame rate">
+        <Segmented
+          options={GIF_RATES}
+          value={settings.fps}
           disabled={running}
-          onChange={(enabled) => update({ trim: { ...settings.trim, enabled } })}
+          onChange={(fps) => update({ fps })}
         />
-
-        {settings.trim.enabled && <TrimFields />}
-      </Collapsible>
+        <p className="text-[10.5px] text-slate-400">
+          Frames per second. 25 is the most a GIF can hold to honestly — its timing is measured in
+          hundredths of a second, and 30 fps doesn’t divide into them.
+        </p>
+      </Field>
 
       <Divider />
 
-      <PanelActions kind="video" canConvert={engineReady} />
-    </Panel>
+      <Toggle
+        label="Smooth the colours"
+        hint="Dithers gradients so they don’t band — but it makes the file noticeably bigger"
+        on={settings.dither}
+        disabled={running}
+        onChange={(dither) => update({ dither })}
+      />
+
+      <Toggle
+        label="Loop forever"
+        hint="Off plays the animation once and stops on the last frame"
+        on={settings.loop}
+        disabled={running}
+        onChange={(loop) => update({ loop })}
+      />
+
+      <TrimToggle />
+    </Collapsible>
+  )
+}
+
+/**
+ * The trim switch and its fields, shared by both targets and reading one piece
+ * of state — `video.trim`. Somebody who types a window, then changes their mind
+ * about MP4 versus GIF, should not have to type it again.
+ */
+function TrimToggle() {
+  const trim = useConverterStore((s) => s.video.trim)
+  const running = useConverterStore((s) => s.running)
+  const update = useConverterStore((s) => s.updateVideo)
+
+  return (
+    <>
+      <Toggle
+        label="Trim"
+        hint="Keep only part of each file — same window for the whole queue"
+        on={trim.enabled}
+        disabled={running}
+        onChange={(enabled) => update({ trim: { ...trim, enabled } })}
+      />
+      {trim.enabled && <TrimFields />}
+    </>
   )
 }
 

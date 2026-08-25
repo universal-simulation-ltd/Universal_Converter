@@ -28,6 +28,7 @@ import { parseClock } from '@unisim/media'
 import { createZip, crc32 } from '../src/lib/zip.ts'
 import { HEADER_BOS, HEADER_EOS, buildPage, oggCrc, opusHead, opusTags } from '../src/lib/ogg.ts'
 import { buildPdf } from '../src/lib/pdf.ts'
+import { ColourCube, GifWriter, MAX_COLOURS, PaletteMap, TRANSPARENT_INDEX, lzwEncode, quantiseFrame } from '../src/lib/gif.ts'
 import { buildMp4, readMp4, trimWindow } from '@unisim/media'
 import { buildId3, readTags, vorbisComments } from '../src/lib/tags.ts'
 
@@ -443,6 +444,148 @@ function ascii(view, offset, length) {
       skipped += 1
       console.warn('! pdf — python not found, skipped the outside-reader check')
       console.log('✓ pdf — structure, xref offsets and escaping')
+    } else {
+      throw err
+    }
+  }
+}
+
+// ── GIF ──────────────────────────────────────────────────────────────────────
+// The one writer in this app whose output no browser can check for us: there is
+// no `toBlob('image/gif')` to compare against, so the palette, the LZW coder
+// and the frame differencing are all ours and all have to be proved against a
+// reader that is not.
+//
+// ffmpeg is that reader. Every pixel of every decoded frame is compared to the
+// palette colour our own index array claims it should be — not "roughly right",
+// EXACTLY right — which is the assertion that catches the mistakes this format
+// invites: a code width that grows one entry late, a bounding box off by a row,
+// a transparent index that leaks a real colour.
+{
+  const W = 96
+  const H = 72
+  const frame = (fn) => {
+    const px = new Uint8ClampedArray(W * H * 4)
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const [r, g, b] = fn(x, y)
+        const p = (y * W + x) * 4
+        px[p] = r; px[p + 1] = g; px[p + 2] = b; px[p + 3] = 255
+      }
+    }
+    return px
+  }
+
+  // A deterministic pseudo-random source. Noise is the WORST case for LZW —
+  // it fills the 4096-entry table and forces the reset — and the case a happy
+  // path of flat colours never reaches.
+  let seed = 20260824
+  const rand = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
+
+  const frames = [
+    frame(() => [(rand() * 255) | 0, (rand() * 255) | 0, (rand() * 255) | 0]),
+    frame((x, y) => [((x * 255) / W) | 0, ((y * 255) / H) | 0, 128]),
+    // Byte-for-byte the frame before it: the "nothing moved" path, which writes
+    // a single transparent pixel and must still hold the screen for its delay.
+    frame((x, y) => [((x * 255) / W) | 0, ((y * 255) / H) | 0, 128]),
+    // One square moves. Only that rectangle should be written.
+    frame((x, y) => (x >= 30 && x < 60 && y >= 20 && y < 50 ? [0, 0, 0] : [((x * 255) / W) | 0, ((y * 255) / H) | 0, 128])),
+  ]
+
+  const cube = new ColourCube()
+  for (const f of frames) cube.addFrame(f)
+  const colours = cube.palette(MAX_COLOURS)
+  assert.ok(colours.length / 3 <= MAX_COLOURS, 'the palette leaves index 255 free for transparency')
+  const map = new PaletteMap(colours)
+  const indices = frames.map((f) => quantiseFrame(f, W, H, map, false))
+
+  const writer = new GifWriter(W, H, colours, true)
+  for (const q of indices) writer.addFrame(q, 5)
+  const chunks = writer.finish()
+  const gif = Buffer.concat(chunks.map(Buffer.from))
+
+  // Structure, before anyone else is asked to read it.
+  assert.equal(gif.subarray(0, 6).toString('latin1'), 'GIF89a', 'the version block says GIF89a')
+  assert.equal(gif.readUInt16LE(6), W, 'logical screen width')
+  assert.equal(gif.readUInt16LE(8), H, 'logical screen height')
+  assert.equal(gif[10], 0xf7, 'a global colour table of 256 entries is declared')
+  assert.equal(gif[gif.length - 1], 0x3b, 'the file ends with the trailer')
+  assert.ok(gif.includes(Buffer.from('NETSCAPE2.0', 'latin1')), 'looping asks for the Netscape extension')
+
+  // Differencing, measured rather than assumed: a moving square must cost far
+  // less than a whole frame, and an identical frame must cost almost nothing.
+  // ⚠️ These are the chunks the writer produced, so the numbers are the real
+  // payload sizes and not an estimate.
+  const payloads = chunks.map((c) => c.length)
+  const first = Math.max(...payloads)
+  const held = payloads[payloads.length - 4]
+  assert.ok(held < 40, `an unchanged frame costs a handful of bytes, not ${held}`)
+  assert.ok(first > 2000, 'the first frame is a whole picture')
+
+  const noLoop = Buffer.concat(new GifWriter(W, H, colours, false).finish().map(Buffer.from))
+  assert.ok(!noLoop.includes(Buffer.from('NETSCAPE2.0', 'latin1')), 'not looping leaves the extension out entirely')
+
+  // The palette guard: index 255 is reserved, so 256 colours must be refused
+  // rather than quietly writing a colour that means "transparent".
+  assert.throws(() => new PaletteMap(new Uint8Array(256 * 3)), /at most 255 colours/)
+  assert.equal(TRANSPARENT_INDEX, 255)
+
+  // Sub-blocks: every one at most 255 bytes, and a zero to end them.
+  {
+    const data = lzwEncode(new Uint8Array(1000).map((_, i) => i & 0xff), 8)
+    let at = 0
+    let blocks = 0
+    while (data[at] !== 0) {
+      assert.ok(data[at] <= 255, 'no sub-block claims more than 255 bytes')
+      at += data[at] + 1
+      blocks += 1
+      assert.ok(at < data.length, 'the sub-block chain stays inside the buffer')
+    }
+    assert.equal(data[at], 0, 'the chain ends with a zero-length block')
+    assert.ok(blocks > 0)
+  }
+
+  const dir = mkdtempSync(join(tmpdir(), 'conv-gif-'))
+  const file = join(dir, 'animation.gif')
+  writeFileSync(file, gif)
+
+  try {
+    const probe = execFileSync(
+      'ffprobe',
+      ['-v', 'error', '-count_frames', '-select_streams', 'v:0',
+       '-show_entries', 'stream=width,height,nb_read_frames',
+       '-show_entries', 'format=duration', '-of', 'default=nw=1', file],
+      { encoding: 'utf8' },
+    )
+    const field = (name) => probe.match(new RegExp(`${name}=([\\d.]+)`))?.[1]
+    assert.equal(Number(field('width')), W, 'an outside reader agrees on the width')
+    assert.equal(Number(field('height')), H, 'an outside reader agrees on the height')
+    assert.equal(Number(field('nb_read_frames')), frames.length, 'every frame is there, including the one that did not change')
+    // 4 frames × 5 hundredths.
+    assert.ok(Math.abs(Number(field('duration')) - 0.2) < 0.005, `the delays add up to the right running time (${field('duration')})`)
+
+    const raw = execFileSync(
+      'ffmpeg',
+      ['-v', 'error', '-i', file, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'],
+      { encoding: 'buffer', maxBuffer: 1 << 28 },
+    )
+    const frameBytes = W * H * 3
+    assert.equal(raw.length / frameBytes, frames.length, 'the decoder produces one full picture per frame')
+    let wrong = 0
+    for (let f = 0; f < frames.length; f++) {
+      for (let i = 0; i < W * H; i++) {
+        const index = indices[f][i]
+        const at = f * frameBytes + i * 3
+        if (raw[at] !== colours[index * 3] || raw[at + 1] !== colours[index * 3 + 1] || raw[at + 2] !== colours[index * 3 + 2]) wrong++
+      }
+    }
+    assert.equal(wrong, 0, `${wrong} of ${frames.length * W * H} pixels came back as a different colour than the index says`)
+    console.log('✓ gif — LZW, palette and frame differencing, decoded pixel-for-pixel by ffmpeg')
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      skipped += 1
+      console.warn('! gif — ffmpeg/ffprobe not found, skipped the outside-reader check')
+      console.log('✓ gif — structure, sub-blocks and differencing')
     } else {
       throw err
     }

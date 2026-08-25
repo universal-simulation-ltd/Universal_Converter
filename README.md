@@ -70,6 +70,7 @@ dependency and in the same spirit as this app's own ZIP and Ogg writers.
 | | OGG (Vorbis) | **Disabled** — needs the ffmpeg core (below) |
 | **Images** | **WebP**, **JPEG**, **PNG**, **AVIF** | The browser's own canvas encoder — convert, re-quality and resize |
 | **Video** | **MP4** (H.264 + AAC) | The browser's own WebCodecs `VideoEncoder`, between a demuxer and a muxer we write — trim, scale and compress. Lives in [`@unisim/media`](https://www.npmjs.com/package/@unisim/media) now, shared with [Universal Video](https://opensource.unisim.co.uk/video) |
+| | **GIF** (animated) | Ours entirely ([`gif.ts`](src/lib/gif.ts)) — median-cut palette, LZW, frame differencing. The **only** target here the browser cannot encode: there is no `toBlob('image/gif')` in any engine, and no animation encoder at all |
 | **Files** | **PDF** with selectable text, real pagination and working links | Our own readers and our own text-flow PDF writer — no dependency. See [The Files tab](#the-files-tab) |
 | | **Text**, **HTML**, **Markdown** | The same document model, rendered a different way |
 | | **CSV**, **JSON** | Only from a file that already has rows — see the note below |
@@ -79,7 +80,9 @@ AIFF, WebM for audio; PNG, JPEG, WebP, GIF, BMP, AVIF, SVG for images; MP4, M4V
 and MOV for video; DOCX, DOC, ODT, RTF, TXT, MD, HTML, CSV and JSON for
 documents. All four tabs share one queue, one settings vocabulary and one privacy
 story; AVIF and H.264 are probed at runtime because support for them varies by
-browser.
+browser — and the video tab probes the H.264 **encoder** and **decoder**
+separately, because a GIF needs only the decoder. A browser that can read an MP4
+but not write one can still make a GIF, and the chips say so.
 
 **Dropping a video on the audio tab extracts its soundtrack.** `decodeAudioData`
 reads an MP4's audio track directly, so the whole audio pipeline — trim,
@@ -236,6 +239,17 @@ disabled and why video shipped anyway:
   Those files now live in **`@unisim/media`** rather than in this repo — see
   "Where the pipeline lives" below.
 
+- **GIF didn't either, and this one was never going to.** No browser encodes GIF
+  — `canvas.toBlob('image/gif')` does not exist in any engine, and no engine
+  exposes an animation encoder of any kind — so unlike every other target here,
+  there was no platform encoder to reach for. It is the one format the app
+  writes from nothing: a median-cut palette over a 5-5-5 histogram of the whole
+  clip, nearest-colour lookup cached per bin, GIF's variable-width LZW, and
+  frame differencing with a transparent index so an unchanged background costs
+  nothing. All of it is [`gif.ts`](src/lib/gif.ts), about 600 lines, no
+  dependency. On a gradient-heavy test clip it lands within 0.3 dB PSNR of
+  ffmpeg's own `palettegen`/`paletteuse` at the same file size.
+
 **What the core would still buy**, honestly:
 
 - **MKV, AVI and WMV input.** Different containers entirely — the reader here is
@@ -243,7 +257,9 @@ disabled and why video shipped anyway:
   accepted and failed half way through. Fragmented MP4 is refused the same way.
 - **OGG (Vorbis) output**, superseded by Opus.
 - **Video in browsers with no WebCodecs H.264 encoder** — Firefox today. The tab
-  probes for one and says so plainly instead of failing at conversion time.
+  probes for one and says so plainly instead of failing at conversion time. Note
+  this costs the **MP4** target only: GIF needs the decoder, not the encoder, so
+  it stays available where the decoder is.
 
 **A WebCodecs trap worth knowing:** `AudioEncoder.isConfigSupported()` is not
 reliable for AAC. On Chrome 148/macOS it answers `supported: true` for every
@@ -300,7 +316,8 @@ npm run dev
 | `npm run dev` | Vite dev server |
 | `npm run build` | Typecheck + production build into `dist/` |
 | `npm run typecheck` | Types only |
-| `npm test` | Byte-level self-tests for every writer: WAV, AIFF, MP3, Ogg, MP4, ID3, ZIP |
+| `npm test` | Byte-level self-tests for every writer: WAV, AIFF, MP3, Ogg, MP4, GIF, ID3, ZIP |
+| `npm run test:video` | The video tab's GIF export, driven end to end in a real browser |
 
 `npm test` needs no browser and shells out to real third-party readers, because
 "our reader agrees with our writer" proves nothing: WAV header fields, sample
@@ -309,8 +326,18 @@ actually validates the 80-bit extended sample rate); a LAME-encoded MP3 through
 `afinfo` too; the Ogg page/lacing/CRC structure; the MP4 box tree (box order,
 the `stco` offset landing on the first frame's bytes, the sample tables, the
 priming edit list); ID3v2.3 tags (synchsafe sizes, UTF-16 text, round trip); the
-trim clock parser; the resize maths; the canonical CRC-32 check value; and a real ZIP through
-**`unzip -t`** and python's `zipfile`.
+trim clock parser; the resize maths; the canonical CRC-32 check value; a real ZIP through
+**`unzip -t`** and python's `zipfile`; and an animated GIF decoded by **ffmpeg**,
+where every pixel of every frame is compared to the palette colour our own index
+array claims — exactly right, not roughly, because that is the assertion that
+catches an LZW code width that grows one entry late or a difference rectangle
+off by a row.
+
+`npm run test:video` needs Playwright (borrowed from a sibling app) and ffmpeg,
+which builds the H.264 fixture and reads the resulting GIF back. Everything
+between a dropped MP4 and the encoder — WebCodecs, the canvas, the two decode
+passes, the `<a download>` — only exists in a browser, so that is where it is
+tested.
 
 **Opus, M4A and FLAC are checked in-browser** rather than by an external reader.
 Opus and M4A round-trip through `decodeAudioData` *and* an `<audio>` element
@@ -357,6 +384,7 @@ whole point of it is that the browser already has the codecs.
 | Audio | `OfflineAudioContext` — decode, trim, resample, re-channel, normalise — then WAV / AIFF writers, LAME for MP3, libFLAC for FLAC, or WebCodecs + our own Ogg / MP4 muxers for Opus and M4A |
 | Images | `createImageBitmap` + canvas — decode, downscale, re-encode |
 | Video | `@unisim/media`: `mp4read` → WebCodecs `VideoDecoder` → canvas scale → `VideoEncoder` → `mp4mux`; the audio track goes through the audio pipeline above and is muxed back alongside |
+| GIF | `src/lib/videogif.ts` — `mp4read` → `VideoDecoder` → canvas → **twice**: pass one builds one palette for the whole animation, pass two quantises and writes with `src/lib/gif.ts`. Two passes rather than holding the frames, which at 480×270 would be 78 MB of live pixels for ten seconds |
 | Tags | `src/lib/tags.ts` — reads ID3v2 / MP4 `ilst` / Vorbis comments, writes ID3v2.3 and Vorbis comments |
 | Batching | `src/lib/zip.ts` — a dependency-free STORED-entry ZIP writer for "Download all" |
 

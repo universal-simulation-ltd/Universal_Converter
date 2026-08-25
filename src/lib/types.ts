@@ -3,7 +3,7 @@
 // shape now have one definition shared with Universal Video rather than one per
 // app. They are re-exported from here so nothing else in this app had to change
 // its imports, and so `import … from '../lib/types'` still means what it did.
-import type { ConvertedFile, TrimSettings } from '@unisim/media'
+import type { ConvertedFile, TrimSettings, VideoFormat } from '@unisim/media'
 
 export type {
   ConvertedFile, TrimSettings, VideoSettings, VideoFormat, MaxHeight, VideoQuality,
@@ -19,6 +19,57 @@ export type MediaKind = 'audio' | 'image' | 'video' | 'document'
 
 export type AudioFormat = 'wav' | 'mp3' | 'aiff' | 'flac' | 'm4a' | 'ogg' | 'opus'
 export type ImageFormat = 'png' | 'jpeg' | 'webp' | 'avif'
+
+/**
+ * What the video tab can produce — the package's `VideoFormat` plus GIF.
+ *
+ * ⚠️ GIF is deliberately NOT added to `VideoFormat` in @unisim/media, and this
+ * is not squeamishness about publishing. `VideoSettings` is quality, audio
+ * bitrate and keep-audio, and NONE of the three mean anything to a GIF: it has
+ * no bitrate, no audio track and no concept of either. Widening the package's
+ * type would put a value into a struct where most of the surrounding fields are
+ * dead, and every consumer of the package would then have to know which ones.
+ * The GIF's own settings live below, beside the writer that reads them. If
+ * Universal Video ever wants GIF out, the encoder moves to the package then —
+ * with a settings type of its own, which is exactly what this is.
+ */
+export type VideoTarget = VideoFormat | 'gif'
+
+/** The longest edge of the GIF, or the source's own size. */
+export type GifEdge = 'source' | 240 | 320 | 480 | 640
+
+/**
+ * Frames per second. Capped at 25 because a GIF's delay is measured in
+ * hundredths of a second, so 30 fps cannot be expressed — it is 3.33
+ * hundredths, and the nearest legal value plays 10% slow.
+ */
+export type GifFps = 10 | 15 | 20 | 25
+
+export interface GifSettings {
+  maxEdge: GifEdge
+  fps: GifFps
+  /** Floyd–Steinberg. Smoother gradients, noticeably bigger file — see gif.ts. */
+  dither: boolean
+  /** Off plays the animation once and stops on the last frame. */
+  loop: boolean
+}
+
+/**
+ * 480 px and 15 fps, NOT the source's own size and rate.
+ *
+ * The only default in this app that does not mean "keep what you gave me", and
+ * on purpose: an untouched 1080p/30 clip makes a GIF of a few hundred megabytes
+ * that no chat window, README or email will accept. Every other tab can afford
+ * to default to fidelity because every other target compresses; this one has to
+ * default to something sendable, because a GIF nobody can send is not a
+ * conversion, it is a download that failed slowly.
+ */
+export const DEFAULT_GIF_SETTINGS: GifSettings = {
+  maxEdge: 480,
+  fps: 15,
+  dither: false,
+  loop: true,
+}
 
 // Which encoder backs a given target today.
 //  • 'built-in' — our own writer or the browser's own canvas/audio encoder. No
