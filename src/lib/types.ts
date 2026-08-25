@@ -97,6 +97,16 @@ export interface QueueItem {
   error: string | null
   result: ConvertedFile | null
   /**
+   * Bytes the conversion is expected to produce, before it runs — images only.
+   *
+   * Null means "not known", which covers a row still being sampled, a format
+   * this browser cannot write, and every non-image kind. Audio, video and
+   * documents have no equivalent: an MP3's size is its bitrate times its
+   * duration and is already implied by the panel, while a PDF's depends on
+   * work that IS the conversion. See `lib/estimate.ts`.
+   */
+  estimate: number | null
+  /**
    * What the conversion SUCCEEDED at doing but had to give up on the way —
    * a .doc's formatting, a document's headers and footers, an alphabet the
    * PDF's built-in fonts can't spell.

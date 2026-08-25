@@ -4,7 +4,8 @@ import { convertDocument, DEFAULT_DOC_SETTINGS, type DocSettings } from '../lib/
 import { saveBlob } from '../lib/download'
 import { extensionOf, formatDuration } from '../lib/humanise'
 import { acceptsOn, kindOf, unsupportedMessage } from '../lib/formats'
-import { convertImage, probeDimensions } from '../lib/image'
+import { convertImage } from '../lib/image'
+import { estimateImageBytes, sampleImage, type ImageSample } from '../lib/estimate'
 import { convertVideo } from '@unisim/media'
 import { probeDuration, probeVideo } from '../lib/probe'
 import { convertVideoToGif } from '../lib/videogif'
@@ -88,6 +89,120 @@ function newId(): string {
   return crypto.randomUUID()
 }
 
+/**
+ * Put the converted rows of one kind back in the queue, so changing a setting
+ * offers the conversion again instead of leaving a finished queue and a
+ * "Convert 0 files" button.
+ *
+ * ⚠️ The RESULT is dropped along with the status, and that is the point. A row
+ * that kept its old blob would sit there offering a Save button for a PNG while
+ * the panel says JPEG, with the old format's size printed beside it — the two
+ * most believable halves of a wrong answer. `notes` go too: they described the
+ * conversion that is no longer there.
+ *
+ * ⚠️ Rows that FAILED are left exactly as they are. `convertAll` already
+ * retries a failed row, so re-arming would only wipe the error message
+ * explaining why it failed — which the person needs in order to choose the
+ * setting that will work.
+ */
+/**
+ * Tiles cut from each queued image, keyed by row id — the input to every size
+ * estimate. Deliberately OUTSIDE the store: a canvas is not state anybody
+ * renders, and putting one in a zustand slice would re-render the whole queue
+ * every time a file finished being sampled.
+ *
+ * Cleared by `forgetSample` on remove and on clear, or the cache outlives the
+ * queue and holds a canvas per file that has been gone for an hour.
+ */
+const samples = new Map<string, ImageSample>()
+
+function forgetSample(id: string): void {
+  samples.delete(id)
+}
+
+/**
+ * Re-price every image row against the CURRENT settings.
+ *
+ * Cheap by construction: the expensive half — decoding the source — happened
+ * once when the file was added, and this only re-encodes a 224px tile. That is
+ * what makes it affordable to run on every quality nudge and format click.
+ */
+async function refreshEstimates(): Promise<void> {
+  const store = useConverterStore.getState()
+  const settings = store.image
+  for (const item of store.items) {
+    if (item.kind !== 'image') continue
+    const sample = samples.get(item.id)
+    if (!sample) continue
+    let estimate: number | null = null
+    try {
+      estimate = await estimateImageBytes(sample, settings)
+    } catch {
+      // An estimate is a courtesy — a browser that will not encode a tile is
+      // not a reason to paint the row red. It converts or it doesn't, and that
+      // is what the Convert button is for.
+      estimate = null
+    }
+    const live = useConverterStore.getState()
+    // The settings may have moved on while this awaited; a stale number is
+    // worse than none, so it is dropped rather than written.
+    if (live.image !== settings) return
+    useConverterStore.setState({
+      items: live.items.map((i) => (i.id === item.id ? { ...i, estimate } : i)),
+    })
+  }
+}
+
+/**
+ * Decode each new image once: it gives the row its dimensions AND leaves the
+ * tile every later estimate is priced from.
+ *
+ * ⚠️ SEQUENTIAL, unlike the audio and video probes above. Those read a header;
+ * this decodes whole pictures, and forty 12-megapixel photos decoded at once is
+ * forty full-size bitmaps live at the same moment — which is how a tab runs out
+ * of memory before it has converted anything.
+ *
+ * ⚠️ It also replaces `probeDimensions`, which asked an `<img>` for the size and
+ * therefore returned NOTHING for a HEIC — the one format no browser will load
+ * that way. HEIC rows had a blank where every other row had "4032 × 3024".
+ * Getting the dimensions from the decoder that already handles HEIC fixes that
+ * as a side effect of needing the pixels anyway.
+ */
+async function sampleAdded(items: QueueItem[]): Promise<void> {
+  for (const item of items) {
+    try {
+      const sample = await sampleImage(item.file)
+      // Dropped from the queue while it decoded — do not resurrect the row, and
+      // do not leave its tile in the cache.
+      if (!useConverterStore.getState().items.some((i) => i.id === item.id)) continue
+      samples.set(item.id, sample)
+      useConverterStore.setState({
+        items: useConverterStore.getState().items.map((i) =>
+          i.id === item.id ? { ...i, detail: `${sample.width} × ${sample.height}` } : i,
+        ),
+      })
+    } catch {
+      // A file that will not decode has no dimensions and no estimate. It is
+      // NOT marked failed here: the row is still queued, and the conversion is
+      // what gets to say so, with the decoder's own words.
+      continue
+    }
+    await refreshEstimates()
+  }
+}
+
+function rearmed(state: ConverterState, kind: MediaKind): QueueItem[] {
+  // A run holds the panel read-only, so this should be unreachable mid-pass —
+  // but a settings write landing during a conversion would reset the very row
+  // being written to, so it is guarded rather than assumed.
+  if (state.running) return state.items
+  return state.items.map((i) =>
+    i.kind === kind && i.status === 'done'
+      ? { ...i, status: 'queued' as const, progress: 0, result: null, notes: [] }
+      : i,
+  )
+}
+
 export const useConverterStore = create<ConverterState>((set, get) => ({
   // The front door, not a converter: somebody arriving does not yet know
   // which of the four they need, and this tab is the one that answers that.
@@ -120,6 +235,7 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
         detail: null,
         error: supported ? null : unsupportedMessage(ext, kind),
         result: null,
+        estimate: null,
         notes: [],
       }
     })
@@ -135,16 +251,17 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
       // the file size, is ALREADY the first thing on the row: putting it in
       // `detail` too printed it twice ("3 KB · 3 KB · → 10 KB").
       if (item.kind === 'document') continue
+      if (item.kind === 'image') continue // sampled below, in one sequential pass
       const probe =
         item.kind === 'audio'
           ? probeDuration(item.file).then((s) => (s == null ? null : formatDuration(s)))
-          : item.kind === 'video'
-            ? probeVideo(item.file)
-            : probeDimensions(item.file)
+          : probeVideo(item.file)
       void probe.then((detail) => {
         set({ items: get().items.map((i) => (i.id === item.id ? { ...i, detail } : i)) })
       })
     }
+
+    void sampleAdded(added.filter((i) => i.kind === 'image' && i.status === 'queued'))
   },
 
   addSorted: (files) => {
@@ -169,32 +286,53 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
     }
   },
 
-  removeItem: (id) => set({ items: get().items.filter((i) => i.id !== id) }),
+  removeItem: (id) => {
+    forgetSample(id)
+    set({ items: get().items.filter((i) => i.id !== id) })
+  },
 
-  clearQueue: (kind) =>
-    set({ items: kind ? get().items.filter((i) => i.kind !== kind) : [] }),
+  clearQueue: (kind) => {
+    for (const i of get().items) if (!kind || i.kind === kind) forgetSample(i.id)
+    set({ items: kind ? get().items.filter((i) => i.kind !== kind) : [] })
+  },
 
-  updateAudio: (patch) => set({ audio: { ...get().audio, ...patch } }),
+  updateAudio: (patch) => {
+    set({ audio: { ...get().audio, ...patch }, items: rearmed(get(), 'audio') })
+  },
 
-  updateImage: (patch) => set({ image: { ...get().image, ...patch } }),
+  updateImage: (patch) => {
+    set({ image: { ...get().image, ...patch }, items: rearmed(get(), 'image') })
+    void refreshEstimates()
+  },
 
-  updateVideo: (patch) => set({ video: { ...get().video, ...patch } }),
+  updateVideo: (patch) => {
+    set({ video: { ...get().video, ...patch }, items: rearmed(get(), 'video') })
+  },
 
-  setVideoTarget: (videoTarget) => set({ videoTarget }),
+  setVideoTarget: (videoTarget) => set({ videoTarget, items: rearmed(get(), 'video') }),
 
-  updateGif: (patch) => set({ gif: { ...get().gif, ...patch } }),
+  updateGif: (patch) => {
+    set({ gif: { ...get().gif, ...patch }, items: rearmed(get(), 'video') })
+  },
 
-  updateDocument: (patch) => set({ document: { ...get().document, ...patch } }),
+  updateDocument: (patch) => {
+    set({ document: { ...get().document, ...patch }, items: rearmed(get(), 'document') })
+  },
 
-  resetSettings: () =>
+  resetSettings: () => {
+    let items = get().items
+    for (const kind of KINDS) items = rearmed({ ...get(), items }, kind)
     set({
+      items,
       audio: DEFAULT_AUDIO_SETTINGS,
       image: DEFAULT_IMAGE_SETTINGS,
       video: DEFAULT_VIDEO_SETTINGS,
       videoTarget: 'mp4',
       gif: DEFAULT_GIF_SETTINGS,
       document: DEFAULT_DOC_SETTINGS,
-    }),
+    })
+    void refreshEstimates()
+  },
 
   convertAll: async (kind) => {
     if (get().running) return

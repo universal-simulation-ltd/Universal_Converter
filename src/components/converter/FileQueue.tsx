@@ -72,6 +72,18 @@ function Row({
       ? Math.round((1 - item.result.blob.size / item.file.size) * 100)
       : null
 
+  // Before it is converted, the size it is HEADING for — see lib/estimate.ts.
+  // ⚠️ Only while there is no result: once the real number exists it replaces
+  // the guess, rather than sitting beside it inviting a comparison of the
+  // estimator against itself.
+  const estimate = !item.result && !skipped && !failed ? item.estimate : null
+  // The multiple is the whole reason this is here. "1.3 MB · ≈ 15.2 MB" already
+  // says it if you read both numbers and divide; "12× bigger" says it if you
+  // read neither. A 1 MB HEIC quietly becoming a 15 MB PNG is the case that
+  // asked for this, so the growth is spelled out and the shrink is not — going
+  // smaller is what a converter is expected to do.
+  const growth = estimate != null && item.file.size > 0 ? estimate / item.file.size : null
+
   return (
     <li
       className={`grid grid-cols-[26px_minmax(0,1fr)_112px_72px_136px] items-center gap-3 border-t border-slate-200 px-4 py-3 max-sm:grid-cols-[26px_minmax(0,1fr)_128px] ${
@@ -95,6 +107,8 @@ function Row({
               formatBytes(item.file.size),
               item.detail,
               item.result ? `→ ${formatBytes(item.result.blob.size)}` : null,
+              estimate != null ? `≈ ${formatBytes(estimate)}` : null,
+              growth != null && growth >= 1.5 ? `${growth < 10 ? growth.toFixed(1) : Math.round(growth)}× bigger` : null,
               savedPct != null && savedPct > 0 ? `${savedPct}% smaller` : null,
               large ? 'large file — may run out of memory' : null,
             ]

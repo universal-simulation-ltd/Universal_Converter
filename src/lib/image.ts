@@ -18,7 +18,7 @@ export async function convertImage(
     throw new Error(`This browser can’t write ${meta.label} — try WebP, JPEG or PNG`)
   }
 
-  const bitmap = await decode(file)
+  const bitmap = await decodeImage(file)
   onProgress(0.4)
 
   try {
@@ -107,7 +107,11 @@ async function heicToBitmap(file: File): Promise<ImageBitmap> {
 // createImageBitmap covers PNG/JPEG/WebP/GIF/AVIF wherever the browser can
 // decode them at all. SVG is the exception in some engines, so it falls back to
 // an <img> element, which always rasterises at the SVG's intrinsic size.
-async function decode(file: File): Promise<ImageBitmap> {
+//
+// Exported because `estimate.ts` needs the SAME decoder this file converts
+// with, HEIC branch and all — a size estimate produced by a second, weaker
+// decode path would be an estimate of a different picture.
+export async function decodeImage(file: File): Promise<ImageBitmap> {
   // Before the try, not inside its catch: on Safari `createImageBitmap` would
   // succeed on a HEIC and never reach a fallback, so the two engines would take
   // different paths and only one of them would be the tested one.
@@ -132,24 +136,4 @@ async function decode(file: File): Promise<ImageBitmap> {
       URL.revokeObjectURL(url)
     }
   }
-}
-
-/** "1920 × 1080" for the queue row, read without decoding the whole file. */
-export function probeDimensions(file: File): Promise<string | null> {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file)
-    const img = new Image()
-    let settled = false
-    const finish = (value: string | null) => {
-      if (settled) return
-      settled = true
-      clearTimeout(timer)
-      URL.revokeObjectURL(url)
-      resolve(value)
-    }
-    const timer = setTimeout(() => finish(null), 5000)
-    img.onload = () => finish(`${img.naturalWidth} × ${img.naturalHeight}`)
-    img.onerror = () => finish(null)
-    img.src = url
-  })
 }

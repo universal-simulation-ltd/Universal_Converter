@@ -317,6 +317,14 @@ console.log('\n── A HEIC decodes ──────────────�
   // first decoder shipped here, `heic2any`, passed this check and failed EVERY
   // photo off an actual phone. **This proves the wiring, not the format.** The
   // format is only ever proved by a file a phone wrote.
+  // A HEIC row used to show a blank where every other row shows its size:
+  // `probeDimensions` asked an <img> for it, and an <img> cannot load a HEIC.
+  // The sampler decodes properly, so the dimensions come free with the estimate.
+  await fileInput().setInputFiles(path.join(TMP, 'sample.heic'))
+  check('a HEIC row shows its dimensions',
+    await page.getByText('32 × 32').first().waitFor({ timeout: 20000 }).then(() => true).catch(() => false))
+  await page.getByRole('button', { name: /Remove / }).first().click()
+
   const got = await convertOne('sample.heic')
   check('HEIC → PNG is named .png',
     got.length === 1 && got[0].suggestedFilename() === 'sample.png',
@@ -334,6 +342,49 @@ console.log('\n── A HEIC decodes ──────────────�
       bytes.readUInt32BE(16) === 32 && bytes.readUInt32BE(20) === 32,
       `${bytes.readUInt32BE(16)}×${bytes.readUInt32BE(20)}`)
   }
+}
+
+console.log('\n── An estimate first, and another go at it ─────────')
+{
+  // Two promises the panel makes before anything is converted, and one it
+  // makes after. The estimate is `lib/estimate.ts`; the re-arm is what stops a
+  // finished queue sitting behind a dead "Convert 0 files" button.
+  await chip('PNG').click()
+  await fileInput().setInputFiles(path.join(TMP, 'sample.png'))
+  const estimated = await page.getByText(/≈ /).first()
+    .waitFor({ timeout: 15000 }).then(() => true).catch(() => false)
+  check('a size estimate appears before anything is converted', estimated)
+
+  await page.getByRole('button', { name: /Convert and save 1 file/ }).click()
+  await page.getByText('Done', { exact: true }).first().waitFor({ timeout: 30000 })
+  await page.waitForTimeout(1200)
+  // ⚠️ The guess must GO, not sit beside the real number. Two sizes on one row
+  // is an invitation to compare the estimator against itself.
+  check('the estimate gives way to the real size once there is one',
+    !(await page.getByText(/≈ /).first().isVisible().catch(() => false)))
+
+  // The ask itself: clicking another format offers the conversion again.
+  await chip('JPEG').click()
+  const rearmed = await page.getByRole('button', { name: /Convert and save 1 file/ })
+    .waitFor({ timeout: 8000 }).then(() => true).catch(() => false)
+  check('picking another format puts the finished row back in the queue', rearmed)
+  check('and the row is priced for the NEW format before it runs',
+    await page.getByText(/≈ /).first().isVisible().catch(() => false))
+  // The old PNG must not still be downloadable: it is not what the panel says.
+  check('the stale result is dropped with the status',
+    !(await page.getByRole('button', { name: 'Save', exact: true }).first().isVisible().catch(() => false)))
+
+  const before = downloads.length
+  await page.getByRole('button', { name: /Convert and save 1 file/ }).click()
+  await page.getByText('Done', { exact: true }).first().waitFor({ timeout: 30000 })
+  await page.waitForTimeout(1500)
+  const again = downloads.slice(before)
+  check('the second pass really produces the second format',
+    again.length === 1 && again[0].suggestedFilename() === 'sample.jpg',
+    again.map((d) => d.suggestedFilename()).join(', '))
+
+  await page.getByRole('button', { name: /Remove / }).first().click()
+  await chip('PNG').click()
 }
 
 console.log('\n── Two files do NOT save themselves ─────────────────────────')
