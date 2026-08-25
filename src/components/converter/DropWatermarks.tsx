@@ -70,16 +70,17 @@ export function ConvertWatermark() {
 }
 
 /**
- * The generic: a document, a picture and a plain file dropping into a tray.
+ * The generic: a document, a picture and a plain file, above the ring's centre.
  *
  * This is the fallback drawing — what a ring wears when the app behind it takes
  * anything, or has nothing more specific to say. The three shapes are what the
- * suite actually deals in, and the tray is the thing you are aiming at.
+ * suite actually deals in; the thing you are aiming at is the ring itself, so
+ * the backdrop stays out of the way of the copy in the middle of it.
  */
 export function AnyFileWatermark() {
   return (
     <svg viewBox="0 0 120 120" className="h-full w-full" aria-hidden="true" focusable="false">
-      <style>{css('gw', [['gw-doc', 0], ['gw-pic', 500], ['gw-file', 1000], ['gw-tray', 1900]])}</style>
+      <style>{css('gw', [['gw-doc', 0], ['gw-pic', 500], ['gw-file', 1000]])}</style>
       <g fill="none" strokeLinecap="round" strokeLinejoin="round">
         {/* Three kinds of thing, sitting above the tray. Different shapes, not
             three copies of one icon — the point is that it takes anything.
@@ -96,10 +97,14 @@ export function AnyFileWatermark() {
         <circle className="gw-pic" pathLength={100} cx="55" cy="17" r="2.4" stroke={INK} strokeWidth="1.4" />
         <path className="gw-file" pathLength={100} d="M101 10 H89 a2.5 2.5 0 0 0-2.5 2.5 v18 a2.5 2.5 0 0 0 2.5 2.5 h16 a2.5 2.5 0 0 0 2.5-2.5 V16.5 Z M101 10 v6.5 h6.5" stroke={INK} strokeWidth="1.5" />
 
-        {/* The tray, open at the top because things go INTO it. It carries the
-            accent instead of an arrow: the first draft's arrow ran the length
-            of the circle and straight through the headline. */}
-        <path className="gw-tray" pathLength={100} d="M20 86 v12 a5 5 0 0 0 5 5 h70 a5 5 0 0 0 5-5 V86" stroke={ACCENT} strokeWidth="2.2" />
+        {/* ⚠️ NO TRAY along the bottom, and don't put one back. An orange
+            open-topped tray used to sit at y=86–103 to carry the accent, and on
+            the All tab it landed exactly where the centre stack's fourth line
+            ("or click to browse") already is — a stroke half-hidden behind
+            text, which reads as a box the circle has cut off rather than as a
+            drawing. This backdrop only ever gets the BAND ABOVE the centre
+            glyph; the accent is the ring's own pills, which are orange already
+            and are the thing being aimed at. */}
       </g>
     </svg>
   )

@@ -81,7 +81,12 @@ export default defineConfig(({ mode }) => {
           // The FLAC glue is ~110 KB and only matters to people converting to
           // FLAC, so it stays out of the install-time precache alongside its
           // wasm and is runtime-cached on first use instead.
-          globIgnores: ['**/*.wasm', 'flac/*.js'],
+          // ⚠️ The HEIC decoder is the same bargain and the biggest single
+          // chunk in the build (~1.35 MB, 341 KB gzipped) — precaching it would
+          // hand that download to every visitor at install time and undo the
+          // dynamic import in `image.ts`, which exists precisely so that people
+          // who never drop an iPhone photo never pay for it.
+          globIgnores: ['**/*.wasm', 'flac/*.js', '**/heic2any-*.js'],
           runtimeCaching: [
             {
               // libflacjs — cached after the first FLAC conversion, so it works
@@ -91,6 +96,17 @@ export default defineConfig(({ mode }) => {
               options: {
                 cacheName: 'libflac',
                 expiration: { maxEntries: 4, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              // The HEIC decoder — cached after the first iPhone photo, so
+              // HEIC input works offline from then on.
+              urlPattern: /\/assets\/heic2any-.*\.js$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'heic2any',
+                expiration: { maxEntries: 2, maxAgeSeconds: 60 * 60 * 24 * 30 },
                 cacheableResponse: { statuses: [0, 200] },
               },
             },

@@ -87,7 +87,12 @@ export function imageFormatMeta(id: ImageFormat): FormatMeta<ImageFormat> {
 // with a message naming a format that does work, rather than failing halfway
 // through a conversion.
 export const AUDIO_INPUT_EXTS = ['wav', 'mp3', 'm4a', 'mp4', 'aac', 'flac', 'ogg', 'oga', 'opus', 'aif', 'aiff', 'webm', 'weba', 'caf']
-export const IMAGE_INPUT_EXTS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif', 'ico', 'svg']
+// ⚠️ HEIC/HEIF is the one image input NO browser engine outside Safari will
+// decode — `createImageBitmap` and <img> both refuse it — so it is only in
+// this list because `image.ts` dynamic-imports a decoder when it meets one.
+// Listing a format nothing can read queues the file and fails it a second
+// later, which is the exact outcome this list exists to prevent.
+export const IMAGE_INPUT_EXTS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif', 'ico', 'svg', 'heic', 'heif']
 
 // Documents. The list lives in `doc/index.ts` beside the reader that opens each
 // one, so a new format is added in one place rather than two.
@@ -101,7 +106,10 @@ export const DOCUMENT_INPUT_EXTS: readonly string[] = DOC_INPUT_EXTS
 export const VIDEO_INPUT_EXTS = ['mp4', 'm4v', 'mov', 'qt']
 
 export const AUDIO_ACCEPT = 'audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus,.aif,.aiff,.webm,.caf,.mp4,.mov'
-export const IMAGE_ACCEPT = 'image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.avif,.svg'
+// `.heic`/`.heif` spelled out even though `image/*` is here: a photo straight
+// off an iPhone often arrives with an EMPTY MIME type on Windows, and the
+// wildcard alone then greys it out in the file picker.
+export const IMAGE_ACCEPT = 'image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.avif,.svg,.heic,.heif'
 export const VIDEO_ACCEPT = 'video/mp4,video/quicktime,.mp4,.m4v,.mov'
 // Extensions only, no `application/*` wildcard: the browser's own MIME guesses
 // for documents are unreliable (a .md is `text/markdown` on one machine and
@@ -162,7 +170,7 @@ export function acceptsOn(ext: string, kind: MediaKind): boolean {
 /** The message shown on a row we refuse to queue. Names a way forward. */
 export function unsupportedMessage(ext: string, kind: MediaKind): string {
   const named = ext ? ext.toUpperCase() : 'That file type'
-  if (kind === 'image') return `${named} isn’t supported yet — try PNG, JPEG, WebP, GIF or AVIF`
+  if (kind === 'image') return `${named} isn’t supported yet — try PNG, JPEG, HEIC, WebP, GIF or AVIF`
   if (kind === 'video') {
     return ext === 'mkv' || ext === 'avi' || ext === 'wmv' || ext === 'flv'
       ? `${named} is a container this converter can’t take apart — re-wrap it as MP4 or MOV first`

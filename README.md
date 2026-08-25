@@ -68,17 +68,17 @@ dependency and in the same spirit as this app's own ZIP and Ogg writers.
 | | **FLAC** | libFLAC compiled to wasm ([`libflacjs`](https://www.npmjs.com/package/libflacjs), MIT), fetched on first use |
 | | **WAV**, **AIFF** | Our own 16-bit PCM writers ([`wav.ts`](src/lib/wav.ts), [`aiff.ts`](src/lib/aiff.ts)) |
 | | OGG (Vorbis) | **Disabled** — needs the ffmpeg core (below) |
-| **Images** | **WebP**, **JPEG**, **PNG**, **AVIF** | The browser's own canvas encoder — convert, re-quality and resize |
+| **Images** | **WebP**, **JPEG**, **PNG**, **AVIF** | The browser's own canvas encoder — convert, re-quality and resize. **HEIC/HEIF in** (an iPhone photo → PNG or JPEG) is the one exception to "no decoder ships with this app": nothing outside Safari reads HEIC, so [`heic2any`](https://www.npmjs.com/package/heic2any) is dynamically imported the first time one is dropped, and never otherwise |
 | **Video** | **MP4** (H.264 + AAC) | The browser's own WebCodecs `VideoEncoder`, between a demuxer and a muxer we write — trim, scale and compress. Lives in [`@unisim/media`](https://www.npmjs.com/package/@unisim/media) now, shared with [Universal Video](https://opensource.unisim.co.uk/video) |
 | | **GIF** (animated) | Ours entirely ([`gif.ts`](src/lib/gif.ts)) — median-cut palette, LZW, frame differencing. The **only** target here the browser cannot encode: there is no `toBlob('image/gif')` in any engine, and no animation encoder at all |
 | **Files** | **PDF** with selectable text, real pagination and working links | Our own readers and our own text-flow PDF writer — no dependency. See [The Files tab](#the-files-tab) |
 | | **Text**, **HTML**, **Markdown** | The same document model, rendered a different way |
 | | **CSV**, **JSON** | Only from a file that already has rows — see the note below |
 
-Input is anything the browser can decode: MP3, M4A/AAC, FLAC, OGG, Opus, WAV,
-AIFF, WebM for audio; PNG, JPEG, WebP, GIF, BMP, AVIF, SVG for images; MP4, M4V
-and MOV for video; DOCX, DOC, ODT, RTF, TXT, MD, HTML, CSV and JSON for
-documents. All four tabs share one queue, one settings vocabulary and one privacy
+Input is anything the browser can decode, plus HEIC: MP3, M4A/AAC, FLAC, OGG,
+Opus, WAV, AIFF, WebM for audio; PNG, JPEG, HEIC/HEIF, WebP, GIF, BMP, AVIF, SVG
+for images; MP4, M4V and MOV for video; DOCX, DOC, ODT, RTF, TXT, MD, HTML, CSV
+and JSON for documents. All four tabs share one queue, one settings vocabulary and one privacy
 story; AVIF and H.264 are probed at runtime because support for them varies by
 browser — and the video tab probes the H.264 **encoder** and **decoder**
 separately, because a GIF needs only the decoder. A browser that can read an MP4

@@ -181,6 +181,10 @@ for (const name of ['sample.png', 'my.photo.v2.png', 'second.png', 'SHOUTY.PNG']
   fs.writeFileSync(path.join(TMP, name), png)
 }
 fs.writeFileSync(path.join(TMP, 'logo.svg'), SVG)
+// The one fixture that cannot be written here. A HEIC is an HEVC still in an
+// ISO container — there is no dozen-line encoder for it the way there is for a
+// PNG — so 598 real bytes sit committed beside this file instead.
+fs.copyFileSync(path.join(HERE, 'fixtures', 'sample.heic'), path.join(TMP, 'sample.heic'))
 
 // ── Drive it ─────────────────────────────────────────────────────────────────
 
@@ -245,7 +249,7 @@ console.log('\n── The empty state is the ring, and it is clickable ───
   ]).then(([c]) => c).catch(() => null)
   check('clicking the ring opens the file browser', chooser !== null)
   check('the format list sits under the ring, spelled out',
-    await page.getByText('PNG, JPEG, WebP, GIF, BMP, AVIF and SVG').isVisible())
+    await page.getByText('PNG, JPEG, HEIC, WebP, GIF, BMP, AVIF and SVG').isVisible())
 }
 
 console.log('\n── One file converts and saves itself ───────────────────────')
@@ -296,6 +300,32 @@ console.log('\n── A different target, and a different source ─────
   check('SVG → PNG is named .png',
     svg.length === 1 && svg[0].suggestedFilename() === 'logo.png',
     svg.map((d) => d.suggestedFilename()).join(', '))
+}
+
+console.log('\n── An iPhone photo ──────────────────────────')
+{
+  // The only input in the app that Chromium cannot decode AT ALL —
+  // `createImageBitmap` and <img> both refuse a HEIC — so this is the one case
+  // that proves the bundled decoder rather than the browser's. Without it, a
+  // regression in the dynamic import shows up as a photo quietly queued as
+  // "unsupported", which no other assertion here would notice.
+  const got = await convertOne('sample.heic')
+  check('HEIC → PNG is named .png',
+    got.length === 1 && got[0].suggestedFilename() === 'sample.png',
+    got.map((d) => d.suggestedFilename()).join(', '))
+  if (got.length === 1) {
+    const saved = path.join(TMP, '.out-heic.png')
+    await got[0].saveAs(saved)
+    const bytes = fs.readFileSync(saved)
+    check('the saved file really is a PNG',
+      bytes.subarray(1, 4).toString('latin1') === 'PNG', bytes.subarray(0, 8).toString('hex'))
+    // ⚠️ The dimensions, not just the magic bytes. A decoder that hands back an
+    // empty bitmap still encodes to a perfectly valid PNG — of nothing — and
+    // the IHDR is the cheapest place to catch that. The fixture is 32×32.
+    check('the picture inside it is the 32×32 the fixture holds',
+      bytes.readUInt32BE(16) === 32 && bytes.readUInt32BE(20) === 32,
+      `${bytes.readUInt32BE(16)}×${bytes.readUInt32BE(20)}`)
+  }
 }
 
 console.log('\n── Two files do NOT save themselves ─────────────────────────')

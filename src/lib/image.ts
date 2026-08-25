@@ -52,10 +52,57 @@ export async function convertImage(
   }
 }
 
+const HEIC_EXT_RE = /\.(heic|heif)$/i
+const HEIC_MIME = new Set(['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'])
+
+/**
+ * Is this the thing an iPhone hands you?
+ *
+ * ⚠️ The extension test is not belt-and-braces, it is the one that fires. A
+ * `.heic` copied off a phone routinely arrives with `file.type === ''` on
+ * Windows, because the OS has no MIME registered for it — so a MIME-only test
+ * sends the photo down the ordinary path and it fails to decode.
+ */
+function isHeic(file: File): boolean {
+  return HEIC_MIME.has(file.type.toLowerCase()) || HEIC_EXT_RE.test(file.name)
+}
+
+/**
+ * HEIC/HEIF → JPEG, so the rest of this file can treat an iPhone photo as any
+ * other raster.
+ *
+ * This is the ONLY input in the app that needs a decoder shipped with it:
+ * Safari reads HEIC natively, and no other engine will touch it at all —
+ * `createImageBitmap` and <img> both simply fail. The decoder is ~150kB of
+ * wasm-ish JS, so it is dynamic-imported on first HEIC and never costs anyone
+ * who does not drop one. Universal Images made the same call with the same
+ * library; keep them on the same one.
+ *
+ * Quality 0.92 because this is an intermediate: the JPEG produced here is
+ * immediately re-encoded to whatever was actually asked for, and a lower number
+ * would put generation loss in front of a PNG target that has none of its own.
+ */
+async function heicToJpeg(file: File): Promise<Blob> {
+  const { default: heic2any } = await import('heic2any')
+  try {
+    const out = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 })
+    // A Live Photo / burst is a SEQUENCE and comes back as an array of frames.
+    // The first one is the still everybody means by "the photo".
+    return Array.isArray(out) ? out[0]! : out
+  } catch {
+    throw new Error('This HEIC couldn’t be decoded — if it came off an iPhone, try sharing it as “Most Compatible”')
+  }
+}
+
 // createImageBitmap covers PNG/JPEG/WebP/GIF/AVIF wherever the browser can
 // decode them at all. SVG is the exception in some engines, so it falls back to
 // an <img> element, which always rasterises at the SVG's intrinsic size.
 async function decode(file: File): Promise<ImageBitmap> {
+  // Before the try, not inside its catch: on Safari `createImageBitmap` would
+  // succeed on a HEIC and never reach a fallback, so the two engines would take
+  // different paths and only one of them would be the tested one.
+  if (isHeic(file)) return await createImageBitmap(await heicToJpeg(file))
+
   try {
     return await createImageBitmap(file)
   } catch {

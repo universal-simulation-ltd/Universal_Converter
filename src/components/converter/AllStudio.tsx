@@ -263,7 +263,7 @@ function Capability({ label, body }: { label: string; body: string }) {
  * synonym nobody types, and `.jpeg`/`.oga`/`.weba` likewise.
  */
 function list(exts: readonly string[], also: readonly string[] = []): string {
-  const skip = new Set(['jpeg', 'qt', 'oga', 'weba', ...also])
+  const skip = new Set(['jpeg', 'qt', 'oga', 'weba', 'heif', ...also])
   return exts.filter((e) => !skip.has(e)).map((e) => e.toUpperCase()).join(', ')
 }
 

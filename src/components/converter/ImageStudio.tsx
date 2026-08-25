@@ -30,7 +30,7 @@ export default function ImageStudio() {
       accept={IMAGE_ACCEPT}
       emptyTitle="Drop images here"
       moreTitle="Drop more images here"
-      formatsLine="PNG, JPEG, WebP, GIF, BMP, AVIF and SVG"
+      formatsLine="PNG, JPEG, HEIC, WebP, GIF, BMP, AVIF and SVG"
       engineBadge="on-device encoder · works offline"
       targetExt={target.ext}
       panel={
