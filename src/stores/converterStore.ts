@@ -22,7 +22,7 @@ import {
   type VideoSettings,
   type VideoTarget,
 } from '../lib/types'
-import { createZip } from '../lib/zip'
+import { createZip } from '@unisim/media'
 
 /**
  * Which tab is showing. NOT `MediaKind`, on purpose: `MediaKind` is also the
