@@ -25,6 +25,106 @@ body {
 }
 .row-settle { animation: row-settle 420ms cubic-bezier(0.22, 1, 0.36, 1); }
 
+/* ---------- Landing illustration ---------- */
+
+/* Every part is a window on the single `--t` that ConverterIllustration.tsx
+   writes — the same shape Universal PDF's, Universal Images' and Universal
+   Compress's landing illustrations use, so the four read as one family. A rule
+   only has to name its window; `--p` (clamped progress) and `--e` (the same,
+   smoothstepped, so each part eases on its own) fall out of the rule below. */
+
+.cnv-illu {
+  --t: 0;
+}
+
+/* Defaults for every part. The universal selector is scoped to the
+   illustration — about thirty nodes. */
+.cnv-illu * {
+  --from: 0;
+  --span: 1;
+  --p: clamp(0, (var(--t) - var(--from)) / var(--span), 1);
+  --e: calc(var(--p) * var(--p) * (3 - 2 * var(--p)));
+}
+
+/* The file you brought, sliding aside. 135 is exactly how far its centre (115)
+   sits from the middle of the frame, so frame 0 is one file dead centre. */
+.cnv-illu .cnv-source {
+  transform: translateX(calc(135px * (1 - var(--e))));
+  --from: 0.02;
+  --span: 0.22;
+}
+
+/* The arc draws itself across the gap. pathLength={100} in the component, so
+   this is a percentage and survives the curve being nudged. */
+.cnv-illu .cnv-arc {
+  stroke-dasharray: 100;
+  stroke-dashoffset: calc(100 * (1 - var(--e)));
+  --from: 0.22;
+  --span: 0.20;
+}
+
+/* The head lands as the arc finishes. The rotation is FIXED and the scale is
+   what animates — the angle is the arc's own tangent where it ends, so it is
+   geometry, not motion.
+   ⚠️ If the curve in the component moves, this angle moves with it. */
+.cnv-illu .cnv-head {
+  transform: rotate(-24deg) scale(var(--e));
+  --from: 0.38;
+  --span: 0.10;
+}
+
+/* The result arrives — not from nothing, but nearly: 0.72 → 1 rather than
+   0 → 1, so it grows into place instead of springing out of a point. */
+.cnv-illu .cnv-target {
+  opacity: var(--e);
+  transform: scale(calc(0.72 + 0.28 * var(--e)));
+  --from: 0.34;
+  --span: 0.18;
+}
+
+/* Its format badge is the payoff of the whole picture, so it stamps rather
+   than fading with the card. */
+.cnv-illu .cnv-chip {
+  transform: scale(var(--e));
+  --from: 0.46;
+  --span: 0.12;
+}
+
+/* The page setting itself, line by line, each growing from its left edge. */
+.cnv-illu .cnv-line {
+  transform: scaleX(var(--e));
+  --span: 0.08;
+}
+.cnv-illu .cnv-line-1 { --from: 0.50; }
+.cnv-illu .cnv-line-2 { --from: 0.54; }
+.cnv-illu .cnv-line-3 { --from: 0.58; }
+.cnv-illu .cnv-line-4 { --from: 0.62; }
+
+/* The other three tabs, listed under the pair above. They rise a little as they
+   arrive so the row reads as one gesture rather than three fades. */
+.cnv-illu .cnv-pill {
+  opacity: var(--e);
+  transform: translateY(calc(16px * (1 - var(--e))));
+  --span: 0.12;
+}
+.cnv-illu .cnv-pill-1 { --from: 0.64; }
+.cnv-illu .cnv-pill-2 { --from: 0.70; }
+.cnv-illu .cnv-pill-3 { --from: 0.76; }
+
+/* The tick stamps last, and the sweep holds on it before turning back. */
+.cnv-illu .cnv-tick {
+  transform: scale(var(--e));
+  opacity: var(--e);
+  --from: 0.82;
+  --span: 0.14;
+}
+
+/* Reduced motion is handled in ConverterIllustration.tsx, which parks `--t` at
+   1 and never starts the loop — the finished frame, not a slower version of it.
+   ⚠️ The blanket rule below zeroes TRANSITION durations, which is why nothing
+   here is a transition: this whole illustration is one custom property written
+   from rAF, and it has to keep working when that rule applies. */
+
 @media (prefers-reduced-motion: reduce) {
   .row-settle { animation: none; }
   * { transition-duration: 0.01ms !important; }

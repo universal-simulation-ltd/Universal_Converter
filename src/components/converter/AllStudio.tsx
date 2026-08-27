@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
 import { CONTAINER } from '../../lib/layout'
-import {
-  ALL_ACCEPT, AUDIO_INPUT_EXTS, DOCUMENT_INPUT_EXTS, IMAGE_INPUT_EXTS, VIDEO_INPUT_EXTS,
-} from '../../lib/formats'
+import { ALL_ACCEPT } from '../../lib/formats'
 import { KINDS, useConverterStore } from '../../stores/converterStore'
 import type { MediaKind } from '../../lib/types'
 import { AnyFileWatermark } from './DropWatermarks'
+import LandingPage from '../Landing/LandingPage'
 
 /**
  * The All tab — the front door.
@@ -28,6 +27,15 @@ import { AnyFileWatermark } from './DropWatermarks'
  * still landing is how you lose track of what you just dropped. The right-hand
  * column reports what went where and offers the tabs; where the answer IS
  * unambiguous (everything landed on one tab) that tab's button is the primary.
+ *
+ * WITH NOTHING QUEUED IT IS THE LANDING PAGE — illustration on the left,
+ * headline and drop circle on the right, the same shape Universal PDF and
+ * Universal Images open on. This layout stays as the WORKING screen, which is
+ * what it was always right for; what it was wrong for was being a first
+ * impression, where half the page was a card listing every accepted extension
+ * to somebody who had not yet found the circle. The sorter, the counts and the
+ * rejection list stay here and are handed down, so a file dropped on the
+ * landing page goes through exactly the same code path as one dropped here.
  */
 export default function AllStudio() {
   const addSorted = useConverterStore((s) => s.addSorted)
@@ -51,6 +59,14 @@ export default function AllStudio() {
   const total = KINDS.reduce((sum, kind) => sum + waiting[kind], 0)
   const tabsUsed = KINDS.filter((k) => waiting[k] > 0)
 
+  // `rejected` is deliberately still ours: a drop where NOTHING is convertible
+  // leaves `total` at 0, so the landing page is what has to report it, and a
+  // drop where only some files are turned away lands on the layout below. One
+  // piece of state, read by whichever screen is up.
+  if (total === 0) {
+    return <LandingPage onFiles={(files) => setRejected(addSorted(files).rejected)} rejected={rejected} />
+  }
+
   return (
     <div className={`${CONTAINER} flex flex-col gap-4 py-5`}>
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)]">
@@ -60,11 +76,13 @@ export default function AllStudio() {
             className="relative w-full max-w-[300px] cursor-pointer rounded-full transition-transform focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-600"
             style={drop.over ? { transform: 'scale(1.02)' } : undefined}
           >
-            {/* Never `busy`: nothing converts on this tab. The ring twinkles
-                while it is waiting and goes still once it has something, which
-                is the honest pair of states for a sorting office. */}
-            <DropRing size="100%" over={drop.over} motion={total === 0 ? 'idle' : 'still'} watermark={<AnyFileWatermark />}>
-              {total === 0 ? <EmptyCentre over={drop.over} /> : <SortedCentre waiting={waiting} total={total} />}
+            {/* Always `still`, and never `busy`: nothing converts on this tab,
+                and the twinkling `idle` ring belongs to the landing page this
+                screen replaces the moment anything is queued — by the time you
+                are here the circle has something, so "alive and waiting" is no
+                longer the true sentence. */}
+            <DropRing size="100%" over={drop.over} motion="still" watermark={<AnyFileWatermark />}>
+              <SortedCentre waiting={waiting} total={total} />
             </DropRing>
           </div>
           <input {...drop.inputProps} className="hidden" />
@@ -85,38 +103,6 @@ export default function AllStudio() {
   )
 }
 
-function EmptyCentre({ over }: { over: boolean }) {
-  return (
-    <>
-      <svg
-        viewBox="0 0 24 24"
-        className={`mb-1 h-9 w-9 ${over ? 'text-orange-500' : 'text-slate-400'}`}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        {/* One thing coming in, splitting two ways — sorting, not compressing.
-            Universal Compress's mark is two arrows squeezing IN, and the two
-            apps must not wear each other's glyph. Drawn with real arrowheads
-            because at 36px a bare fork reads as a stray letter. */}
-        <path d="M12 3v6" />
-        <path d="M12 9c0 3-6 2-6 6" />
-        <path d="M12 9c0 3 6 2 6 6" />
-        <path d="M3.5 18 6 21l2.5-3" />
-        <path d="M15.5 18 18 21l2.5-3" />
-      </svg>
-      <span className="text-[15px] font-bold text-slate-900">Drop any file here</span>
-      <span className="text-[11.5px] leading-relaxed text-slate-500">
-        Pictures · Audio · Video · Documents
-      </span>
-      <span className="mt-1 text-[11px] text-slate-400">or click to browse</span>
-    </>
-  )
-}
-
 function SortedCentre({ waiting, total }: { waiting: Record<MediaKind, number>; total: number }) {
   const tabs = KINDS.filter((k) => waiting[k] > 0).length
   return (
@@ -134,10 +120,14 @@ function SortedCentre({ waiting, total }: { waiting: Record<MediaKind, number>; 
 }
 
 /**
- * The column that adapts — the same idea as Universal Compress's options
- * column. Before anything is dropped it answers "will it take my file?"; after
- * a drop it answers "where did everything go?". An empty outline would be dead
- * space, and a list of formats you have already used is noise.
+ * The column that says where everything went.
+ *
+ * It used to have a second half — "what this will take", a list of every
+ * accepted extension — for the case where nothing had been dropped yet. That
+ * half was a first-visit answer shown only on the screen you reach by having
+ * already dropped something, so it moved to the landing page (see
+ * `../Landing/LandingPage.tsx`) and this column is now one job: after a drop,
+ * where did each file go. A list of formats you have already used is noise.
  */
 function SortingColumn({
   waiting, tabsUsed, rejected,
@@ -147,89 +137,44 @@ function SortingColumn({
   rejected: string[]
 }) {
   const setTab = useConverterStore((s) => s.setTab)
-  const total = KINDS.reduce((sum, kind) => sum + waiting[kind], 0)
 
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-xl border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-4 py-3">
-          <span className="text-[12.5px] font-bold text-slate-900">
-            {total === 0 ? 'What this will take' : 'Where everything went'}
-          </span>
+          <span className="text-[12.5px] font-bold text-slate-900">Where everything went</span>
         </div>
 
         <div className="flex flex-col gap-3 p-4">
-          {total === 0 ? (
-            <>
-              <p className="text-[11.5px] leading-relaxed text-slate-500">
-                Drop anything into the circle and it goes to the tab that can convert it. Drop a
-                mixed pile and each file finds its own way.
-              </p>
-              <ul className="flex flex-col gap-2">
-                <Capability label="Images" body={`${list(IMAGE_INPUT_EXTS)} — convert between PNG, JPEG, WebP and AVIF, and resize.`} />
-                {/* ⚠️ MP4 is deliberately NOT listed here even though the audio
-                    tab accepts it. `kindOf` sends an .mp4 to the VIDEO tab, so
-                    listing it under Audio would promise a destination the
-                    sorter does not use. Taking the sound out of a video is on
-                    the video tab, under Other exports. */}
-                <Capability label="Audio" body={`${list(AUDIO_INPUT_EXTS, ['mp4'])} — convert to MP3, M4A, Opus, FLAC, WAV or AIFF.`} />
-                <Capability label="Video" body={`${list(VIDEO_INPUT_EXTS)} — trim, resize and compress to H.264 MP4, or turn into an animated GIF.`} />
-                <Capability label="Files" body={`${list(DOCUMENT_INPUT_EXTS, ['text', 'log', 'htm', 'markdown', 'tsv'])} — convert to a laid-out PDF, or to text, HTML, Markdown, CSV and JSON.`} />
-              </ul>
-              {/* Named here rather than discovered on drop: these are the ones
-                  everybody tries, and finding out after you have dragged a
-                  2 GB file across is the worst moment to be told. */}
-              <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500">
-                <span className="font-semibold text-slate-700">Not MKV or AVI.</span> Those
-                containers need a different engine than the one that runs in a browser tab, so they
-                are refused on drop rather than accepted and failed halfway through.
-              </p>
-              <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500">
-                <span className="font-semibold text-slate-700">Not XLSX or PPTX.</span> Save a
-                spreadsheet as CSV and it converts; export a slide deck to PDF from the app that
-                made it. And PDF is what the Files tab converts <em>to</em> — to edit or split one,
-                use{' '}
-                <a
-                  href="https://opensource.unisim.co.uk/pdf"
-                  className="font-semibold text-orange-700 underline decoration-orange-300 underline-offset-2 hover:text-orange-800"
+          <p className="text-[11.5px] leading-relaxed text-slate-500">
+            {tabsUsed.length === 1
+              ? 'Everything went to one tab — its settings are waiting there.'
+              : 'Each kind has its own settings, so pick a tab to carry on.'}
+          </p>
+          <div className="flex flex-col gap-2">
+            {KINDS.map((kind) =>
+              waiting[kind] > 0 ? (
+                <button
+                  key={kind}
+                  type="button"
+                  onClick={() => setTab(kind)}
+                  className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition-colors ${
+                    tabsUsed.length === 1
+                      ? 'border-orange-500 bg-orange-50 hover:bg-orange-100'
+                      : 'border-slate-300 bg-white hover:bg-slate-50'
+                  }`}
                 >
-                  Universal PDF
-                </a>.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-[11.5px] leading-relaxed text-slate-500">
-                {tabsUsed.length === 1
-                  ? 'Everything went to one tab — its settings are waiting there.'
-                  : 'Each kind has its own settings, so pick a tab to carry on.'}
-              </p>
-              <div className="flex flex-col gap-2">
-                {KINDS.map((kind) =>
-                  waiting[kind] > 0 ? (
-                    <button
-                      key={kind}
-                      type="button"
-                      onClick={() => setTab(kind)}
-                      className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition-colors ${
-                        tabsUsed.length === 1
-                          ? 'border-orange-500 bg-orange-50 hover:bg-orange-100'
-                          : 'border-slate-300 bg-white hover:bg-slate-50'
-                      }`}
-                    >
-                      <span>
-                        <span className="block text-[12.5px] font-bold text-slate-900">
-                          {waiting[kind]} {NOUN[kind]}{waiting[kind] === 1 ? '' : 's'}
-                        </span>
-                        <span className="block text-[11px] text-slate-500">{TAB_NAME[kind]} tab</span>
-                      </span>
-                      <span aria-hidden className="text-slate-400">→</span>
-                    </button>
-                  ) : null,
-                )}
-              </div>
-            </>
-          )}
+                  <span>
+                    <span className="block text-[12.5px] font-bold text-slate-900">
+                      {waiting[kind]} {NOUN[kind]}{waiting[kind] === 1 ? '' : 's'}
+                    </span>
+                    <span className="block text-[11px] text-slate-500">{TAB_NAME[kind]} tab</span>
+                  </span>
+                  <span aria-hidden className="text-slate-400">→</span>
+                </button>
+              ) : null,
+            )}
+          </div>
 
           {rejected.length > 0 && (
             // Named individually rather than counted. "3 files skipped" makes
@@ -244,27 +189,6 @@ function SortingColumn({
       </div>
     </div>
   )
-}
-
-function Capability({ label, body }: { label: string; body: string }) {
-  return (
-    <li className="flex gap-2.5">
-      <span className="mt-0.5 flex h-5 w-14 shrink-0 items-center justify-center rounded bg-slate-100 text-[9.5px] font-bold uppercase tracking-wide text-slate-500">
-        {label}
-      </span>
-      <span className="text-[11.5px] leading-relaxed text-slate-600">{body}</span>
-    </li>
-  )
-}
-
-/**
- * Built from the real extension lists rather than typed out again, so the card
- * cannot drift from what the app actually accepts. `.qt` is dropped as a
- * synonym nobody types, and `.jpeg`/`.oga`/`.weba` likewise.
- */
-function list(exts: readonly string[], also: readonly string[] = []): string {
-  const skip = new Set(['jpeg', 'qt', 'oga', 'weba', 'heif', ...also])
-  return exts.filter((e) => !skip.has(e)).map((e) => e.toUpperCase()).join(', ')
 }
 
 const NOUN: Record<MediaKind, string> = {
