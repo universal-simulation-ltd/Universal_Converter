@@ -54,7 +54,6 @@ export default function StudioShell({
         repo="https://github.com/universal-simulation-ltd/Universal_Converter"
         subject={SUBJECT[kind]}
         plural
-        badge={engineBadge}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.55fr)_minmax(288px,0.85fr)] gap-4 items-start">

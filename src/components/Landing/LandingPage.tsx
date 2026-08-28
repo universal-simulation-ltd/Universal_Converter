@@ -42,17 +42,6 @@ export default function LandingPage({
 
   return (
     <div className={`${CONTAINER} flex flex-col gap-4 py-5 lg:py-10`}>
-      {/* Above the fold, as on the studio screens: "does this upload my file?"
-          is the first question anyone arriving from a search has, and answering
-          it below the card answers it only for people who already took the
-          risk. */}
-      <PrivacyNote
-        repo="https://github.com/universal-simulation-ltd/Universal_Converter"
-        subject="Your files"
-        plural
-        badge="on-device · works offline"
-      />
-
       <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
         {/* Desktop keeps the illustration as its own column. On a phone it is
             hidden rather than stacked: as a block above or below it is a full
@@ -196,6 +185,16 @@ export default function LandingPage({
               </p>
             </details>
           </div>
+
+          {/* Under the card, the suite's placement. It sat above the fold until
+              2026-08-28; the same move on Universal Compress was forced by its
+              illustration animating over the note, and both pages now agree. */}
+          <PrivacyNote
+            className="mt-4"
+            repo="https://github.com/universal-simulation-ltd/Universal_Converter"
+            subject="Your files"
+            plural
+          />
         </div>
       </div>
 
