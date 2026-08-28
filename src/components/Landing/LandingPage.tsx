@@ -1,4 +1,4 @@
-import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
+import { DropAnywhere, DropRing, PrivacyNote, useFileDrop } from '@unisim/sdk'
 import { CONTAINER } from '../../lib/layout'
 import {
   ALL_ACCEPT, AUDIO_INPUT_EXTS, DOCUMENT_INPUT_EXTS, IMAGE_INPUT_EXTS, VIDEO_INPUT_EXTS,
@@ -42,6 +42,17 @@ export default function LandingPage({
 
   return (
     <div className={`${CONTAINER} flex flex-col gap-4 py-5 lg:py-10`}>
+      {/* Above the fold, as on the studio screens: "does this upload my file?"
+          is the first question anyone arriving from a search has, and answering
+          it below the card answers it only for people who already took the
+          risk. */}
+      <PrivacyNote
+        repo="https://github.com/universal-simulation-ltd/Universal_Converter"
+        subject="Your files"
+        plural
+        badge="on-device · works offline"
+      />
+
       <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
         {/* Desktop keeps the illustration as its own column. On a phone it is
             hidden rather than stacked: as a block above or below it is a full
@@ -60,8 +71,8 @@ export default function LandingPage({
             Any file, <span className="text-orange-600">any format</span>.
           </h1>
           <p className="mt-3 max-w-md text-slate-600">
-            Drop a mixed pile and each file finds the tab that can convert it. Nothing is uploaded,
-            so there is no size limit and no queue to wait in.
+            Drop a mixed pile and each file finds the tab that can convert it — no size limit,
+            and no queue to wait in.
           </p>
 
           <div className="mt-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">

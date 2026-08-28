@@ -1,8 +1,8 @@
+import { PrivacyNote } from '@unisim/sdk'
 import type { ReactNode } from 'react'
 import { CONTAINER } from '../../lib/layout'
 import DropZone from './DropZone'
 import FileQueue from './FileQueue'
-import PrivacyStrip from './PrivacyStrip'
 import { useConverterStore } from '../../stores/converterStore'
 import type { MediaKind } from '../../lib/types'
 
@@ -12,6 +12,17 @@ import type { MediaKind } from '../../lib/types'
  * right-hand panel and what the dropzone accepts — the frame is identical, which
  * is the point of one converter rather than two apps.
  */
+// Name the thing in front of the reader, per tab. A generic "your files" would
+// work grammatically and say less — and "your documents" in particular is the
+// specific reassurance, because a document is the thing most likely to be under
+// an NDA or a duty of care. Inherited from the strip this replaced.
+const SUBJECT: Record<MediaKind, string> = {
+  audio: 'Your audio files',
+  image: 'Your images',
+  video: 'Your videos',
+  document: 'Your documents',
+}
+
 export default function StudioShell({
   kind,
   accept,
@@ -39,7 +50,12 @@ export default function StudioShell({
 
   return (
     <div className={`${CONTAINER} py-5 flex flex-col gap-4`}>
-      <PrivacyStrip kind={kind} engineBadge={engineBadge} />
+      <PrivacyNote
+        repo="https://github.com/universal-simulation-ltd/Universal_Converter"
+        subject={SUBJECT[kind]}
+        plural
+        badge={engineBadge}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.55fr)_minmax(288px,0.85fr)] gap-4 items-start">
         <div className="rounded-xl border border-slate-200 bg-white">
