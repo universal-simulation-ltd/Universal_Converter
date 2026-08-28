@@ -29,7 +29,6 @@ export default function StudioShell({
   emptyTitle,
   moreTitle,
   formatsLine,
-  engineBadge,
   targetExt,
   panel,
 }: {
@@ -38,7 +37,6 @@ export default function StudioShell({
   emptyTitle: string
   moreTitle: string
   formatsLine: string
-  engineBadge: string
   targetExt: string
   panel: ReactNode
 }) {
@@ -52,6 +50,7 @@ export default function StudioShell({
     <div className={`${CONTAINER} py-5 flex flex-col gap-4`}>
       <PrivacyNote
         repo="https://github.com/universal-simulation-ltd/Universal_Converter"
+        proof="https://github.com/universal-simulation-ltd/Universal_Converter/blob/main/PRIVACY.md"
         subject={SUBJECT[kind]}
         plural
       />

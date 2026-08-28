@@ -31,7 +31,6 @@ export default function ImageStudio() {
       emptyTitle="Drop images here"
       moreTitle="Drop more images here"
       formatsLine="PNG, JPEG, HEIC, WebP, GIF, BMP, AVIF and SVG"
-      engineBadge="on-device encoder · works offline"
       targetExt={target.ext}
       panel={
         <div className="flex flex-col gap-4">

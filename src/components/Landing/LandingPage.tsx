@@ -192,6 +192,7 @@ export default function LandingPage({
           <PrivacyNote
             className="mt-4"
             repo="https://github.com/universal-simulation-ltd/Universal_Converter"
+            proof="https://github.com/universal-simulation-ltd/Universal_Converter/blob/main/PRIVACY.md"
             subject="Your files"
             plural
           />

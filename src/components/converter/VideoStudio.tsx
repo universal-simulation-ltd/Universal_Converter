@@ -77,7 +77,6 @@ export default function VideoStudio() {
       emptyTitle="Drop video here"
       moreTitle="Drop more video here"
       formatsLine="MP4, M4V and MOV"
-      engineBadge="on-device encoder · works offline"
       targetExt={target.ext}
       panel={
         <div className="flex flex-col gap-4">

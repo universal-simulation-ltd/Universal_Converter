@@ -32,7 +32,6 @@ export default function AudioStudio() {
       emptyTitle="Drop audio here"
       moreTitle="Drop more audio here"
       formatsLine="WAV, MP3, M4A/AAC, FLAC, OGG, Opus, AIFF and WebM"
-      engineBadge="on-device encoder · works offline"
       targetExt={target.ext}
       panel={<AudioPanel />}
     />

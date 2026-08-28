@@ -61,7 +61,6 @@ export default function DocumentStudio() {
       emptyTitle="Drop documents here"
       moreTitle="Drop more documents here"
       formatsLine="DOCX, DOC, ODT, RTF, TXT, MD, HTML, CSV and JSON"
-      engineBadge="on-device reader & PDF writer · works offline"
       targetExt={target.id === 'md' ? 'md' : target.id}
       panel={
         <div className="flex flex-col gap-4">
