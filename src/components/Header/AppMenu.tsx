@@ -1,3 +1,4 @@
+import { AdvancedMenu } from '@unisim/sdk'
 import { useConverterStore } from '../../stores/converterStore'
 
 // The per-app actions that slot into <UniversalAppsNavBar />'s `actions` prop —
@@ -32,6 +33,19 @@ export default function AppMenu() {
         label="Reset output settings"
         disabled={running}
         onClick={resetSettings}
+      />
+
+      {/* Advanced — the SDK's own category, so every app in the suite has one in
+          the same place, and whatever goes in it next is one change rather than
+          nineteen. "About this app" is always its last row. */}
+      <AdvancedMenu
+        about={{
+          repo:    'https://github.com/universal-simulation-ltd/Universal_Converter',
+          proof:   'https://github.com/universal-simulation-ltd/Universal_Converter/blob/main/PRIVACY.md',
+          subject: 'Your files',
+          plural:  true,
+          version: __APP_VERSION__,
+        }}
       />
     </>
   )
