@@ -19,7 +19,8 @@
     "test:video": "node e2e/video.e2e.mjs",
     "test:routing": "node e2e/routing.e2e.mjs",
     "build:desktop": "tsc -b && vite build --mode desktop",
-    "cap:sync": "npm run build:desktop && npx cap sync",
+    "cap:sync": "npm run build:desktop && npx cap sync && npm run check:mobile-bundle",
+    "check:mobile-bundle": "node scripts/verify-mobile-bundle.mjs",
     "cap:open:ios": "npx cap open ios"
   },
   "dependencies": {
