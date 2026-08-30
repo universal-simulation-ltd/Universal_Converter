@@ -1,12 +1,10 @@
-/** Save a blob to the user's downloads. Nothing here touches the network. */
+// Kept as this app's save entry point so no call site had to change. The
+// mechanics — and the reason a phone needs a different one entirely — live in
+// `saveFile.ts`.
+import { saveBlob as save } from './saveFile'
+
+/** Save a blob to the user's downloads, or to the share sheet on a phone.
+ *  Nothing here touches the network. */
 export function saveBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  // Give the browser a moment to start the download before dropping the URL.
-  setTimeout(() => URL.revokeObjectURL(url), 10_000)
+  save(blob, filename)
 }
