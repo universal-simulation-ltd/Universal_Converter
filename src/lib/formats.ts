@@ -120,6 +120,45 @@ export const DOCUMENT_ACCEPT = DOCUMENT_INPUT_EXTS.map((e) => `.${e}`).join(',')
 export const ALL_ACCEPT = `${IMAGE_ACCEPT},${AUDIO_ACCEPT},${VIDEO_ACCEPT},${DOCUMENT_ACCEPT}`
 
 /**
+ * What each studio's drop targets take, and what they say.
+ *
+ * One table rather than four sets of props, because a studio now has TWO drop
+ * targets that must agree: the empty ring that owns the tab on arrival, and the
+ * working circle in the right-hand column once something is queued. They accept
+ * the same files and list the same formats, and the only way to be sure of that
+ * is for there to be one copy of it.
+ */
+export const DROP_COPY: Record<
+  MediaKind,
+  { accept: string; emptyTitle: string; moreTitle: string; formatsLine: string }
+> = {
+  image: {
+    accept: IMAGE_ACCEPT,
+    emptyTitle: 'Drop images here',
+    moreTitle: 'Drop more images here',
+    formatsLine: 'PNG, JPEG, HEIC, WebP, GIF, BMP, AVIF and SVG',
+  },
+  audio: {
+    accept: AUDIO_ACCEPT,
+    emptyTitle: 'Drop audio here',
+    moreTitle: 'Drop more audio here',
+    formatsLine: 'WAV, MP3, M4A/AAC, FLAC, OGG, Opus, AIFF and WebM',
+  },
+  video: {
+    accept: VIDEO_ACCEPT,
+    emptyTitle: 'Drop video here',
+    moreTitle: 'Drop more video here',
+    formatsLine: 'MP4, M4V and MOV',
+  },
+  document: {
+    accept: DOCUMENT_ACCEPT,
+    emptyTitle: 'Drop documents here',
+    moreTitle: 'Drop more documents here',
+    formatsLine: 'DOCX, DOC, ODT, RTF, TXT, MD, HTML, CSV and JSON',
+  },
+}
+
+/**
  * The tab a loose file belongs on.
  *
  * ⚠️ VIDEO IS TESTED BEFORE AUDIO, and that ordering is the whole correctness

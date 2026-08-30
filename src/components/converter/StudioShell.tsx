@@ -1,16 +1,28 @@
 import { PrivacyNote } from '@unisim/sdk'
 import type { ReactNode } from 'react'
 import { CONTAINER } from '../../lib/layout'
+import { DROP_COPY } from '../../lib/formats'
 import DropZone from './DropZone'
 import FileQueue from './FileQueue'
 import { useConverterStore } from '../../stores/converterStore'
 import type { MediaKind } from '../../lib/types'
 
 /**
- * The layout both studios share: privacy strip on top, queue on the left,
- * settings panel on the right. Audio and images differ only in what goes in that
- * right-hand panel and what the dropzone accepts — the frame is identical, which
- * is the point of one converter rather than two apps.
+ * The layout all four studios share: privacy note on top, queue on the left,
+ * settings and every action on the right. The tabs differ only in what goes in
+ * that right-hand column and what the drop targets accept — the frame is
+ * identical, which is the point of one converter rather than four apps.
+ *
+ * ⚠️ **The left column answers "what have I got"; the right one is everything
+ * that happens** — Universal Compress's shape, brought across on 2026-08-30.
+ * The queue used to end in a compact dashed "drop more" strip; that strip is
+ * gone, and the drop target is the full circle at the top of the right-hand
+ * column, directly above the Convert and Download buttons (see
+ * `StudioActions`, which each studio's panel column ends with).
+ *
+ * The columns also change weight once something is queued: an empty tab is
+ * mostly the ring it opens on, and a working one needs the extra width on the
+ * right for a 300px circle to sit in without crowding the buttons.
  */
 // Name the thing in front of the reader, per tab. A generic "your files" would
 // work grammatically and say less — and "your documents" in particular is the
@@ -25,18 +37,10 @@ const SUBJECT: Record<MediaKind, string> = {
 
 export default function StudioShell({
   kind,
-  accept,
-  emptyTitle,
-  moreTitle,
-  formatsLine,
   targetExt,
   panel,
 }: {
   kind: MediaKind
-  accept: string
-  emptyTitle: string
-  moreTitle: string
-  formatsLine: string
   targetExt: string
   panel: ReactNode
 }) {
@@ -45,6 +49,8 @@ export default function StudioShell({
   // snapshot-identity check and spins React into an infinite re-render.
   const items = useConverterStore((s) => s.items).filter((i) => i.kind === kind)
   const addDropped = useConverterStore((s) => s.addDropped)
+  const copy = DROP_COPY[kind]
+  const empty = items.length === 0
 
   return (
     <div className={`${CONTAINER} py-5 flex flex-col gap-4`}>
@@ -55,31 +61,25 @@ export default function StudioShell({
         plural
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.55fr)_minmax(288px,0.85fr)] gap-4 items-start">
+      <div
+        className={`grid grid-cols-1 items-start gap-4 ${
+          empty
+            ? 'lg:grid-cols-[minmax(0,1.55fr)_minmax(288px,0.85fr)]'
+            : 'lg:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.95fr)]'
+        }`}
+      >
         <div className="rounded-xl border border-slate-200 bg-white">
-          {items.length === 0 ? (
+          {empty ? (
             // No padding wrapper: the empty state is the ring, and it centres
             // itself in the card the same way the All tab's does.
             <DropZone
               onFiles={(files) => addDropped(files, kind)}
-              variant="empty"
-              accept={accept}
-              title={emptyTitle}
-              formatsLine={formatsLine}
+              accept={copy.accept}
+              title={copy.emptyTitle}
+              formatsLine={copy.formatsLine}
             />
           ) : (
-            <>
-              <FileQueue kind={kind} targetExt={targetExt} />
-              <div className="p-4">
-                <DropZone
-                  onFiles={(files) => addDropped(files, kind)}
-                  variant="more"
-                  accept={accept}
-                  title={moreTitle}
-                  formatsLine={formatsLine}
-                />
-              </div>
-            </>
+            <FileQueue kind={kind} targetExt={targetExt} />
           )}
         </div>
 

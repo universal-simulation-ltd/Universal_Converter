@@ -1,9 +1,9 @@
-import { DOCUMENT_ACCEPT } from '../../lib/formats'
 import { commonTargets, type DocFormat, type FontChoice, type PageMargin, type PaperSize } from '../../lib/doc'
 import { useConverterStore } from '../../stores/converterStore'
 import OtherExports from './OtherExports'
+import StudioActions from './StudioActions'
 import StudioShell from './StudioShell'
-import { Collapsible, Divider, Field, FormatChip, Panel, PanelActions, Segmented, Select } from './PanelParts'
+import { Collapsible, Divider, Field, FormatChip, Panel, Segmented, Select } from './PanelParts'
 
 /**
  * The Files studio — documents in, PDF (or text, HTML, Markdown, CSV, JSON) out.
@@ -57,10 +57,6 @@ export default function DocumentStudio() {
   return (
     <StudioShell
       kind="document"
-      accept={DOCUMENT_ACCEPT}
-      emptyTitle="Drop documents here"
-      moreTitle="Drop more documents here"
-      formatsLine="DOCX, DOC, ODT, RTF, TXT, MD, HTML, CSV and JSON"
       targetExt={target.id === 'md' ? 'md' : target.id}
       panel={
         <div className="flex flex-col gap-4">
@@ -87,135 +83,135 @@ function DocumentPanel() {
   const ready = available.includes(settings.format)
 
   return (
-    <Panel>
-      <Field label="Convert to">
-        <div className="flex flex-wrap gap-1.5">
-          {TARGETS.map((t) => (
-            <FormatChip
-              key={t.id}
-              label={t.label}
-              selected={settings.format === t.id}
-              ready={available.includes(t.id)}
-              disabled={running}
-              title={
-                available.includes(t.id)
-                  ? undefined
-                  : queued.length
-                    ? `${t.label} needs a file with rows in it — a CSV or JSON`
-                    : undefined
-              }
-              onSelect={() => update({ format: t.id })}
-            />
-          ))}
-        </div>
-        <p className="text-[11px] text-slate-500">{target.blurb}</p>
-        {!ready && queued.length > 0 && (
-          <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800">
-            {target.label} needs rows and columns to start from. It’s available for a CSV or a JSON
-            file — a document has paragraphs, not cells.
-          </p>
-        )}
-      </Field>
-
-      {settings.format === 'pdf' && (
-        <>
-          <Field label="Page">
-            <Select
-              options={PAPERS}
-              value={settings.pdf.paper}
-              disabled={running}
-              onChange={(paper) => update({ pdf: { ...settings.pdf, paper } })}
-            />
-          </Field>
-
-          <Field label="Text">
-            <Segmented
-              options={FONTS}
-              value={settings.pdf.font}
-              disabled={running}
-              onChange={(font) => update({ pdf: { ...settings.pdf, font } })}
-            />
-            <Segmented
-              options={SIZES}
-              value={nearestSize(settings.pdf.fontSize)}
-              disabled={running}
-              onChange={(fontSize) => update({ pdf: { ...settings.pdf, fontSize } })}
-            />
-            <p className="text-[10.5px] text-slate-400">
-              Headings, code and tables all scale from the body size, so one setting sets the lot.
-            </p>
-          </Field>
-
-          <Collapsible
-            label="More"
-            summary={`${settings.pdf.margin} margins · ${settings.pdf.pageNumbers ? 'numbered' : 'no numbers'}`}
-          >
-            <Field label="Margins">
-              <Segmented
-                options={MARGINS}
-                value={settings.pdf.margin}
+    <>
+      <Panel>
+        <Field label="Convert to">
+          <div className="flex flex-wrap gap-1.5">
+            {TARGETS.map((t) => (
+              <FormatChip
+                key={t.id}
+                label={t.label}
+                selected={settings.format === t.id}
+                ready={available.includes(t.id)}
                 disabled={running}
-                onChange={(margin) => update({ pdf: { ...settings.pdf, margin } })}
+                title={
+                  available.includes(t.id)
+                    ? undefined
+                    : queued.length
+                      ? `${t.label} needs a file with rows in it — a CSV or JSON`
+                      : undefined
+                }
+                onSelect={() => update({ format: t.id })}
+              />
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-500">{target.blurb}</p>
+          {!ready && queued.length > 0 && (
+            <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800">
+              {target.label} needs rows and columns to start from. It’s available for a CSV or a JSON
+              file — a document has paragraphs, not cells.
+            </p>
+          )}
+        </Field>
+
+        {settings.format === 'pdf' && (
+          <>
+            <Field label="Page">
+              <Select
+                options={PAPERS}
+                value={settings.pdf.paper}
+                disabled={running}
+                onChange={(paper) => update({ pdf: { ...settings.pdf, paper } })}
               />
             </Field>
-            <Field label="Page numbers">
+
+            <Field label="Text">
               <Segmented
-                options={[
-                  { value: 'on' as const, label: 'Show' },
-                  { value: 'off' as const, label: 'Hide' },
-                ]}
-                value={settings.pdf.pageNumbers ? 'on' : 'off'}
+                options={FONTS}
+                value={settings.pdf.font}
                 disabled={running}
-                onChange={(v) => update({ pdf: { ...settings.pdf, pageNumbers: v === 'on' } })}
+                onChange={(font) => update({ pdf: { ...settings.pdf, font } })}
+              />
+              <Segmented
+                options={SIZES}
+                value={nearestSize(settings.pdf.fontSize)}
+                disabled={running}
+                onChange={(fontSize) => update({ pdf: { ...settings.pdf, fontSize } })}
               />
               <p className="text-[10.5px] text-slate-400">
-                Only drawn when there is more than one page.
+                Headings, code and tables all scale from the body size, so one setting sets the lot.
               </p>
             </Field>
-          </Collapsible>
 
-          <Divider />
+            <Collapsible
+              label="More"
+              summary={`${settings.pdf.margin} margins · ${settings.pdf.pageNumbers ? 'numbered' : 'no numbers'}`}
+            >
+              <Field label="Margins">
+                <Segmented
+                  options={MARGINS}
+                  value={settings.pdf.margin}
+                  disabled={running}
+                  onChange={(margin) => update({ pdf: { ...settings.pdf, margin } })}
+                />
+              </Field>
+              <Field label="Page numbers">
+                <Segmented
+                  options={[
+                    { value: 'on' as const, label: 'Show' },
+                    { value: 'off' as const, label: 'Hide' },
+                  ]}
+                  value={settings.pdf.pageNumbers ? 'on' : 'off'}
+                  disabled={running}
+                  onChange={(v) => update({ pdf: { ...settings.pdf, pageNumbers: v === 'on' } })}
+                />
+                <p className="text-[10.5px] text-slate-400">
+                  Only drawn when there is more than one page.
+                </p>
+              </Field>
+            </Collapsible>
 
+            <Divider />
+
+            <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500">
+              The PDF uses the fonts every reader already has, so nothing is embedded and the file
+              stays small. That means <span className="font-medium text-slate-700">Latin alphabets
+              only</span> — Greek, Cyrillic, Hebrew, Arabic and CJK can’t be written, and any that
+              appear are named on the row afterwards rather than silently replaced.
+            </p>
+          </>
+        )}
+
+        {settings.format === 'json' && (
+          <Field label="Values">
+            <Segmented
+              options={[
+                { value: 'typed' as const, label: 'Numbers & true/false' },
+                { value: 'text' as const, label: 'All text' },
+              ]}
+              value={settings.inferTypes ? 'typed' : 'text'}
+              disabled={running}
+              onChange={(v) => update({ inferTypes: v === 'typed' })}
+            />
+            <p className="text-[10.5px] leading-relaxed text-slate-400">
+              Typed reads <code className="font-mono">42</code> as a number. A value that wouldn’t
+              survive the trip stays text either way — <code className="font-mono">007</code> keeps
+              its zeros, and a phone number keeps its <code className="font-mono">+</code>.
+            </p>
+          </Field>
+        )}
+
+        {(settings.format === 'txt' || settings.format === 'md' || settings.format === 'html') && (
           <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500">
-            The PDF uses the fonts every reader already has, so nothing is embedded and the file
-            stays small. That means <span className="font-medium text-slate-700">Latin alphabets
-            only</span> — Greek, Cyrillic, Hebrew, Arabic and CJK can’t be written, and any that
-            appear are named on the row afterwards rather than silently replaced.
+            Pictures inside a document can’t travel into a {target.label} file, so each one is marked
+            in place by its caption. Everything else — headings, emphasis, lists, tables and links —
+            comes across.
           </p>
-        </>
-      )}
+        )}
+      </Panel>
 
-      {settings.format === 'json' && (
-        <Field label="Values">
-          <Segmented
-            options={[
-              { value: 'typed' as const, label: 'Numbers & true/false' },
-              { value: 'text' as const, label: 'All text' },
-            ]}
-            value={settings.inferTypes ? 'typed' : 'text'}
-            disabled={running}
-            onChange={(v) => update({ inferTypes: v === 'typed' })}
-          />
-          <p className="text-[10.5px] leading-relaxed text-slate-400">
-            Typed reads <code className="font-mono">42</code> as a number. A value that wouldn’t
-            survive the trip stays text either way — <code className="font-mono">007</code> keeps
-            its zeros, and a phone number keeps its <code className="font-mono">+</code>.
-          </p>
-        </Field>
-      )}
-
-      {(settings.format === 'txt' || settings.format === 'md' || settings.format === 'html') && (
-        <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500">
-          Pictures inside a document can’t travel into a {target.label} file, so each one is marked
-          in place by its caption. Everything else — headings, emphasis, lists, tables and links —
-          comes across.
-        </p>
-      )}
-
-      <Divider />
-
-      <PanelActions kind="document" canConvert={ready} />
-    </Panel>
+      <StudioActions kind="document" canConvert={ready} />
+    </>
   )
 }
 

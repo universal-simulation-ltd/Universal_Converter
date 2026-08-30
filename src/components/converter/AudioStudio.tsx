@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { AUDIO_ACCEPT, AUDIO_FORMATS, audioFormatMeta, audioFormatSupported } from '../../lib/formats'
+import { AUDIO_FORMATS, audioFormatMeta, audioFormatSupported } from '../../lib/formats'
 import { formatDuration, parseClock } from '../../lib/humanise'
 import { aacSupported } from '@unisim/media'
 import { MP3_BITRATES } from '../../lib/mp3'
 import { useConverterStore } from '../../stores/converterStore'
+import StudioActions from './StudioActions'
 import StudioShell from './StudioShell'
-import { Collapsible, Divider, Field, FormatChip, Panel, PanelActions, Segmented, Select, Toggle } from './PanelParts'
+import { Collapsible, Divider, Field, FormatChip, Panel, Segmented, Select, Toggle } from './PanelParts'
 import { DEFAULT_AUDIO_SETTINGS, type AudioFormat, type ChannelMode, type SampleRate } from '../../lib/types'
 
 const SAMPLE_RATES: { value: SampleRate; label: string }[] = [
@@ -28,12 +29,12 @@ export default function AudioStudio() {
   return (
     <StudioShell
       kind="audio"
-      accept={AUDIO_ACCEPT}
-      emptyTitle="Drop audio here"
-      moreTitle="Drop more audio here"
-      formatsLine="WAV, MP3, M4A/AAC, FLAC, OGG, Opus, AIFF and WebM"
       targetExt={target.ext}
-      panel={<AudioPanel />}
+      panel={
+        <div className="flex flex-col gap-4">
+          <AudioPanel />
+        </div>
+      }
     />
   )
 }
@@ -99,118 +100,118 @@ function AudioPanel() {
   if (!settings.keepTags) changed.push('No tags')
 
   return (
-    <Panel>
-      <Field label="Convert to">
-        <div className="flex flex-wrap gap-1.5">
-          {AUDIO_FORMATS.map((f) => (
-            <FormatChip
-              key={f.id}
-              label={f.label}
-              selected={settings.format === f.id}
-              ready={supported[f.id] === true}
-              disabled={running}
-              title={
-                supported[f.id]
-                  ? undefined
-                  : f.engine === 'ffmpeg'
-                    ? `${f.label} needs the ffmpeg engine (not wired up yet)`
-                    : `This browser can’t encode ${f.label}`
-              }
-              onSelect={() => update({ format: f.id })}
-            />
-          ))}
-        </div>
-        <p className="text-[11px] text-slate-500">{target.blurb}</p>
-        {!engineReady && (
-          <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800">
-            {target.engine === 'ffmpeg'
-              ? `${target.label} needs the ffmpeg engine, which isn’t wired up yet.`
-              : `This browser can’t encode ${target.label}.`}{' '}
-            MP3, WAV and AIFF convert everywhere.
-          </p>
-        )}
-      </Field>
-
-      <Divider />
-
-      <Collapsible
-        label="Advanced"
-        summary={changed.length ? changed.join(' · ') : 'Default settings'}
-        defaultOpen={changed.length > 0}
-      >
-        {target.lossy && (
-          <Field label="Bitrate">
-            <Segmented
-              options={MP3_BITRATES.map((b) => ({ value: b, label: `${b}` }))}
-              value={settings.bitrateKbps}
-              disabled={running || !engineReady}
-              onChange={(bitrateKbps) => update({ bitrateKbps })}
-              unavailable={badBitrates}
-              unavailableTitle="This browser’s AAC encoder refuses this bitrate"
-            />
-            <p className="text-[10.5px] text-slate-400">
-              {badBitrates.includes(settings.bitrateKbps)
-                ? 'This browser’s AAC encoder refuses this bitrate — pick another.'
-                : 'kbps, constant. 192 is transparent for most music; 320 is as good as it gets.'}
+    <>
+      <Panel>
+        <Field label="Convert to">
+          <div className="flex flex-wrap gap-1.5">
+            {AUDIO_FORMATS.map((f) => (
+              <FormatChip
+                key={f.id}
+                label={f.label}
+                selected={settings.format === f.id}
+                ready={supported[f.id] === true}
+                disabled={running}
+                title={
+                  supported[f.id]
+                    ? undefined
+                    : f.engine === 'ffmpeg'
+                      ? `${f.label} needs the ffmpeg engine (not wired up yet)`
+                      : `This browser can’t encode ${f.label}`
+                }
+                onSelect={() => update({ format: f.id })}
+              />
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-500">{target.blurb}</p>
+          {!engineReady && (
+            <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800">
+              {target.engine === 'ffmpeg'
+                ? `${target.label} needs the ffmpeg engine, which isn’t wired up yet.`
+                : `This browser can’t encode ${target.label}.`}{' '}
+              MP3, WAV and AIFF convert everywhere.
             </p>
-          </Field>
-        )}
-
-        <Field label="Sample rate">
-          <Select
-            options={SAMPLE_RATES}
-            value={settings.sampleRate}
-            disabled={running}
-            onChange={(sampleRate) => update({ sampleRate })}
-          />
-        </Field>
-
-        <Field label="Channels">
-          <Segmented
-            options={CHANNELS}
-            value={settings.channels}
-            disabled={running}
-            onChange={(channels) => update({ channels })}
-          />
+          )}
         </Field>
 
         <Divider />
 
-        <Toggle
-          label="Normalise loudness"
-          hint="Lift the whole file so its loudest peak sits just under full scale"
-          on={settings.normalise}
-          disabled={running}
-          onChange={(normalise) => update({ normalise })}
-        />
+        <Collapsible
+          label="Advanced"
+          summary={changed.length ? changed.join(' · ') : 'Default settings'}
+          defaultOpen={changed.length > 0}
+        >
+          {target.lossy && (
+            <Field label="Bitrate">
+              <Segmented
+                options={MP3_BITRATES.map((b) => ({ value: b, label: `${b}` }))}
+                value={settings.bitrateKbps}
+                disabled={running || !engineReady}
+                onChange={(bitrateKbps) => update({ bitrateKbps })}
+                unavailable={badBitrates}
+                unavailableTitle="This browser’s AAC encoder refuses this bitrate"
+              />
+              <p className="text-[10.5px] text-slate-400">
+                {badBitrates.includes(settings.bitrateKbps)
+                  ? 'This browser’s AAC encoder refuses this bitrate — pick another.'
+                  : 'kbps, constant. 192 is transparent for most music; 320 is as good as it gets.'}
+              </p>
+            </Field>
+          )}
 
-        <Toggle
-          label="Trim"
-          hint="Keep only part of each file — same window for the whole queue"
-          on={settings.trim.enabled}
-          disabled={running}
-          onChange={(enabled) => update({ trim: { ...settings.trim, enabled } })}
-        />
+          <Field label="Sample rate">
+            <Select
+              options={SAMPLE_RATES}
+              value={settings.sampleRate}
+              disabled={running}
+              onChange={(sampleRate) => update({ sampleRate })}
+            />
+          </Field>
 
-        {settings.trim.enabled && <TrimFields />}
+          <Field label="Channels">
+            <Segmented
+              options={CHANNELS}
+              value={settings.channels}
+              disabled={running}
+              onChange={(channels) => update({ channels })}
+            />
+          </Field>
 
-        <Toggle
-          label="Keep title, artist &amp; album"
-          hint={
-            settings.format === 'mp3' || settings.format === 'opus'
-              ? 'Read from the original and written into the converted file'
-              : `Read from the original — ${audioFormatMeta(settings.format).label} output can’t carry them yet`
-          }
-          on={settings.keepTags}
-          disabled={running}
-          onChange={(keepTags) => update({ keepTags })}
-        />
-      </Collapsible>
+          <Divider />
 
-      <Divider />
+          <Toggle
+            label="Normalise loudness"
+            hint="Lift the whole file so its loudest peak sits just under full scale"
+            on={settings.normalise}
+            disabled={running}
+            onChange={(normalise) => update({ normalise })}
+          />
 
-      <PanelActions kind="audio" canConvert={engineReady} />
-    </Panel>
+          <Toggle
+            label="Trim"
+            hint="Keep only part of each file — same window for the whole queue"
+            on={settings.trim.enabled}
+            disabled={running}
+            onChange={(enabled) => update({ trim: { ...settings.trim, enabled } })}
+          />
+
+          {settings.trim.enabled && <TrimFields />}
+
+          <Toggle
+            label="Keep title, artist &amp; album"
+            hint={
+              settings.format === 'mp3' || settings.format === 'opus'
+                ? 'Read from the original and written into the converted file'
+                : `Read from the original — ${audioFormatMeta(settings.format).label} output can’t carry them yet`
+            }
+            on={settings.keepTags}
+            disabled={running}
+            onChange={(keepTags) => update({ keepTags })}
+          />
+        </Collapsible>
+      </Panel>
+
+      <StudioActions kind="audio" canConvert={engineReady} />
+    </>
   )
 }
 

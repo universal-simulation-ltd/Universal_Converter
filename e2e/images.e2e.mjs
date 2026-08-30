@@ -408,7 +408,7 @@ console.log('\n── Two files do NOT save themselves ────────�
   // extension there is invisible until somebody unpacks the folder.
   const zip = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: /Download all as ZIP/ }).click(),
+    page.getByRole('button', { name: /Download all \d+ files as a ZIP/ }).click(),
   ]).then(([d]) => d)
   check('the zip is named for the tab', zip.suggestedFilename() === 'converted-images.zip',
     zip.suggestedFilename())

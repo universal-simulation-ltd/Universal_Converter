@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
-import { VIDEO_ACCEPT, VIDEO_FORMATS, videoFormatMeta } from '../../lib/formats'
+import { VIDEO_FORMATS, videoFormatMeta } from '../../lib/formats'
 import { formatDuration, parseClock } from '../../lib/humanise'
 import { videoSupported } from '@unisim/media'
 import { gifExportSupported } from '../../lib/videogif'
 import { useConverterStore } from '../../stores/converterStore'
 import OtherExports from './OtherExports'
+import StudioActions from './StudioActions'
 import StudioShell from './StudioShell'
-import { Collapsible, Divider, Field, FormatChip, Panel, PanelActions, Segmented, Select, Toggle } from './PanelParts'
+import { Collapsible, Divider, Field, FormatChip, Panel, Segmented, Select, Toggle } from './PanelParts'
 import {
   DEFAULT_GIF_SETTINGS,
   DEFAULT_VIDEO_SETTINGS,
@@ -73,10 +74,6 @@ export default function VideoStudio() {
   return (
     <StudioShell
       kind="video"
-      accept={VIDEO_ACCEPT}
-      emptyTitle="Drop video here"
-      moreTitle="Drop more video here"
-      formatsLine="MP4, M4V and MOV"
       targetExt={target.ext}
       panel={
         <div className="flex flex-col gap-4">
@@ -120,55 +117,55 @@ function VideoPanel() {
   const engineReady = readyFor(videoTarget)
 
   return (
-    <Panel>
-      <Field label="Convert to">
-        <div className="flex flex-wrap gap-1.5">
-          {VIDEO_FORMATS.map((f) => (
-            <FormatChip
-              key={f.id}
-              label={f.label}
-              selected={videoTarget === f.id}
-              ready={readyFor(f.id)}
-              disabled={running}
-              onSelect={() => setTarget(f.id)}
-            />
-          ))}
-        </div>
-        <p className="text-[11px] text-slate-500">{target.blurb}</p>
+    <>
+      <Panel>
+        <Field label="Convert to">
+          <div className="flex flex-wrap gap-1.5">
+            {VIDEO_FORMATS.map((f) => (
+              <FormatChip
+                key={f.id}
+                label={f.label}
+                selected={videoTarget === f.id}
+                ready={readyFor(f.id)}
+                disabled={running}
+                onSelect={() => setTarget(f.id)}
+              />
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-500">{target.blurb}</p>
 
-        {videoTarget === 'gif' && (
-          <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] leading-snug text-amber-800">
-            <span className="font-semibold">A GIF has no sound</span>, and 256 colours in the whole
-            animation — so a gradient or a sunset will band a little. It is also much larger than
-            the same clip as MP4: a few seconds is a few megabytes. Keep it short.
-          </p>
-        )}
+          {videoTarget === 'gif' && (
+            <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] leading-snug text-amber-800">
+              <span className="font-semibold">A GIF has no sound</span>, and 256 colours in the whole
+              animation — so a gradient or a sunset will band a little. It is also much larger than
+              the same clip as MP4: a few seconds is a few megabytes. Keep it short.
+            </p>
+          )}
 
-        {videoTarget === 'mp4' && encoderReady === false && (
-          <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] leading-snug text-amber-800">
-            This browser has no WebCodecs H.264 encoder, so it can’t write an MP4.
-            {decoderReady === true
-              ? ' It can still read one, so GIF above will work here. Chrome and Edge do both.'
-              : ' Chrome and Edge have one. The audio and images tabs work everywhere.'}
-          </p>
-        )}
+          {videoTarget === 'mp4' && encoderReady === false && (
+            <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] leading-snug text-amber-800">
+              This browser has no WebCodecs H.264 encoder, so it can’t write an MP4.
+              {decoderReady === true
+                ? ' It can still read one, so GIF above will work here. Chrome and Edge do both.'
+                : ' Chrome and Edge have one. The audio and images tabs work everywhere.'}
+            </p>
+          )}
 
-        {videoTarget === 'gif' && decoderReady === false && (
-          <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] leading-snug text-amber-800">
-            This browser has no WebCodecs H.264 decoder, so it can’t take a video apart to make a
-            GIF — Chrome and Edge have one. The audio and images tabs work everywhere.
-          </p>
-        )}
-      </Field>
+          {videoTarget === 'gif' && decoderReady === false && (
+            <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] leading-snug text-amber-800">
+              This browser has no WebCodecs H.264 decoder, so it can’t take a video apart to make a
+              GIF — Chrome and Edge have one. The audio and images tabs work everywhere.
+            </p>
+          )}
+        </Field>
 
-      <Divider />
+        <Divider />
 
-      {videoTarget === 'gif' ? <GifAdvanced /> : <Mp4Advanced engineReady={engineReady} />}
+        {videoTarget === 'gif' ? <GifAdvanced /> : <Mp4Advanced engineReady={engineReady} />}
+      </Panel>
 
-      <Divider />
-
-      <PanelActions kind="video" canConvert={engineReady} />
-    </Panel>
+      <StudioActions kind="video" canConvert={engineReady} />
+    </>
   )
 }
 

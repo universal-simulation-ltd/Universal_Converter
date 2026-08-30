@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { IMAGE_ACCEPT, IMAGE_FORMATS, imageFormatMeta, imageFormatSupported } from '../../lib/formats'
+import { IMAGE_FORMATS, imageFormatMeta, imageFormatSupported } from '../../lib/formats'
 import { useConverterStore } from '../../stores/converterStore'
 import OtherExports from './OtherExports'
+import StudioActions from './StudioActions'
 import StudioShell from './StudioShell'
-import { Divider, Field, FormatChip, Panel, PanelActions, Segmented, Select } from './PanelParts'
+import { Divider, Field, FormatChip, Panel, Segmented, Select } from './PanelParts'
 import type { ImageFormat, MaxEdge } from '../../lib/types'
 
 const MAX_EDGES: { value: MaxEdge; label: string }[] = [
@@ -27,10 +28,6 @@ export default function ImageStudio() {
   return (
     <StudioShell
       kind="image"
-      accept={IMAGE_ACCEPT}
-      emptyTitle="Drop images here"
-      moreTitle="Drop more images here"
-      formatsLine="PNG, JPEG, HEIC, WebP, GIF, BMP, AVIF and SVG"
       targetExt={target.ext}
       panel={
         <div className="flex flex-col gap-4">
@@ -73,66 +70,66 @@ function ImagePanel() {
   const ready = supported[settings.format]
 
   return (
-    <Panel>
-      <Field label="Convert to">
-        <div className="flex flex-wrap gap-1.5">
-          {IMAGE_FORMATS.map((f) => (
-            <FormatChip
-              key={f.id}
-              label={f.label}
-              selected={settings.format === f.id}
-              ready={supported[f.id]}
-              disabled={running}
-              title={supported[f.id] ? undefined : `This browser can’t write ${f.label}`}
-              onSelect={() => update({ format: f.id })}
-            />
-          ))}
-        </div>
-        <p className="text-[11px] text-slate-500">{target.blurb}</p>
-        {!ready && (
-          <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800">
-            This browser can’t write {target.label}. WebP, JPEG and PNG work everywhere.
-          </p>
-        )}
-      </Field>
+    <>
+      <Panel>
+        <Field label="Convert to">
+          <div className="flex flex-wrap gap-1.5">
+            {IMAGE_FORMATS.map((f) => (
+              <FormatChip
+                key={f.id}
+                label={f.label}
+                selected={settings.format === f.id}
+                ready={supported[f.id]}
+                disabled={running}
+                title={supported[f.id] ? undefined : `This browser can’t write ${f.label}`}
+                onSelect={() => update({ format: f.id })}
+              />
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-500">{target.blurb}</p>
+          {!ready && (
+            <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800">
+              This browser can’t write {target.label}. WebP, JPEG and PNG work everywhere.
+            </p>
+          )}
+        </Field>
 
-      {target.lossy && (
-        <Field label="Quality">
-          <Segmented
-            options={QUALITIES}
-            value={nearestQuality(settings.quality)}
+        {target.lossy && (
+          <Field label="Quality">
+            <Segmented
+              options={QUALITIES}
+              value={nearestQuality(settings.quality)}
+              disabled={running}
+              onChange={(quality) => update({ quality })}
+            />
+            <p className="text-[10.5px] text-slate-400">
+              Lossy formats trade detail for size. Balanced is the sweet spot for photos.
+            </p>
+          </Field>
+        )}
+
+        <Field label="Size">
+          <Select
+            options={MAX_EDGES}
+            value={settings.maxEdge}
             disabled={running}
-            onChange={(quality) => update({ quality })}
+            onChange={(maxEdge) => update({ maxEdge })}
           />
           <p className="text-[10.5px] text-slate-400">
-            Lossy formats trade detail for size. Balanced is the sweet spot for photos.
+            Scales the longest edge down, keeping the aspect ratio. Never scales up.
           </p>
         </Field>
-      )}
 
-      <Field label="Size">
-        <Select
-          options={MAX_EDGES}
-          value={settings.maxEdge}
-          disabled={running}
-          onChange={(maxEdge) => update({ maxEdge })}
-        />
-        <p className="text-[10.5px] text-slate-400">
-          Scales the longest edge down, keeping the aspect ratio. Never scales up.
+        <Divider />
+
+        <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] text-slate-500">
+          Metadata is dropped on the way through — the canvas re-encode keeps pixels, not EXIF. That
+          means location and camera details don’t travel with the converted file.
         </p>
-      </Field>
+      </Panel>
 
-      <Divider />
-
-      <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] text-slate-500">
-        Metadata is dropped on the way through — the canvas re-encode keeps pixels, not EXIF. That
-        means location and camera details don’t travel with the converted file.
-      </p>
-
-      <Divider />
-
-      <PanelActions kind="image" canConvert={ready} />
-    </Panel>
+      <StudioActions kind="image" canConvert={ready} />
+    </>
   )
 }
 

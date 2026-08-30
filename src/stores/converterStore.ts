@@ -84,6 +84,12 @@ interface ConverterState {
   resetSettings: () => void
 
   convertAll: (kind: MediaKind) => Promise<void>
+  /**
+   * Put one tab's finished rows back in the queue, so "Convert again" has
+   * something to convert. Same `rearmed` the settings writes use — the results
+   * go with the status, for the reason spelled out there.
+   */
+  requeueAll: (kind: MediaKind) => void
   downloadItem: (id: string) => void
   downloadAll: (kind: MediaKind) => Promise<void>
 }
@@ -461,6 +467,8 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
     }
   },
 
+  requeueAll: (kind) => set({ items: rearmed(get(), kind) }),
+
   downloadItem: (id) => {
     const item = get().items.find((i) => i.id === id)
     if (item?.result) saveBlob(item.result.blob, item.result.name)
@@ -469,6 +477,11 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
   downloadAll: async (kind) => {
     const done = get().items.filter((i) => i.kind === kind && i.result)
     if (done.length === 0) return
+    // ⚠️ A queue of one is saved as the file itself, not as a ZIP of one — and
+    // the button says "Download the converted file" when that is what it does.
+    // A single-entry archive is a second step between somebody and the thing
+    // they converted, for no gain.
+    if (done.length === 1) return saveBlob(done[0].result!.blob, done[0].result!.name)
     const zip = await createZip(done.map((i) => ({ name: i.result!.name, blob: i.result!.blob })))
     const folder: Record<MediaKind, string> = {
       image: 'images', audio: 'audio', video: 'video', document: 'files',
@@ -476,3 +489,60 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
     saveBlob(zip, `converted-${folder[kind]}.zip`)
   },
 }))
+
+/** One tab's queue, added up — the numbers the circle and the action card read. */
+export interface KindTotals {
+  /** Rows this tab could convert: everything but the ones it can't open. */
+  eligible: number
+  /** Waiting to be converted, including the ones that failed and can be retried. */
+  pending: number
+  done: number
+  failed: number
+  bytesIn: number
+  /** Source bytes of the rows that HAVE a result — the "was" the saving is against. */
+  bytesInDone: number
+  bytesOutDone: number
+  /** 0–1 across the whole tab, so the ring can fill while a batch runs. */
+  progress: number
+}
+
+/**
+ * ⚠️ `bytesInDone`, not `bytesIn`, is what the saving is measured against.
+ * Halfway through a batch the two are different numbers, and dividing the
+ * output so far by the input of everything queued reports a saving of 60% on a
+ * queue that has not saved anything yet.
+ */
+export function kindTotals(items: QueueItem[], kind: MediaKind): KindTotals {
+  const mine = items.filter((i) => i.kind === kind)
+  const eligible = mine.filter((i) => i.status !== 'unsupported')
+  let bytesIn = 0
+  let bytesInDone = 0
+  let bytesOutDone = 0
+  let progress = 0
+
+  for (const i of eligible) {
+    bytesIn += i.file.size
+    progress += i.status === 'done' ? 1 : i.progress
+    if (i.result) {
+      bytesInDone += i.file.size
+      bytesOutDone += i.result.blob.size
+    }
+  }
+
+  return {
+    eligible: eligible.length,
+    pending: eligible.filter((i) => i.status === 'queued' || i.status === 'failed').length,
+    done: eligible.filter((i) => i.status === 'done').length,
+    failed: eligible.filter((i) => i.status === 'failed').length,
+    bytesIn,
+    bytesInDone,
+    bytesOutDone,
+    progress: eligible.length === 0 ? 0 : progress / eligible.length,
+  }
+}
+
+/** How much smaller, as a whole percent. Negative when the new format is bigger. */
+export function savingPercent(before: number, after: number): number {
+  if (before <= 0) return 0
+  return Math.round(((before - after) / before) * 100)
+}

@@ -1,6 +1,4 @@
 import { useState, type ReactNode } from 'react'
-import { useConverterStore } from '../../stores/converterStore'
-import type { MediaKind } from '../../lib/types'
 
 // The settings-panel vocabulary, shared by the audio and image studios so the
 // two tabs are the same instrument with different strings.
@@ -214,47 +212,5 @@ export function Toggle({
         <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-[left] ${on ? 'left-4.5' : 'left-0.5'}`} />
       </span>
     </button>
-  )
-}
-
-/** The two buttons every studio ends with, wired to that studio's queue. */
-export function PanelActions({ kind, canConvert }: { kind: MediaKind; canConvert: boolean }) {
-  // Filter after selecting — see the note in StudioShell.
-  const items = useConverterStore((s) => s.items).filter((i) => i.kind === kind)
-  const running = useConverterStore((s) => s.running)
-  const convertAll = useConverterStore((s) => s.convertAll)
-  const downloadAll = useConverterStore((s) => s.downloadAll)
-
-  const pending = items.filter((i) => i.status === 'queued' || i.status === 'failed').length
-  const doneCount = items.filter((i) => i.result).length
-  const enabled = canConvert && pending > 0 && !running
-
-  return (
-    <>
-      <button
-        type="button"
-        disabled={!enabled}
-        onClick={() => void convertAll(kind)}
-        className="w-full rounded-xl bg-gradient-to-br from-[#FE8C01] to-[#E05504] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-opacity hover:opacity-95 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        {/* "and save" is not decoration: a single file downloads itself the
-            moment it is done (see `convertAll`), and a button that starts a
-            download should say so before it is pressed. */}
-        {running ? 'Converting…' : pending === 1 ? 'Convert and save 1 file' : `Convert ${pending} files`}
-      </button>
-
-      <button
-        type="button"
-        disabled={doneCount === 0 || running}
-        onClick={() => void downloadAll(kind)}
-        className="w-full rounded-xl bg-orange-500/12 px-4 py-2.5 text-[13px] font-bold text-orange-800 transition-colors hover:bg-orange-500/20 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Download all as ZIP
-      </button>
-
-      <p className="text-center text-[10.5px] text-slate-400">
-        Converted files are saved straight to your downloads.
-      </p>
-    </>
   )
 }
