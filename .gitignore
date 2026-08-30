@@ -14,9 +14,6 @@ release
 # it. Universal_PDF, _AI, _QR and _Images all track theirs for the same reason.
 # Capacitor's own ios/.gitignore already excludes the generated parts
 # (App/build, App/Pods, the copied web assets, App/App/capacitor.config.json).
-#
-# `android/` stays ignored only because no Android project has been added yet.
-/android
 
 # TypeScript incremental build artifacts
 *.tsbuildinfo
