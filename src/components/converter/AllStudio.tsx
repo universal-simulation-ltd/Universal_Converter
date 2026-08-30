@@ -22,11 +22,16 @@ import LandingPage from '../Landing/LandingPage'
  * component — `DropRing` in `@unisim/sdk` — rather than a copy, so a change to
  * it lands in both.
  *
- * ⚠️ It deliberately does NOT switch you to another tab on drop. A mixed drop
- * has no single destination, and jumping somebody somewhere while files are
- * still landing is how you lose track of what you just dropped. The right-hand
- * column reports what went where and offers the tabs; where the answer IS
- * unambiguous (everything landed on one tab) that tab's button is the primary.
+ * ⚠️ A MIXED drop deliberately does NOT switch you anywhere. It has no single
+ * destination, and jumping somebody somewhere while files are still landing is
+ * how you lose track of what you just dropped. The right-hand column reports
+ * what went where and offers the tabs.
+ *
+ * A drop that is entirely ONE kind is the opposite case and does switch, since
+ * 2026-08-30 — there is exactly one destination, so this screen would only be
+ * asking a question it already knows the answer to. The rule (including the
+ * cases where it must NOT fire) is `tabAfterDrop` in `lib/routing`, and the
+ * store's `addDropped` is what applies it; this tab just hands it the files.
  *
  * WITH NOTHING QUEUED IT IS THE LANDING PAGE — illustration on the left,
  * headline and drop circle on the right, the same shape Universal PDF and
@@ -38,7 +43,7 @@ import LandingPage from '../Landing/LandingPage'
  * landing page goes through exactly the same code path as one dropped here.
  */
 export default function AllStudio() {
-  const addSorted = useConverterStore((s) => s.addSorted)
+  const addDropped = useConverterStore((s) => s.addDropped)
   const items = useConverterStore((s) => s.items)
   const [rejected, setRejected] = useState<string[]>([])
 
@@ -47,7 +52,7 @@ export default function AllStudio() {
   // same — and without it the browser navigates away to the file it was handed,
   // which throws away whatever was already queued.
   const drop = useFileDrop({
-    onFiles: (files) => setRejected(addSorted(files).rejected),
+    onFiles: (files) => setRejected(addDropped(files, 'all').rejected),
     accept: ALL_ACCEPT,
     label: 'Drop any file here, or click to browse',
     pageWide: true,
@@ -64,7 +69,7 @@ export default function AllStudio() {
   // drop where only some files are turned away lands on the layout below. One
   // piece of state, read by whichever screen is up.
   if (total === 0) {
-    return <LandingPage onFiles={(files) => setRejected(addSorted(files).rejected)} rejected={rejected} />
+    return <LandingPage onFiles={(files) => setRejected(addDropped(files, 'all').rejected)} rejected={rejected} />
   }
 
   return (

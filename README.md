@@ -17,10 +17,19 @@ right question only once you have worked out which kind of thing you have. The
 **All** tab asks nothing: drop pictures, audio and video together and it sorts
 each one onto the tab that can do the work, then tells you what went where.
 
-It deliberately does **not** jump you to another tab. A mixed drop has no single
+A drop that is **entirely one kind** takes you straight to that kind's studio,
+because there is only one destination and asking which tab would be asking a
+question that has already been answered. On a phone that is the whole flow:
+pick one photo and you are on the Images tab with its settings in front of you.
+
+A **mixed** drop deliberately does *not* jump you anywhere — it has no single
 destination, and moving somebody while files are still landing is how you lose
-track of what you just dropped. Anything it cannot read is named individually
-rather than counted — "3 files skipped" makes you go and work out which three.
+track of what you just dropped. Nor does adding another file of the same kind:
+a second photo on the Images tab leaves you exactly where you are. Add one of a
+*different* kind and you come back here, because from that moment no single
+studio shows the whole queue. Anything it cannot read is named individually
+rather than counted — "3 files skipped" makes you go and work out which three —
+and a drop with something to explain stays here so the explanation can be read.
 
 The circle and the two-column shape are **Universal Compress's**, on purpose:
 both apps open on "drop anything and we will work out what it is", and two front
@@ -318,6 +327,7 @@ npm run dev
 | `npm run typecheck` | Types only |
 | `npm test` | Byte-level self-tests for every writer: WAV, AIFF, MP3, Ogg, MP4, GIF, ID3, ZIP |
 | `npm run test:video` | The video tab's GIF export, driven end to end in a real browser |
+| `npm run test:routing` | Which tab a drop leaves you on, at phone width in a real browser |
 
 `npm test` needs no browser and shells out to real third-party readers, because
 "our reader agrees with our writer" proves nothing: WAV header fields, sample
@@ -332,6 +342,12 @@ where every pixel of every frame is compared to the palette colour our own index
 array claims — exactly right, not roughly, because that is the assertion that
 catches an LZW code width that grows one entry late or a difference rectangle
 off by a row.
+
+`npm run test:routing` drives the tab-switching rules above at 390 x 844 with
+touch, because a phone is where landing on the wrong tab costs the most. The
+rules themselves are a pure function (`src/lib/routing.ts`) pinned by `npm test`;
+that suite covers the other half — that every drop target is really wired to
+them, and that the two cases which must *not* move you still don't.
 
 `npm run test:video` needs Playwright (borrowed from a sibling app) and ffmpeg,
 which builds the H.264 fixture and reads the resulting GIF back. Everything

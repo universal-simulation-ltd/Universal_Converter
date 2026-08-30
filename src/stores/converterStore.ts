@@ -9,6 +9,7 @@ import { estimateImageBytes, sampleImage, type ImageSample } from '../lib/estima
 import { convertVideo } from '@unisim/media'
 import { probeDuration, probeVideo } from '../lib/probe'
 import { convertVideoToGif } from '../lib/videogif'
+import { tabAfterDrop, type TabId } from '../lib/routing'
 import {
   DEFAULT_AUDIO_SETTINGS,
   DEFAULT_GIF_SETTINGS,
@@ -24,14 +25,10 @@ import {
 } from '../lib/types'
 import { createZip } from '@unisim/media'
 
-/**
- * Which tab is showing. NOT `MediaKind`, on purpose: `MediaKind` is also the
- * discriminator on every queue item, so widening it to fit an 'all' tab would
- * leak a fourth case into `QueueItem.kind`, `acceptsOn`, `convertAll` and
- * `downloadAll` — none of which have anything to convert for it. The All tab
- * owns no queue; it sorts a drop and hands each file to a real tab.
- */
-export type TabId = MediaKind | 'all'
+// `TabId` and the rule for where a drop leaves you both live in `lib/routing`,
+// so the rule can be tested without standing a store up. Re-exported here
+// because every component that needs the type already imports from this file.
+export type { TabId } from '../lib/routing'
 
 /** How many of each kind a drop was sorted into. */
 export type SortedCounts = Record<MediaKind, number>
@@ -62,11 +59,20 @@ interface ConverterState {
   /**
    * Sort a mixed drop onto the right tabs and report what went where.
    *
-   * Returns the counts rather than switching tab itself: the caller is the only
-   * thing that knows whether the person is watching, and silently jumping them
-   * to another tab mid-drop is how you lose track of what you just dropped.
+   * ⚠️ Queues only — it does NOT switch tab. `addDropped` is the one that
+   * decides where you end up, and it is what the UI calls; this stays the plain
+   * sorter so the sorting and the navigation can be reasoned about separately.
    */
   addSorted: (files: File[]) => SortedCounts & { rejected: string[] }
+  /**
+   * The one entry point for every drop and every file-picker choice: queue the
+   * files, then put the person on the tab that shows what they now have.
+   *
+   * `on` is the tab the files were dropped on, which is both where they are
+   * assumed to belong and where they stay if nothing better applies. The rule
+   * itself is `tabAfterDrop` in `lib/routing` — see the cases spelled out there.
+   */
+  addDropped: (files: File[], on: TabId) => { rejected: string[] }
   removeItem: (id: string) => void
   clearQueue: (kind?: MediaKind) => void
   updateAudio: (patch: Partial<AudioSettings>) => void
@@ -218,9 +224,14 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
 
   setTab: (tab) => set({ tab }),
 
-  // `kind` is the tab the files were dropped on: a PNG dropped on the audio tab
-  // is refused there rather than silently converting as an image, so the queue
-  // always matches the panel beside it.
+  // `kind` is the queue the files are going into, and everything that doesn't
+  // belong in it is refused rather than silently converted as something else —
+  // so the queue always matches the panel beside it.
+  //
+  // ⚠️ Which is NOT the same as "a PNG dropped on the Audio tab is refused".
+  // Since 2026-08-30 the UI goes through `addDropped`, which sends a file the
+  // dropped-on tab can't use to the tab that can, and then moves the person to
+  // where they can see both. This function is the level below that decision.
   addFiles: (files, kind) => {
     const added: QueueItem[] = files.map((file) => {
       const ext = extensionOf(file.name)
@@ -284,6 +295,55 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
       document: buckets.document.length,
       rejected,
     }
+  },
+
+  addDropped: (files, on) => {
+    // Read BEFORE anything is queued: "was the queue empty when they dropped
+    // this?" is the question rule 1 in `tabAfterDrop` asks, and one `addFiles`
+    // call from now the answer is always "no".
+    const hadItems = get().items.length > 0
+    // Which tabs actually got a row. Not the same as "which kinds were in the
+    // drop": an MP4 dropped on the Audio tab lands on Audio, because that is
+    // how you ask for a video's soundtrack.
+    const landedOn: MediaKind[] = []
+    let rejected: string[] = []
+
+    if (on === 'all') {
+      const sorted = get().addSorted(files)
+      rejected = sorted.rejected
+      for (const kind of KINDS) if (sorted[kind] > 0) landedOn.push(kind)
+    } else {
+      // On a studio tab, that tab is the answer for everything it can take —
+      // and for everything NOTHING can take, which is how an unreadable file
+      // still gets a row here saying why (`unsupportedMessage`) instead of
+      // vanishing. Only a file this tab can't use but another one can moves.
+      const mine: File[] = []
+      const elsewhere: Record<MediaKind, File[]> = { audio: [], image: [], video: [], document: [] }
+      for (const file of files) {
+        const ext = extensionOf(file.name)
+        if (acceptsOn(ext, on)) {
+          mine.push(file)
+          continue
+        }
+        const kind = kindOf(ext, file.type)
+        if (kind && kind !== on) elsewhere[kind].push(file)
+        else mine.push(file)
+      }
+      if (mine.length) {
+        get().addFiles(mine, on)
+        landedOn.push(on)
+      }
+      for (const kind of KINDS) {
+        if (elsewhere[kind].length) {
+          get().addFiles(elsewhere[kind], kind)
+          landedOn.push(kind)
+        }
+      }
+    }
+
+    const next = tabAfterDrop({ from: on, hadItems, landedOn, rejected: rejected.length > 0 })
+    if (next !== get().tab) set({ tab: next })
+    return { rejected }
   },
 
   removeItem: (id) => {

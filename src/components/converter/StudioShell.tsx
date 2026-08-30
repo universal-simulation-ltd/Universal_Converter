@@ -44,7 +44,7 @@ export default function StudioShell({
   // `items.filter(...)` builds a new array on every call, which fails zustand's
   // snapshot-identity check and spins React into an infinite re-render.
   const items = useConverterStore((s) => s.items).filter((i) => i.kind === kind)
-  const addFiles = useConverterStore((s) => s.addFiles)
+  const addDropped = useConverterStore((s) => s.addDropped)
 
   return (
     <div className={`${CONTAINER} py-5 flex flex-col gap-4`}>
@@ -61,7 +61,7 @@ export default function StudioShell({
             // No padding wrapper: the empty state is the ring, and it centres
             // itself in the card the same way the All tab's does.
             <DropZone
-              onFiles={(files) => addFiles(files, kind)}
+              onFiles={(files) => addDropped(files, kind)}
               variant="empty"
               accept={accept}
               title={emptyTitle}
@@ -72,7 +72,7 @@ export default function StudioShell({
               <FileQueue kind={kind} targetExt={targetExt} />
               <div className="p-4">
                 <DropZone
-                  onFiles={(files) => addFiles(files, kind)}
+                  onFiles={(files) => addDropped(files, kind)}
                   variant="more"
                   accept={accept}
                   title={moreTitle}

@@ -17,6 +17,7 @@
     "test:images": "node e2e/images.e2e.mjs",
     "fixtures": "node e2e/fixtures/make-fixtures.mjs",
     "test:video": "node e2e/video.e2e.mjs",
+    "test:routing": "node e2e/routing.e2e.mjs",
     "build:desktop": "tsc -b && vite build --mode desktop",
     "cap:sync": "npm run build:desktop && npx cap sync",
     "cap:open:ios": "npx cap open ios"

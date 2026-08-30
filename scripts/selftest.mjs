@@ -24,6 +24,7 @@ import { encodeWav } from '../src/lib/wav.ts'
 import { encodeAiff } from '../src/lib/aiff.ts'
 import { encodeMp3 } from '../src/lib/mp3.ts'
 import { targetSize } from '../src/lib/resize.ts'
+import { tabAfterDrop } from '../src/lib/routing.ts'
 import { parseClock } from '@unisim/media'
 import { createZip, crc32 } from '@unisim/media'
 import { HEADER_BOS, HEADER_EOS, buildPage, oggCrc, opusHead, opusTags } from '../src/lib/ogg.ts'
@@ -590,6 +591,58 @@ function ascii(view, offset, length) {
       throw err
     }
   }
+}
+
+// ── Tab routing ──────────────────────────────────────────────────────────────
+// Where a drop leaves you. Pure rules over a tiny input, and exactly the kind of
+// behaviour that regresses without anybody noticing — nothing crashes when the
+// app takes you to the wrong tab, it just stops being helpful.
+{
+  const at = (from, hadItems, landedOn, rejected = false) =>
+    tabAfterDrop({ from, hadItems, landedOn, rejected })
+
+  // 1. A single-kind drop onto an empty All tab goes straight to that studio.
+  assert.equal(at('all', false, ['image']), 'image', 'all images → the Images tab')
+  assert.equal(at('all', false, ['audio']), 'audio', 'all audio → the Audio tab')
+  assert.equal(at('all', false, ['video']), 'video', 'all video → the Video tab')
+  assert.equal(at('all', false, ['document']), 'document', 'all documents → the Files tab')
+
+  // …however many files, as long as they are all one kind. `landedOn` is a set
+  // of kinds, not a count, so this is the same case as one file.
+  assert.equal(at('all', false, ['image', 'image']), 'image', 'twelve photos still go to Images')
+
+  // 2. A MIXED drop has no single destination, so it stays where the sorting
+  //    column can explain itself.
+  assert.equal(at('all', false, ['image', 'audio']), 'all', 'a mixed drop stays on All')
+  assert.equal(at('all', false, ['image', 'audio', 'video', 'document']), 'all', 'four kinds stay on All')
+
+  // 3. Already queued and sitting on All on purpose: leave them there. This is
+  //    the case that separates `hadItems` from a plain "is it one kind?" test.
+  assert.equal(at('all', true, ['image']), 'all', 'adding to an existing queue does not navigate')
+
+  // 4. A drop the sorter turned something away from stays on All, because the
+  //    "Not converted: …" notice is only rendered there.
+  assert.equal(at('all', false, ['image'], true), 'all', 'a rejection keeps you where the notice is')
+
+  // 5. More of the same kind NEVER moves anybody — the whole point of the
+  //    "add another one" case, and what keeps a hand-picked tab hand-picked.
+  assert.equal(at('image', true, ['image']), 'image', 'a second photo on Images stays on Images')
+  assert.equal(at('audio', true, ['audio']), 'audio', 'a second sound on Audio stays on Audio')
+  // Even when other kinds are already queued behind them: what matters is what
+  // was just added, not what the queue as a whole holds.
+  assert.equal(at('audio', true, ['audio']), 'audio', 'a hand-picked tab survives a mixed queue')
+
+  // 6. A file of a DIFFERENT kind sends you back to the multi-file view.
+  assert.equal(at('image', true, ['audio']), 'all', 'a sound added from Images bounces to All')
+  assert.equal(at('image', true, ['image', 'audio']), 'all', 'one of each bounces to All')
+  assert.equal(at('document', false, ['video']), 'all', 'and from an empty studio tab too')
+
+  // 7. Nothing landed — every file was unreadable. Never move: the person is
+  //    about to be told why, on the screen they are already looking at.
+  assert.equal(at('all', false, []), 'all')
+  assert.equal(at('image', true, []), 'image')
+
+  console.log('✓ routing — every tab-after-drop rule, including the two that must NOT move you')
 }
 
 console.log(skipped > 0

@@ -84,6 +84,19 @@ function Row({
   // smaller is what a converter is expected to do.
   const growth = estimate != null && item.file.size > 0 ? estimate / item.file.size : null
 
+  // The output size — expected, or real once it exists — gets a line of its own.
+  //
+  // ⚠️ It used to be the third of four values on the mono subtitle line, and on
+  // a phone that line is 146px wide: "1.2 MB · 1600 × 1200 · ≈ 1.9 MB · 1.5×
+  // bigger" wrapped across two or three lines of 10.5px slate-400 (2.55:1 on
+  // white, under AA), breaking between a number and its unit — "≈ 2 / KB" is
+  // what a HEIC row actually printed at 390px in WebKit. Nothing
+  // was missing and nothing was truncated; it simply could not be read, which
+  // is what "I can't see the export size on my phone" meant (James, 2026-08-30).
+  // The answer to "how big will this be?" is the reason the estimator exists,
+  // so it is not filler beside the source's own size any more.
+  const outBytes = item.result ? item.result.blob.size : estimate
+
   return (
     <li
       className={`grid grid-cols-[26px_minmax(0,1fr)_112px_72px_136px] items-center gap-3 border-t border-slate-200 px-4 py-3 max-sm:grid-cols-[26px_minmax(0,1fr)_128px] ${
@@ -101,20 +114,62 @@ function Row({
 
       <span className="min-w-0">
         <span className="block truncate text-[12.5px] font-semibold text-slate-900">{item.file.name}</span>
-        <span className={`block font-mono text-[10.5px] ${skipped || failed ? 'text-red-700' : 'text-slate-400'}`}>
+        {/* What you brought. slate-500, not slate-400: at 10.5px on white the
+            latter is 2.55:1, under AA's 4.5, and this is the size of type where
+            that stops being a technicality. */}
+        <span className={`block font-mono text-[10.5px] ${skipped || failed ? 'text-red-700' : 'text-slate-500'}`}>
           {item.error ??
             [
               formatBytes(item.file.size),
               item.detail,
-              item.result ? `→ ${formatBytes(item.result.blob.size)}` : null,
-              estimate != null ? `≈ ${formatBytes(estimate)}` : null,
-              growth != null && growth >= 1.5 ? `${growth < 10 ? growth.toFixed(1) : Math.round(growth)}× bigger` : null,
-              savedPct != null && savedPct > 0 ? `${savedPct}% smaller` : null,
               large ? 'large file — may run out of memory' : null,
             ]
               .filter(Boolean)
               .join(' · ')}
         </span>
+
+        {/* What you are getting. Its own line, at a size and a weight you can
+            read at arm's length on a phone — see the note on `outBytes`. */}
+        {outBytes != null && (
+          <span className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11.5px] leading-tight">
+            {/* The target format, phones only. Above `sm` the Convert column
+                two tracks over already says `png → jpg`; below it, that column
+                is hidden, so this is the only place the answer to "what am I
+                getting?" appears at all. */}
+            <span className="font-mono font-bold uppercase text-orange-700 sm:hidden">
+              → {targetExt}
+            </span>
+            {/* `whitespace-nowrap` is load-bearing, and it covers the WORD as
+                well as the number: in a 146px column this line otherwise breaks
+                between a number and its unit ("≈ 2" above "KB"), or leaves
+                "expected" stranded on a line of its own under the figure it
+                belongs to. Each piece here wraps whole or not at all. */}
+            <span className="whitespace-nowrap">
+              {/* Above `sm` the phone chip beside this is hidden, so a finished
+                  row would print a bare "2.5 MB" directly under the source's
+                  own "1.2 MB" — two numbers with nothing saying which is which.
+                  The arrow is the app's existing word for "out". A queued row
+                  needs no such help: "≈ … expected" already says it. */}
+              {item.result && <span className="hidden font-bold text-orange-700 sm:inline">→ </span>}
+              <span className="font-semibold text-slate-900">
+                {item.result ? formatBytes(outBytes) : `≈ ${formatBytes(outBytes)}`}
+              </span>
+              {!item.result && <span className="text-slate-500"> expected</span>}
+            </span>
+            {growth != null && growth >= 1.5 && (
+              // Amber, not red: a bigger file is a surprise worth flagging and
+              // not a failure. The row converts perfectly well either way.
+              <span className="whitespace-nowrap rounded border border-amber-200 bg-amber-50 px-1.5 py-px font-semibold text-amber-900">
+                {growth < 10 ? growth.toFixed(1) : Math.round(growth)}× bigger
+              </span>
+            )}
+            {savedPct != null && savedPct > 0 && (
+              <span className="whitespace-nowrap rounded border border-emerald-200 bg-emerald-50 px-1.5 py-px font-semibold text-emerald-800">
+                {savedPct}% smaller
+              </span>
+            )}
+          </span>
+        )}
 
         {/* What the conversion had to give up. Amber and not red, because this
             row SUCCEEDED — the file beside it is good and downloadable — and
