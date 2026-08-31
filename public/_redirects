@@ -20,6 +20,15 @@
 # happened on the first deploy.
 /converter/flac/*               /flac/:splat          200
 
+# The fallback font (@unisim/doc embeds it so Cyrillic, Greek and Hebrew stop
+# converting to '?'). Same shape as the FLAC rule above, and it was missed the
+# same way — worse, silently: `fallbackFont.ts` checks the sfnt magic number, so
+# the SPA shell coming back is read as "no font available" and the document
+# converts with '?' exactly as before. Nothing errors, and the whole feature is
+# simply absent in production. Measured 2026-08-31, before this rule:
+# /converter/fonts/LiberationSans-Regular.ttf answered 200 text/html.
+/converter/fonts/*              /fonts/:splat         200
+
 # Static files referenced from index.html / app code (BASE_URL-prefixed).
 /converter/favicon.svg          /favicon.svg          200
 /converter/unisim-icon.png      /unisim-icon.png      200
