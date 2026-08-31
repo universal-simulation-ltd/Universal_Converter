@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { convertAudio } from '../lib/convert'
 import { convertDocument, DEFAULT_DOC_SETTINGS, type DocSettings } from '../lib/doc'
-import { saveBlob } from '../lib/download'
+import { saveBlob, saveBlobAs } from '../lib/download'
 import { extensionOf, formatDuration } from '../lib/humanise'
 import { acceptsOn, kindOf, unsupportedMessage } from '../lib/formats'
 import { convertImage } from '../lib/image'
@@ -84,13 +84,9 @@ interface ConverterState {
   resetSettings: () => void
 
   convertAll: (kind: MediaKind) => Promise<void>
-  /**
-   * Put one tab's finished rows back in the queue, so "Convert again" has
-   * something to convert. Same `rearmed` the settings writes use — the results
-   * go with the status, for the reason spelled out there.
-   */
-  requeueAll: (kind: MediaKind) => void
   downloadItem: (id: string) => void
+  /** Save one finished row through the OS file dialog, where there is one. */
+  saveItemAs: (id: string) => void
   downloadAll: (kind: MediaKind) => Promise<void>
 }
 
@@ -227,6 +223,17 @@ async function sampleAdded(items: QueueItem[]): Promise<void> {
   }
 }
 
+/**
+ * One tab's finished rows put back in the queue — the results go with the
+ * status, for the reason spelled out below.
+ *
+ * ⓘ There used to be a `requeueAll` action on the store calling this, behind
+ * the action card's "Convert again" button. Both went on 2026-08-31 (James):
+ * once a tab is finished the card shows no convert button at all, and the way
+ * back is to change a setting, which re-arms through the paths below anyway.
+ * Bring it back only with a caller — a store action nothing calls is a claim
+ * about the UI that is no longer true.
+ */
 function rearmed(state: ConverterState, kind: MediaKind): QueueItem[] {
   // A run holds the panel read-only, so this should be unreachable mid-pass —
   // but a settings write landing during a conversion would reset the very row
@@ -499,11 +506,23 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
     }
   },
 
-  requeueAll: (kind) => set({ items: rearmed(get(), kind) }),
-
   downloadItem: (id) => {
     const item = get().items.find((i) => i.id === id)
     if (item?.result) saveBlob(item.result.blob, item.result.name)
+  },
+
+  /**
+   * Save one finished row wherever the user points the dialog.
+   *
+   * ⚠️ Synchronous down to `saveBlobAs`, which is synchronous down to
+   * `showSaveFilePicker`. The picker needs the click's transient activation and
+   * an `await` anywhere on this path spends it — so this reads the item out of
+   * state rather than being handed a promise, and returns void rather than
+   * awaiting anything.
+   */
+  saveItemAs: (id) => {
+    const item = get().items.find((i) => i.id === id)
+    if (item?.result) void saveBlobAs(item.result.blob, item.result.name)
   },
 
   downloadAll: async (kind) => {

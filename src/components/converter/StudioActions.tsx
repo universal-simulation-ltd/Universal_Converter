@@ -1,5 +1,6 @@
 import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
 import { DROP_COPY } from '../../lib/formats'
+import { canPickSaveLocation } from '../../lib/download'
 import { formatBytes } from '../../lib/humanise'
 import { kindTotals, savingPercent, useConverterStore } from '../../stores/converterStore'
 import type { MediaKind } from '../../lib/types'
@@ -183,8 +184,8 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
   const items = useConverterStore((s) => s.items)
   const running = useConverterStore((s) => s.running)
   const convertAll = useConverterStore((s) => s.convertAll)
-  const requeueAll = useConverterStore((s) => s.requeueAll)
   const downloadAll = useConverterStore((s) => s.downloadAll)
+  const saveItemAs = useConverterStore((s) => s.saveItemAs)
 
   const t = kindTotals(items, kind)
   // Every row on the tab is one this app can't open, so there is nothing to
@@ -198,13 +199,14 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
   const allDone = t.done === t.eligible && t.done > 0
   const saved = savingPercent(t.bytesInDone, t.bytesOutDone)
 
+  // ⚠️ No "Convert again" branch any more (James, 2026-08-31). Once a tab is
+  // finished this button is GONE rather than relabelled — see the render below
+  // for why. `allDone` therefore never reaches this expression.
   const convertLabel = running
     ? 'Converting…'
-    : allDone
-      ? 'Convert again'
-      : t.pending === 1
-        ? 'Convert and save 1 file'
-        : `Convert ${t.pending} files`
+    : t.pending === 1
+      ? 'Convert and save 1 file'
+      : `Convert ${t.pending} files`
 
   // Did the one file save itself already? `convertAll` downloads a single
   // result the moment it is ready, so on that path the file is on disk before
@@ -222,12 +224,26 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
   // duplicate — same name, same bytes, two entries. The button still works and
   // is still there (re-saving after a browser "keep/discard" prompt is a real
   // thing to want); it just says which copy it is handing you.
+  //
+  // ⚠️ And once it has, the second copy goes through the OS FILE DIALOG rather
+  // than into the downloads folder (James, 2026-08-31). A second copy landing
+  // beside the first as "photo (1).jpg" is the one outcome nobody was asking
+  // for: the reason to save again is to put the file somewhere, and only a
+  // dialog can do that. `canPickSaveLocation()` gates the LABEL, not just the
+  // behaviour — Firefox and Safari have no such API, and promising a dialog
+  // there and then silently downloading would be worse than not offering it.
   const downloadLabel =
     t.done === 1
       ? autoSaved
-        ? 'Save another copy'
+        ? canPickSaveLocation()
+          ? 'Open save dialog…'
+          : 'Save another copy'
         : 'Download the converted file'
       : `Download all ${t.done} files as a ZIP`
+
+  // The one finished row, for the dialog path — `downloadAll` saves to the
+  // downloads folder and is still right for the ZIP and for the first save.
+  const onlyDone = t.done === 1 ? items.find((i) => i.kind === kind && i.result) : undefined
 
   const primary =
     'w-full rounded-xl bg-gradient-to-br from-[#FE8C01] to-[#E05504] px-4 py-3 text-[14px] font-bold text-white shadow-sm transition-opacity hover:opacity-95 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-40'
@@ -325,19 +341,34 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
                 <button
                   type="button"
                   disabled={running}
-                  onClick={() => void downloadAll(kind)}
+                  onClick={() =>
+                    autoSaved && onlyDone ? saveItemAs(onlyDone.id) : void downloadAll(kind)
+                  }
                   className={autoSaved ? secondary : primary}
                 >
                   {downloadLabel}
                 </button>
-                <button
-                  type="button"
-                  disabled={running || (!allDone && (!canConvert || t.pending === 0))}
-                  onClick={() => (allDone ? requeueAll(kind) : void convertAll(kind))}
-                  className={secondary}
-                >
-                  {convertLabel}
-                </button>
+                {/* ⚠️ "Convert again" is GONE (James, 2026-08-31), and only
+                    that case: this button survives while there is still
+                    something QUEUED, which is how a partly-converted tab gets
+                    finished. Removing it outright would strand those rows with
+                    no way to run them.
+
+                    Nothing is lost by dropping it from the finished state.
+                    Touching any setting re-arms the queue through `rearmed`,
+                    so the rows go back to queued and this button returns
+                    saying how many — which is the honest way back, and the
+                    only one that reflects what changed. */}
+                {!allDone && (
+                  <button
+                    type="button"
+                    disabled={running || !canConvert || t.pending === 0}
+                    onClick={() => void convertAll(kind)}
+                    className={secondary}
+                  >
+                    {convertLabel}
+                  </button>
+                )}
               </>
             ) : (
               <button

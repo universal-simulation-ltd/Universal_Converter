@@ -304,20 +304,97 @@ console.log('\n── The file saved itself, so the button says so ────�
     downloads.length - before === 1, `${downloads.length - before} downloads`)
   check('the card says the file is already saved',
     await page.getByText('Saved to your downloads.').isVisible())
-  check('the button offers ANOTHER copy, not the first one',
-    await page.getByRole('button', { name: 'Save another copy' }).isVisible())
   check('nothing still offers to download the file you have',
     await page.getByRole('button', { name: /^Download the converted file/ }).count() === 0)
 
-  // And the button still works — re-saving is a real thing to want after a
-  // browser's keep/discard prompt. It is the LABEL that was lying, not the
-  // control, so the fix must not have quietly disabled it.
-  const beforeSecond = downloads.length
-  await page.getByRole('button', { name: 'Save another copy' }).click()
-  await page.waitForTimeout(1500)
-  check('pressing it deliberately does still save a second copy',
-    downloads.length - beforeSecond === 1, `${downloads.length - beforeSecond} downloads`)
+  // ⚠️ The second copy goes through the OS FILE DIALOG, not the downloads
+  // folder (James, 2026-08-31) — a duplicate landing beside the first as
+  // "sample (1).jpg" is the one outcome nobody wanted. `showSaveFilePicker`
+  // IS defined in Playwright's Chromium on a localhost origin (measured: it
+  // needs a secure context, which is why it reads `undefined` on about:blank),
+  // so the label is the dialog one here.
+  check('the button offers the save dialog',
+    await page.getByRole('button', { name: 'Open save dialog…' }).isVisible())
 
+  // ⚠️ And it is STUBBED rather than clicked for real: a genuine
+  // `showSaveFilePicker` raises a native window, which Playwright cannot see
+  // or dismiss, so the suite would hang. The stub records what the app asked
+  // for and collects what it wrote, which is the whole contract.
+  await page.evaluate(() => {
+    const w = window
+    w.__picked = null
+    w.__wrote = null
+    w.showSaveFilePicker = async (opts) => {
+      w.__picked = opts
+      return {
+        createWritable: async () => ({
+          write: async (data) => {
+            const buf = await data.arrayBuffer()
+            w.__wrote = Array.from(new Uint8Array(buf.slice(0, 4)))
+          },
+          close: async () => {},
+        }),
+      }
+    }
+  })
+
+  const beforeDialog = downloads.length
+  await page.getByRole('button', { name: 'Open save dialog…' }).click()
+  await page.waitForTimeout(1000)
+  const picked = await page.evaluate(() => window.__picked)
+  const wrote = await page.evaluate(() => window.__wrote)
+
+  check('pressing it opens the picker rather than downloading', picked !== null)
+  check('the dialog is pre-filled with the converted name',
+    picked?.suggestedName === 'sample.jpg', JSON.stringify(picked?.suggestedName))
+  check('the dialog filters on the real type and extension',
+    JSON.stringify(picked?.types) === JSON.stringify([
+      { description: 'File', accept: { 'image/jpeg': ['.jpg'] } },
+    ]), JSON.stringify(picked?.types))
+  check('the bytes handed to the dialog are the JPEG itself',
+    Array.isArray(wrote) && wrote[0] === 0xff && wrote[1] === 0xd8, JSON.stringify(wrote))
+  check('and nothing went to the downloads folder behind its back',
+    downloads.length - beforeDialog === 0, `${downloads.length - beforeDialog} downloads`)
+
+  // ⚠️ CANCELLING MUST NOT FALL BACK. Rejecting with AbortError is the user
+  // saying "no" — downloading the file anyway would put it in exactly the
+  // folder they just declined, which is the bug this whole button replaced.
+  await page.evaluate(() => {
+    window.showSaveFilePicker = async () => {
+      const err = new Error('The user aborted a request.')
+      err.name = 'AbortError'
+      throw err
+    }
+  })
+  const beforeCancel = downloads.length
+  await page.getByRole('button', { name: 'Open save dialog…' }).click()
+  await page.waitForTimeout(1000)
+  check('cancelling the dialog saves nothing at all',
+    downloads.length - beforeCancel === 0, `${downloads.length - beforeCancel} downloads`)
+
+  await page.getByRole('button', { name: /Remove / }).first().click()
+}
+
+console.log('\n── A finished tab offers no "Convert again" ─────────────────')
+{
+  // Removed 2026-08-31 (James): once everything is converted the card shows no
+  // convert button at all. The way back is to change a setting, which re-arms
+  // the queue — and THAT case is the one below, because dropping the button
+  // outright would strand a partly-converted tab with no way to finish it.
+  await fileInput().setInputFiles(path.join(TMP, 'sample.png'))
+  await page.getByRole('button', { name: /Convert and save 1 file/ }).click()
+  await page.getByText('Done', { exact: true }).first().waitFor({ timeout: 30000 })
+  await page.waitForTimeout(1500)
+  check('a finished tab has no "Convert again" button',
+    await page.getByRole('button', { name: /Convert again/ }).count() === 0)
+
+  // Changing the format re-arms the row, and the convert button comes back
+  // saying how many — the honest way back, and the only one that reflects
+  // what changed.
+  await chip('WebP').click()
+  check('changing a setting brings the convert button back',
+    await page.getByRole('button', { name: /Convert and save 1 file/ }).isVisible())
+  await chip('JPEG').click()
   await page.getByRole('button', { name: /Remove / }).first().click()
 }
 
