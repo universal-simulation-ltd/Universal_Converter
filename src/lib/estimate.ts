@@ -40,6 +40,39 @@ export interface ImageSample {
   width: number
   height: number
   tile: HTMLCanvasElement
+  /**
+   * Does any sampled pixel have alpha < 255?
+   *
+   * Read here rather than anywhere else because this is the one place the
+   * decoded pixels already exist — asking the question later would mean
+   * decoding the file a second time to learn something we had.
+   *
+   * ⚠️ It is a SAMPLE, so it can only ever prove transparency, never rule it
+   * out. A small image is in the tile whole and the answer is exact; a large
+   * one is nine 96px crops, which covers all four corners (the clamp in
+   * `sampleImage` pins the outer cells to the edges) but not the space between
+   * them. That asymmetry is the right way round for what it drives: the JPEG
+   * flattening warning. A missed thin band under-warns on a rare image; a
+   * scan that guessed the other way would put an amber line on every opaque
+   * PNG screenshot, and a warning that cries wolf is one nobody reads.
+   */
+  hasTransparency: boolean
+}
+
+/**
+ * ⚠️ `willReadFrequently` is deliberately NOT set on the sample canvas: it is
+ * read exactly once, and the flag trades GPU-backed drawing for faster readback
+ * — the wrong bargain when nine `drawImage` calls precede one `getImageData`.
+ */
+function scanForTransparency(ctx: CanvasRenderingContext2D, w: number, h: number): boolean {
+  const { data } = ctx.getImageData(0, 0, w, h)
+  // Stride of 4 from the alpha byte — every pixel, but only the channel asked
+  // about. Short-circuits on the first hit, which for a logo on a transparent
+  // ground is the very first pixel.
+  for (let p = 3; p < data.length; p += 4) {
+    if (data[p] < 255) return true
+  }
+  return false
 }
 
 /**
@@ -87,7 +120,7 @@ export async function sampleImage(file: File): Promise<ImageSample> {
       canvas.width = width
       canvas.height = height
       ctx.drawImage(bitmap, 0, 0)
-      return { width, height, tile: canvas }
+      return { width, height, tile: canvas, hasTransparency: scanForTransparency(ctx, width, height) }
     }
 
     const cw = Math.min(CELL, width)
@@ -103,7 +136,12 @@ export async function sampleImage(file: File): Promise<ImageSample> {
         ctx.drawImage(bitmap, sx, sy, cw, ch, gx * cw, gy * ch, cw, ch)
       }
     }
-    return { width, height, tile: canvas }
+    return {
+      width,
+      height,
+      tile: canvas,
+      hasTransparency: scanForTransparency(ctx, canvas.width, canvas.height),
+    }
   } finally {
     bitmap.close()
   }

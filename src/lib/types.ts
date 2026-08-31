@@ -113,9 +113,40 @@ export interface QueueItem {
    * `detail` would be reading a sentence to recover a number we had.
    */
   frames?: number
+  /**
+   * Does this image carry transparency? Images only, and absent until the row
+   * has been sampled.
+   *
+   * Same reasoning as `frames` directly above: the PANEL needs it as a fact,
+   * not as text. JPEG has no alpha channel at all, so `image.ts` fills white
+   * behind every conversion to it — which is the right rendering and a silent
+   * loss, and since JPEG is now the DEFAULT target it is a loss somebody can
+   * reach without choosing anything. `hasTransparency` on the sample is where
+   * it is measured; see the caveat there about what a sample can and cannot
+   * prove.
+   */
+  hasAlpha?: boolean
   /** User-facing reason this row failed or was skipped. */
   error: string | null
   result: ConvertedFile | null
+  /**
+   * Did this row's file save itself, without anybody pressing a save button?
+   *
+   * True only on the single-file path in `convertAll`, which downloads the one
+   * result the moment it is ready. It exists so the button underneath can stop
+   * lying: it used to read "Download the converted file" over a file already
+   * sitting in the downloads folder, and pressing it put a second identical
+   * copy there — same name, same bytes — which is what a browser does with two
+   * downloads and not what anybody meant to ask for.
+   *
+   * ⚠️ Lives on the ITEM rather than in store state on purpose. Every path that
+   * invalidates a result — `rearmed` on any settings change, a requeue, the row
+   * being removed — already clears the item's fields, so the flag cannot
+   * outlive the download it describes. A store-level flag would need every one
+   * of those paths to remember it, and the one that forgot would leave the
+   * button claiming a file had been saved when it had not.
+   */
+  savedAutomatically?: boolean
   /**
    * Bytes the conversion is expected to produce, before it runs — images only.
    *
@@ -190,13 +221,32 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
   trim: { enabled: false, startSec: 0, endSec: null },
 }
 
-// PNG, not WebP. WebP is the better *file* — smaller at the same quality — but
-// the default has to be the one that opens everywhere, and a PNG does: every
-// image viewer, every document, every decade-old bit of software. Somebody who
-// wants the smaller file goes and picks WebP; somebody who does not know the
-// difference should not end up with a file their colleague cannot open.
+// JPEG (James, 2026-08-31). The rule this default answers to has not changed —
+// it must be the format that opens everywhere — but PNG was satisfying that
+// rule while breaking the action itself. The ordinary path is drop photos,
+// press Convert, and against a JPEG source PNG made the file BIGGER: measured
+// at +338% on a noise JPEG, reported honestly by the amber chip and still the
+// wrong thing to have happened by default. Growth is not a sane default
+// outcome of the most common action in a converter.
+//
+// ⚠️ WebP was the other candidate and was NOT chosen. It is the better file on
+// every axis that can be measured — smaller than JPEG at equal quality, and it
+// keeps alpha — but it fails the one rule above: it is still the format that
+// gets emailed back with "I can't open this". JPEG is one click from WebP for
+// anyone who knows they want it, and the chip's blurb says what it is for.
+//
+// ⚠️ The cost of JPEG, and why it did not sink it: JPEG has NO ALPHA, so
+// `image.ts` fills white behind the image before encoding. That is a real loss
+// and, unlike PNG's growth, an invisible one — nothing about a flattened logo
+// looks wrong until you put it on a coloured background. It is not left
+// silent: `ImageStudio` samples every dropped image for transparency and puts
+// an amber line above the button when a see-through file is about to be
+// flattened, in the same place and the same voice as the animated-GIF warning
+// beside it. A loud loss was judged better than a loud growth; a SILENT loss
+// would have been worse than either, which is the whole reason that warning is
+// part of this change rather than a follow-up.
 export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
-  format: 'png',
+  format: 'jpeg',
   quality: 0.82,
   maxEdge: 'source',
   dither: false,

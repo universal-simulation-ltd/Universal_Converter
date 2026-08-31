@@ -208,6 +208,11 @@ async function sampleAdded(items: QueueItem[]): Promise<void> {
                   ? `${sample.width} × ${sample.height} · ${frames} frames`
                   : `${sample.width} × ${sample.height}`,
                 ...(frames ? { frames } : {}),
+                // Free — the sample decode already read these pixels. Not put
+                // in `detail`: "has transparency" is not a property anyone
+                // wants printed on every PNG row, only one the panel needs to
+                // know about when the target is JPEG.
+                hasAlpha: sample.hasTransparency,
               }
             : i,
         ),
@@ -229,7 +234,7 @@ function rearmed(state: ConverterState, kind: MediaKind): QueueItem[] {
   if (state.running) return state.items
   return state.items.map((i) =>
     i.kind === kind && i.status === 'done'
-      ? { ...i, status: 'queued' as const, progress: 0, result: null, notes: [] }
+      ? { ...i, status: 'queued' as const, progress: 0, result: null, notes: [], savedAutomatically: false }
       : i,
   )
 }
@@ -479,7 +484,15 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
       // put either way, so a second copy is always one click away.
       if (pending.length === 1) {
         const only = get().items.find((i) => i.id === pending[0])
-        if (only?.result) saveBlob(only.result.blob, only.result.name)
+        if (only?.result) {
+          saveBlob(only.result.blob, only.result.name)
+          // Recorded so the button below can offer a SECOND copy rather than
+          // pretending to be the first. Before this, the file saved itself and
+          // then a button reading "Download the converted file" sat under it —
+          // pressing the obvious next control put an identical duplicate in the
+          // downloads folder.
+          patch(only.id, { savedAutomatically: true })
+        }
       }
     } finally {
       set({ running: false })

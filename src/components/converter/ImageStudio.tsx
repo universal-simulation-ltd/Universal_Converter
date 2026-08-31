@@ -78,6 +78,19 @@ function ImagePanel() {
   )
   const flattening = animated && settings.format !== 'gif'
 
+  // Is a see-through image about to be flattened? JPEG is the only target here
+  // with no alpha channel — WebP, PNG and AVIF all carry one, and our GIF
+  // writer keeps 1-bit transparency (see `imagegif.ts`) — so this is the one
+  // format that has to say so.
+  //
+  // ⚠️ This exists BECAUSE JPEG is now the default (see `DEFAULT_IMAGE_SETTINGS`).
+  // While the default was PNG, flattening was something you had to go and pick;
+  // now it is what happens if you drop a logo and press the button, so the
+  // warning is part of the same change rather than a nicety on top of it.
+  const flatteningAlpha = useConverterStore((s) =>
+    s.items.some((i) => i.kind === 'image' && i.hasAlpha === true),
+  ) && settings.format === 'jpeg'
+
   // Anything moved off its default, spelled out for the collapsed header. The
   // section is shut on arrival (owner ask, 2026-08-31), so this line is the only
   // thing standing between a setting carried over from an earlier conversion and
@@ -130,6 +143,18 @@ function ImagePanel() {
           <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800">
             One of these GIFs is animated, and {target.label} holds a single picture — so only its
             first frame will be converted. Choose GIF to keep the animation.
+          </p>
+        )}
+
+        {/* ⚠️ OUTSIDE the disclosure, for the same reason as the line above it:
+            this is not a setting, it is what the conversion does to your file.
+            A flattened logo looks perfect until somebody puts it on a coloured
+            background, which is the worst shape a loss can have — it is found
+            long after the file was converted, by someone else. */}
+        {flatteningAlpha && (
+          <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800">
+            Something here is see-through, and JPEG has no transparency — those areas will be
+            filled with white. Choose PNG or WebP to keep it.
           </p>
         )}
 

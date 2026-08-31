@@ -8,9 +8,11 @@
 // `download.suggestedFilename()` — the name the browser actually used — rather
 // than the name the store computed.
 //
-// It also pins the two promises the panel now makes: PNG is the default target,
-// and converting a queue of ONE saves it without a second click (while a queue
-// of two does not, or a batch would fire a download per file).
+// It also pins the promises the panel makes: JPEG is the default target,
+// converting a queue of ONE saves it without a second click (while a queue of
+// two does not, or a batch would fire a download per file) — and, since
+// 2026-08-31, that ONE convert produces exactly ONE download rather than two,
+// and that a see-through file is warned about before JPEG fills it with white.
 //
 //   node e2e/images.e2e.mjs
 
@@ -144,8 +146,16 @@ function chunk(type, data) {
   return Buffer.concat([head, body, crc])
 }
 
-/** A tiny opaque RGBA PNG — real bytes, so the browser's decoder is real too. */
-function makePng(size = 8) {
+/**
+ * A tiny RGBA PNG — real bytes, so the browser's decoder is real too.
+ *
+ * `alpha` is the constant alpha byte: 0xff for the opaque fixtures everything
+ * else uses, and anything less for the see-through one that drives the JPEG
+ * flattening warning. It has to be a REAL alpha channel rather than a claim,
+ * because what reads it is `sampleImage`'s `getImageData` on the far side of
+ * the browser's own PNG decoder.
+ */
+function makePng(size = 8, alpha = 0xff) {
   const ihdr = Buffer.alloc(13)
   ihdr.writeUInt32BE(size, 0)
   ihdr.writeUInt32BE(size, 4)
@@ -159,7 +169,7 @@ function makePng(size = 8) {
       raw[at++] = (x * 32) & 0xff
       raw[at++] = (y * 32) & 0xff
       raw[at++] = 0x80
-      raw[at++] = 0xff
+      raw[at++] = alpha
     }
   }
   return Buffer.concat([
@@ -180,6 +190,11 @@ const png = makePng()
 for (const name of ['sample.png', 'my.photo.v2.png', 'second.png', 'SHOUTY.PNG']) {
   fs.writeFileSync(path.join(TMP, name), png)
 }
+// Half-transparent throughout, so every sampled pixel trips the scan — the
+// warning's job is to fire on a logo with a see-through ground, and a fixture
+// that is only transparent in one corner would be testing the mosaic's
+// coverage rather than the warning.
+fs.writeFileSync(path.join(TMP, 'seethrough.png'), makePng(8, 0x80))
 fs.writeFileSync(path.join(TMP, 'logo.svg'), SVG)
 // The one fixture that cannot be written here. A HEIC is an HEVC still in an
 // ISO container — there is no dozen-line encoder for it the way there is for a
@@ -229,8 +244,12 @@ async function convertOne(filename) {
 
 console.log('\n── Defaults ─────────────────────────────────────────────────')
 {
-  check('PNG is the default target', await chip('PNG').getAttribute('aria-pressed') === 'true')
-  for (const other of ['WebP', 'JPEG', 'AVIF']) {
+  // ⚠️ JPEG since 2026-08-31, and this assertion is the point of the change
+  // rather than a detail of it. PNG was the default, so the ordinary path —
+  // drop photos, press Convert — produced a BIGGER file every time (+338%
+  // measured on a noise JPEG). The reasoning is on `DEFAULT_IMAGE_SETTINGS`.
+  check('JPEG is the default target', await chip('JPEG').getAttribute('aria-pressed') === 'true')
+  for (const other of ['WebP', 'PNG', 'AVIF']) {
     check(`${other} is not selected by default`,
       await chip(other).getAttribute('aria-pressed') === 'false')
   }
@@ -258,21 +277,76 @@ console.log('\n── One file converts and saves itself ───────�
   check('converting one file starts the download on its own', got.length === 1,
     `${got.length} downloads`)
   if (got.length === 1) {
-    check('PNG → PNG is named .png, not .png.png',
-      got[0].suggestedFilename() === 'sample.png', got[0].suggestedFilename())
+    check('PNG → JPEG is named .jpg',
+      got[0].suggestedFilename() === 'sample.jpg', got[0].suggestedFilename())
+    const saved = path.join(TMP, '.out.jpg')
+    await got[0].saveAs(saved)
+    const bytes = fs.readFileSync(saved)
+    check('the saved file really is a JPEG',
+      bytes.subarray(0, 2).toString('hex') === 'ffd8', bytes.subarray(0, 8).toString('hex'))
+  }
+}
+
+console.log('\n── The file saved itself, so the button says so ─────────────')
+{
+  // ⚠️ THE REGRESSION THIS FILE EXISTS FOR, as of 2026-08-31. Converting one
+  // file auto-saved it and then left a button reading "Download the converted
+  // file" underneath — so the obvious next press put a SECOND identical copy in
+  // the downloads folder, same name, same bytes. Two downloads for one convert.
+  // The assertions below are in the order somebody would hit them.
+  await fileInput().setInputFiles(path.join(TMP, 'sample.png'))
+  const before = downloads.length
+  await page.getByRole('button', { name: /Convert and save 1 file/ }).click()
+  await page.getByText('Done', { exact: true }).first().waitFor({ timeout: 30000 })
+  await page.waitForTimeout(1500)
+
+  check('the convert itself produced exactly one download',
+    downloads.length - before === 1, `${downloads.length - before} downloads`)
+  check('the card says the file is already saved',
+    await page.getByText('Saved to your downloads.').isVisible())
+  check('the button offers ANOTHER copy, not the first one',
+    await page.getByRole('button', { name: 'Save another copy' }).isVisible())
+  check('nothing still offers to download the file you have',
+    await page.getByRole('button', { name: /^Download the converted file/ }).count() === 0)
+
+  // And the button still works — re-saving is a real thing to want after a
+  // browser's keep/discard prompt. It is the LABEL that was lying, not the
+  // control, so the fix must not have quietly disabled it.
+  const beforeSecond = downloads.length
+  await page.getByRole('button', { name: 'Save another copy' }).click()
+  await page.waitForTimeout(1500)
+  check('pressing it deliberately does still save a second copy',
+    downloads.length - beforeSecond === 1, `${downloads.length - beforeSecond} downloads`)
+
+  await page.getByRole('button', { name: /Remove / }).first().click()
+}
+
+console.log('\n── PNG → PNG still is not .png.png ──────────────────────────')
+{
+  // Kept alive explicitly now that PNG is no longer the default: replacing an
+  // extension with THE SAME extension is the case a naive implementation turns
+  // into `sample.png.png`, and it stopped being exercised for free the moment
+  // the default moved to JPEG.
+  await chip('PNG').click()
+  const got = await convertOne('sample.png')
+  check('PNG → PNG is named .png, not .png.png',
+    got.length === 1 && got[0].suggestedFilename() === 'sample.png',
+    got.map((d) => d.suggestedFilename()).join(', '))
+  if (got.length === 1) {
     const saved = path.join(TMP, '.out.png')
     await got[0].saveAs(saved)
     const bytes = fs.readFileSync(saved)
     check('the saved file really is a PNG',
       bytes.subarray(1, 4).toString('latin1') === 'PNG', bytes.subarray(0, 8).toString('hex'))
   }
+  await chip('JPEG').click()
 }
 
 console.log('\n── Names with dots in the stem ──────────────────────────────')
 {
   const got = await convertOne('my.photo.v2.png')
   check('only the last extension is replaced',
-    got.length === 1 && got[0].suggestedFilename() === 'my.photo.v2.png',
+    got.length === 1 && got[0].suggestedFilename() === 'my.photo.v2.jpg',
     got.map((d) => d.suggestedFilename()).join(', '))
 }
 
@@ -283,8 +357,44 @@ console.log('\n── An extension that arrives SHOUTING ───────�
   // instead of replacing.
   const got = await convertOne('SHOUTY.PNG')
   check('an upper-case source extension is replaced, not appended',
-    got.length === 1 && got[0].suggestedFilename() === 'SHOUTY.png',
+    got.length === 1 && got[0].suggestedFilename() === 'SHOUTY.jpg',
     got.map((d) => d.suggestedFilename()).join(', '))
+}
+
+console.log('\n── A see-through file says so before it is flattened ────────')
+{
+  // The cost of the JPEG default: JPEG has no alpha, so `image.ts` fills white
+  // behind the image. That is invisible until somebody puts the result on a
+  // coloured background, which is the worst shape a loss can have — found late,
+  // by someone else. The warning is what makes it loud.
+  await fileInput().setInputFiles(path.join(TMP, 'seethrough.png'))
+  const warning = page.getByText(/see-through, and JPEG has no transparency/)
+  await warning.waitFor({ timeout: 15000 }).catch(() => {})
+  check('a transparent file warns that JPEG will fill it with white',
+    await warning.isVisible())
+
+  // ⚠️ And it goes away on the formats that CAN carry alpha — WebP, PNG and
+  // AVIF all have a channel, and our GIF writer keeps 1-bit transparency. A
+  // warning that stayed up regardless would be teaching people to ignore it.
+  await chip('PNG').click()
+  check('choosing PNG takes the warning away', await warning.count() === 0)
+  await chip('WebP').click()
+  check('choosing WebP takes the warning away too', await warning.count() === 0)
+  await chip('JPEG').click()
+  check('and it comes back on JPEG', await warning.isVisible())
+  await page.getByRole('button', { name: /Remove / }).first().click()
+}
+
+console.log('\n── An opaque file does NOT cry wolf ─────────────────────────')
+{
+  // The other half, and the one that decides whether the warning is worth
+  // having: the ordinary opaque PNG screenshot must NOT get an amber line, or
+  // the warning becomes furniture and stops being read.
+  await fileInput().setInputFiles(path.join(TMP, 'sample.png'))
+  await page.getByText(/8 × 8/).first().waitFor({ timeout: 15000 })
+  check('an opaque PNG gets no transparency warning',
+    await page.getByText(/see-through, and JPEG has no transparency/).count() === 0)
+  await page.getByRole('button', { name: /Remove / }).first().click()
 }
 
 console.log('\n── A different target, and a different source ───────────────')

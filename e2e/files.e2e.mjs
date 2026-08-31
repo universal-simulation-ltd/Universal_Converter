@@ -583,7 +583,11 @@ console.log('\n── The UI, clicked for real ───────────
 
   const download = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Save' }).click(),
+    // ⚠️ `exact`, and it must stay. Playwright matches an accessible name as a
+    // SUBSTRING by default, so a bare 'Save' also matches the action card's
+    // "Save another copy" (added 2026-08-31) and the click dies on a strict
+    // mode violation. This is the ROW's Save button specifically.
+    page.getByRole('button', { name: 'Save', exact: true }).click(),
   ]).then(([d]) => d)
   const saved = path.join(HERE, '.out-sample.pdf')
   await download.saveAs(saved)

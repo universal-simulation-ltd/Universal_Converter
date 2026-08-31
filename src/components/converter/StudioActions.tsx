@@ -206,11 +206,28 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
         ? 'Convert and save 1 file'
         : `Convert ${t.pending} files`
 
+  // Did the one file save itself already? `convertAll` downloads a single
+  // result the moment it is ready, so on that path the file is on disk before
+  // this card is even read.
+  const autoSaved =
+    t.done === 1 && items.some((i) => i.kind === kind && i.result && i.savedAutomatically)
+
   // "and save" on the single-file button is not decoration: one file downloads
   // itself the moment it is done (see `convertAll`), and a button that starts a
   // download should say so before it is pressed.
+  //
+  // ⚠️ And once it HAS saved itself, this button stops offering to do the thing
+  // that is already done. It used to read "Download the converted file" over a
+  // file sitting in the downloads folder, so the obvious next press produced a
+  // duplicate — same name, same bytes, two entries. The button still works and
+  // is still there (re-saving after a browser "keep/discard" prompt is a real
+  // thing to want); it just says which copy it is handing you.
   const downloadLabel =
-    t.done === 1 ? 'Download the converted file' : `Download all ${t.done} files as a ZIP`
+    t.done === 1
+      ? autoSaved
+        ? 'Save another copy'
+        : 'Download the converted file'
+      : `Download all ${t.done} files as a ZIP`
 
   const primary =
     'w-full rounded-xl bg-gradient-to-br from-[#FE8C01] to-[#E05504] px-4 py-3 text-[14px] font-bold text-white shadow-sm transition-opacity hover:opacity-95 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-40'
@@ -293,7 +310,24 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
                 you, and the file is the reason you came. */}
             {t.done > 0 ? (
               <>
-                <button type="button" disabled={running} onClick={() => void downloadAll(kind)} className={primary}>
+                {/* Once the file is saved, NOTHING in this card is orange, and
+                    that is deliberate. A primary button is a claim that there
+                    is a next step; here there is not one — the job finished and
+                    the file is on disk. Promoting "Convert again" to fill the
+                    gap would invite a pointless re-run, and leaving "Save
+                    another copy" orange is how the duplicate got pressed in the
+                    first place. */}
+                {autoSaved && (
+                  <p className="text-center text-[11.5px] font-semibold text-[#166534]">
+                    Saved to your downloads.
+                  </p>
+                )}
+                <button
+                  type="button"
+                  disabled={running}
+                  onClick={() => void downloadAll(kind)}
+                  className={autoSaved ? secondary : primary}
+                >
                   {downloadLabel}
                 </button>
                 <button
