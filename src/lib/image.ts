@@ -18,6 +18,23 @@ export async function convertImage(
     throw new Error(`This browser can’t write ${meta.label} — try WebP, JPEG or PNG`)
   }
 
+  // ⚠️ **Before the decode, and it stays there.** `decodeImage` is
+  // `createImageBitmap`, which on an animated GIF returns FRAME ONE and gives
+  // no flag, no warning and no error — so an animation reaching it does not
+  // fail, it succeeds at producing a still. Until this branch existed, that is
+  // exactly what converting an animated GIF did, silently, and the resulting
+  // file was tiny enough to look like a triumph.
+  //
+  // Dynamic: the reader, the palette builder and the LZW coder are ~15 KB that
+  // nobody converting a photograph should download.
+  if (settings.format === 'gif') {
+    const { convertAnimatedGif } = await import('./imagegif')
+    const animated = await convertAnimatedGif(file, settings, onProgress)
+    if (animated) return animated
+    // A still GIF, or any other image, falls through: there is no animation to
+    // protect, and the canvas below scales it better than we would by hand.
+  }
+
   const bitmap = await decodeImage(file)
   onProgress(0.4)
 
@@ -40,9 +57,20 @@ export async function convertImage(
     ctx.drawImage(bitmap, 0, 0, width, height)
     onProgress(0.7)
 
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, meta.mime, meta.lossy ? settings.quality : undefined),
-    )
+    // GIF is the one target with no `toBlob` behind it — no engine has ever
+    // shipped a GIF encoder — so the pixels go to our own writer instead. Note
+    // it reads them back off the canvas rather than from the source bitmap:
+    // that way the downscale, the aspect ratio and the alpha handling above are
+    // the same code for every format, and only the encoder differs.
+    let blob: Blob | null
+    if (settings.format === 'gif') {
+      const { encodeStillAsGif } = await import('./imagegif')
+      blob = encodeStillAsGif(ctx.getImageData(0, 0, width, height).data, width, height, settings)
+    } else {
+      blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, meta.mime, meta.lossy ? settings.quality : undefined),
+      )
+    }
     if (!blob) throw new Error('The image couldn’t be encoded')
     onProgress(1)
 

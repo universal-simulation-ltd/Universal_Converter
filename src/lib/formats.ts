@@ -44,6 +44,12 @@ export const IMAGE_FORMATS: FormatMeta<ImageFormat>[] = [
   { id: 'jpeg', label: 'JPEG', ext: 'jpg',  mime: 'image/jpeg', lossy: true,  engine: 'built-in', blurb: 'Universal. No transparency — anything see-through fills with white.' },
   { id: 'png',  label: 'PNG',  ext: 'png',  mime: 'image/png',  lossy: false, engine: 'built-in', blurb: 'Lossless with transparency. Best for screenshots, logos and line art.' },
   { id: 'avif', label: 'AVIF', ext: 'avif', mime: 'image/avif', lossy: true,  engine: 'built-in', blurb: 'The smallest of the four, but slower to encode and newer to support.' },
+  // GIF is the odd one out here for the same reason it is on the video tab:
+  // no engine will encode one, so the palette, the LZW and the file are ours.
+  // It is on the IMAGE tab as well as the video tab because an animated GIF
+  // dropped here is an image by every other measure — and because until it was,
+  // converting one produced a still with no warning at all.
+  { id: 'gif',  label: 'GIF',  ext: 'gif',  mime: 'image/gif',  lossy: true,  engine: 'built-in', blurb: '256 colours, and it animates inline in a chat, an email or a README. An animated GIF stays animated.' },
 ]
 
 // ── Video ────────────────────────────────────────────────────────────────────
@@ -247,6 +253,12 @@ const supportCache = new Map<ImageFormat, Promise<boolean>>()
 export function imageFormatSupported(format: ImageFormat): Promise<boolean> {
   const cached = supportCache.get(format)
   if (cached) return cached
+
+  // ⚠️ GIF before the probe, not inside it. The probe asks the CANVAS, and no
+  // canvas has ever written a GIF — so probing would disable the one target
+  // that needs no browser support at all, because the encoder is ours and ships
+  // with the app. See the note on `ImageFormat`.
+  if (format === 'gif') return Promise.resolve(true)
 
   const probe = (async () => {
     if (typeof document === 'undefined') return false

@@ -117,9 +117,23 @@ export async function sampleImage(file: File): Promise<ImageSample> {
 export async function estimateImageBytes(
   sample: ImageSample,
   settings: ImageSettings,
+  /** Frames, when the source is an animated GIF. See the guard below. */
+  frames = 1,
 ): Promise<number | null> {
   const meta = imageFormatMeta(settings.format)
   if (!(await imageFormatSupported(settings.format))) return null
+
+  // ⚠️ **An animated GIF re-encoded as a GIF gets NO estimate, deliberately.**
+  // Everything below prices one mosaic tile and multiplies by pixels, which
+  // has no way to account for a frame count — and multiplying by frames would
+  // be wrong in the other direction, because frame differencing makes every
+  // frame after the first far cheaper than the first. The only honest number
+  // would come from doing the whole conversion, twice over, on every settings
+  // change while somebody watched. A blank is a smaller lie than a number.
+  //
+  // Every other combination is fine: an animated GIF going to PNG/JPEG/WebP/
+  // AVIF really does produce one frame, which is exactly what the tile prices.
+  if (settings.format === 'gif' && frames > 1) return null
 
   const out = targetSize(sample.width, sample.height, settings.maxEdge)
   const scale = out.width / sample.width
@@ -157,9 +171,31 @@ export async function estimateImageBytes(
     probe = flat
   }
 
-  const blob = await new Promise<Blob | null>((resolve) =>
-    probe.toBlob(resolve, meta.mime, meta.lossy ? settings.quality : undefined),
-  )
+  // GIF has no `toBlob` behind it — the writer is ours. The tile goes through
+  // the same encoder the conversion will use, so the number reflects the
+  // palette the quality control actually asks for.
+  //
+  // ⚠️ It will read HIGH for a GIF, more than for the canvas formats, and the
+  // cause is `sampleImage`'s mosaic: LZW compresses long runs of one colour,
+  // and a grid of nine unrelated crops has far shorter runs than the picture
+  // they came from. That is the same trade the mosaic already makes for the
+  // other formats, in the same direction — over, not under.
+  let blob: Blob | null
+  if (settings.format === 'gif') {
+    const ctx = probe.getContext('2d')
+    if (!ctx) return null
+    const { encodeStillAsGif } = await import('./imagegif')
+    blob = encodeStillAsGif(
+      ctx.getImageData(0, 0, probe.width, probe.height).data,
+      probe.width,
+      probe.height,
+      settings,
+    )
+  } else {
+    blob = await new Promise<Blob | null>((resolve) =>
+      probe.toBlob(resolve, meta.mime, meta.lossy ? settings.quality : undefined),
+    )
+  }
   if (!blob) return null
 
   const perPixel = blob.size / (probe.width * probe.height)

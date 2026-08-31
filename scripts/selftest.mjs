@@ -15,7 +15,7 @@
 // bottom of this file is a check that this app is really calling the package.
 
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import assert from 'node:assert/strict'
@@ -29,7 +29,8 @@ import { parseClock } from '@unisim/media'
 import { createZip, crc32 } from '@unisim/media'
 import { HEADER_BOS, HEADER_EOS, buildPage, oggCrc, opusHead, opusTags } from '../src/lib/ogg.ts'
 import { buildPdf } from '../src/lib/pdf.ts'
-import { ColourCube, GifWriter, MAX_COLOURS, PaletteMap, TRANSPARENT_INDEX, lzwEncode, quantiseFrame } from '../src/lib/gif.ts'
+import { ALPHA_THRESHOLD, ColourCube, GifWriter, MAX_COLOURS, PaletteMap, TRANSPARENT_INDEX, lzwEncode, quantiseFrame } from '../src/lib/gif.ts'
+import { decodeGif, isGif, readGifInfo } from '../src/lib/gifdecode.ts'
 import { buildMp4, readMp4, trimWindow } from '@unisim/media'
 import { buildId3, readTags, vorbisComments } from '../src/lib/tags.ts'
 
@@ -587,6 +588,124 @@ function ascii(view, offset, length) {
       skipped += 1
       console.warn('! gif — ffmpeg/ffprobe not found, skipped the outside-reader check')
       console.log('✓ gif — structure, sub-blocks and differencing')
+    } else {
+      throw err
+    }
+  }
+}
+
+// ── GIF, reading ─────────────────────────────────────────────────────────────
+// The half this app did not have until 2026-08-31, and the reason it silently
+// destroyed every animated GIF dropped on the Images tab: `createImageBitmap`
+// returns FRAME ONE of an animation and gives no flag, no warning and no error,
+// so the conversion did not fail — it succeeded, at producing a still.
+//
+// `gifdecode.ts` is a byte-identical copy of Universal Compress's
+// `src/lib/gif/decode.ts`, as `gif.ts` is of its `encode.ts`. These checks are
+// deliberately duplicated in both repos: two copies that are never both tested
+// are two copies that drift.
+//
+// ffmpeg is the reader that is not ours. Every pixel of every frame.
+{
+  const ffmpegFrames = (file, width, height, dir) => {
+    const raw = join(dir, 'ref.raw')
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', file, '-fps_mode', 'passthrough',
+      '-f', 'rawvideo', '-pix_fmt', 'rgba', raw], { maxBuffer: 1 << 28 })
+    const bytes = readFileSync(raw)
+    const stride = width * height * 4
+    assert.equal(bytes.length % stride, 0, 'ffmpeg returned a partial frame')
+    const out = []
+    for (let at = 0; at < bytes.length; at += stride) out.push(bytes.subarray(at, at + stride))
+    return out
+  }
+
+  const dir = mkdtempSync(join(tmpdir(), 'conv-gifread-'))
+
+  const readerAgreesWithFfmpeg = (label, file) => {
+    const bytes = new Uint8Array(readFileSync(file))
+    assert.ok(isGif(bytes), `${label}: recognised as a GIF by its bytes`)
+    const info = readGifInfo(bytes)
+    assert.ok(info, `${label}: the header scan read it`)
+
+    const reference = ffmpegFrames(file, info.width, info.height, dir)
+    assert.equal(reference.length, info.frames, `${label}: frame count agrees with ffmpeg`)
+
+    let index = 0
+    decodeGif(bytes, (frame) => {
+      const want = reference[index]
+      let wrong = 0
+      for (let p = 0; p < want.length; p += 4) {
+        // A transparent pixel still has an RGB, and ffmpeg's is not obliged to
+        // match ours — nobody can see it. Compare those on alpha alone.
+        const ours = frame.rgba[p + 3] >= ALPHA_THRESHOLD
+        const theirs = want[p + 3] >= ALPHA_THRESHOLD
+        if (ours !== theirs) { wrong++; continue }
+        if (!ours) continue
+        if (frame.rgba[p] !== want[p] || frame.rgba[p + 1] !== want[p + 1] || frame.rgba[p + 2] !== want[p + 2]) wrong++
+      }
+      assert.equal(wrong, 0, `${label}: frame ${index} has ${wrong} pixels ffmpeg disagrees with`)
+      index++
+    })
+    assert.equal(index, info.frames, `${label}: every frame reached the callback`)
+  }
+
+  try {
+    // A GIF ffmpeg wrote, with its own local colour tables and its own
+    // differencing — a file shape our writer never produces, which is the point.
+    const generated = join(dir, 'ffmpeg.gif')
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i',
+      'testsrc=size=160x120:rate=10:duration=2', '-vf',
+      'split[a][b];[a]palettegen=max_colors=64[p];[b][p]paletteuse', generated])
+    readerAgreesWithFfmpeg('ffmpeg testsrc', generated)
+
+    // ⚠️ A real GIF written by a real tool, if this machine happens to have one.
+    // It is borrowed from a sibling repo's node_modules and WILL be absent on a
+    // fresh clone — so a green run is not proof this ran. Read the warning.
+    const real = new URL('../../Universal_PDF/node_modules/tesseract.js/docs/images/demo.gif', import.meta.url).pathname
+    if (existsSync(real)) {
+      readerAgreesWithFfmpeg('a real screen-recording GIF', real)
+    } else {
+      skipped += 1
+      console.warn('! gif reader — the real-world fixture is not on this machine, only the generated one ran')
+    }
+
+    // Both halves, end to end: write an animation, read it back, and require
+    // the delays and the palette indices to survive exactly.
+    const W = 40, H = 24
+    const frames = []
+    for (let i = 0; i < 6; i++) {
+      const px = new Uint8ClampedArray(W * H * 4)
+      for (let p = 0; p < W * H; p++) {
+        px[p * 4] = 30 + i * 20
+        px[p * 4 + 1] = 90
+        px[p * 4 + 2] = 200 - i * 20
+        px[p * 4 + 3] = 255
+      }
+      frames.push(px)
+    }
+    const cube = new ColourCube()
+    for (const f of frames) cube.addFrame(f)
+    const colours = cube.palette(MAX_COLOURS)
+    const map = new PaletteMap(colours)
+    const writer = new GifWriter(W, H, colours, 0)
+    for (const f of frames) writer.addFrame(quantiseFrame(f, W, H, map), 9)
+    const roundTrip = new Uint8Array(Buffer.concat(writer.finish().map(Buffer.from)))
+
+    const info = readGifInfo(roundTrip)
+    assert.equal(info.frames, frames.length, 'the round trip keeps every frame')
+    assert.equal(info.loop, 0, 'loop-forever survives, and 0 is not treated as falsy')
+    let seen = 0
+    decodeGif(roundTrip, (frame) => {
+      assert.equal(frame.delayCs, 9, `round trip: frame ${seen} kept its delay`)
+      seen++
+    })
+    assert.equal(seen, frames.length, 'the round trip reads back every frame')
+
+    console.log('✓ gif reader — real and generated GIFs decoded pixel-for-pixel as ffmpeg decodes them')
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      skipped += 1
+      console.warn('! gif reader — ffmpeg not found, skipped the outside-reader check')
     } else {
       throw err
     }

@@ -18,7 +18,16 @@ export { DEFAULT_VIDEO_SETTINGS } from '@unisim/media'
 export type MediaKind = 'audio' | 'image' | 'video' | 'document'
 
 export type AudioFormat = 'wav' | 'mp3' | 'aiff' | 'flac' | 'm4a' | 'ogg' | 'opus'
-export type ImageFormat = 'png' | 'jpeg' | 'webp' | 'avif'
+/**
+ * ⚠️ **`gif` is in this list and the browser cannot write one.** Every other
+ * member goes through `canvas.toBlob`; GIF goes through our own writer
+ * (`gif.ts`), because no engine has ever exposed a GIF encoder — and, for an
+ * animated source, our own reader too (`gifdecode.ts`), because
+ * `createImageBitmap` returns frame one of an animation and says nothing about
+ * the rest. So `imageFormatSupported('gif')` must not probe the canvas: the
+ * probe would answer "no" for the one target that always works.
+ */
+export type ImageFormat = 'png' | 'jpeg' | 'webp' | 'avif' | 'gif'
 
 /**
  * What the video tab can produce — the package's `VideoFormat` plus GIF.
@@ -93,6 +102,17 @@ export interface QueueItem {
   progress: number
   /** Probed once on add: seconds for audio, "1920×1080" for images, both for video. */
   detail: string | null
+  /**
+   * Frames, for an ANIMATED GIF only — absent for every other file, including a
+   * still GIF.
+   *
+   * The row's caption could have carried this alone, but the PANEL needs it as
+   * a fact rather than as text: converting an animated GIF to PNG, JPEG, WebP
+   * or AVIF keeps only the first frame, and that has to be said before the
+   * button is pressed rather than discovered afterwards. Parsing it back out of
+   * `detail` would be reading a sentence to recover a number we had.
+   */
+  frames?: number
   /** User-facing reason this row failed or was skipped. */
   error: string | null
   result: ConvertedFile | null
@@ -137,9 +157,27 @@ export type MaxEdge = 'source' | 640 | 1280 | 1920 | 2560
 
 export interface ImageSettings {
   format: ImageFormat
-  /** 0–1, only used by the lossy formats. */
+  /**
+   * 0–1, only used by the lossy formats.
+   *
+   * ⚠️ For GIF it means something different in kind, not just in degree: there
+   * is no quantiser to loosen, only a palette to narrow, so it sets how many of
+   * the 255 colours the format allows get used. The control is the same three
+   * stops and the direction is the same, which is why it is the same field.
+   */
   quality: number
   maxEdge: MaxEdge
+  /**
+   * Floyd–Steinberg dithering. **GIF only** — every other image target here has
+   * millions of colours available and nothing to dither.
+   *
+   * Off by default for the same reason it is off on the video tab: dithering
+   * replaces flat areas with fine noise, and on an ANIMATED GIF that noise
+   * differs from frame to frame even where nothing moved, which defeats frame
+   * differencing and can double or triple the file. It is worth turning on for
+   * a still with a gradient in it, which is the case that bands.
+   */
+  dither: boolean
 }
 
 export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
@@ -161,4 +199,5 @@ export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
   format: 'png',
   quality: 0.82,
   maxEdge: 'source',
+  dither: false,
 }

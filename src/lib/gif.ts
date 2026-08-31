@@ -1,10 +1,34 @@
 /**
  * GIF89a — the palette builder, the quantiser and the LZW coder.
  *
- * A leaf module with no imports, like resize.ts, so scripts/selftest.mjs can
- * drive it in Node with no DOM and check the bytes against a real third-party
- * reader. The browser-side half — decoding a video into frames to feed it —
- * lives in videogif.ts.
+ * ⚠️ **THIS FILE IS SHARED VERBATIM BY TWO REPOS. Keep it that way.**
+ * `Universal_Compress/src/lib/gif/encode.ts` and
+ * `Universal_Converter/src/lib/gif.ts` are byte-identical copies. It began in
+ * the converter, written to turn *video* into a GIF; Universal Compress needed
+ * the same writer for GIFs that already existed, which meant handling source
+ * transparency that opaque video frames never have. Rather than fork, the
+ * converter took the additions — they are inert on opaque input.
+ *
+ * The three transparency-aware parts, since they are the ones that look
+ * optional and are not:
+ *
+ *   1. `ColourCube` skips transparent pixels, so a sticker on a transparent
+ *      ground does not spend a quarter of its palette on the black behind it.
+ *   2. `quantiseFrame` maps a transparent pixel to `TRANSPARENT_INDEX` instead
+ *      of to whatever colour is nearest to its meaningless RGB.
+ *   3. `GifWriter` has two modes. Differencing writes disposal 1, "do not
+ *      dispose", which can add pixels to the screen but can never take one
+ *      away — so an animation where something transparent *moves* has to be
+ *      written as full frames with disposal 2. See the mode note on the class.
+ *
+ * Copy any change to the other repo in the same session. When a third consumer
+ * appears, or the copies ever have to differ, lift the pair (this and
+ * `decode.ts`) into `@unisim/media` instead — noted in the backlog.
+ *
+ * A leaf module with no imports, so the self-test can drive it in Node with no
+ * DOM and check the bytes against a real third-party reader (ffmpeg). The
+ * reading half — turning a .gif back into frames to feed it — is its twin
+ * `decode.ts`, which this file knows nothing about.
  *
  * Why write one at all, when the browser encodes PNG, JPEG, WebP and AVIF for
  * us? Because `canvas.toBlob('image/gif')` does not exist in any engine, and
@@ -48,6 +72,21 @@ export const TRANSPARENT_INDEX = 255
 /** The most real colours a palette can hold — 255, with the last index reserved above. */
 export const MAX_COLOURS = 255
 
+/**
+ * At or above this alpha a pixel is drawn; below it, it is transparent.
+ *
+ * GIF has no partial transparency — a pixel is either a palette entry or it is
+ * not there — so a threshold is not a simplification, it is the only thing the
+ * format can express. 128 is the midpoint, and the midpoint is what matters
+ * after downscaling: shrinking an image blends a hard alpha edge into a ramp,
+ * and cutting that ramp anywhere else either eats the shape's outline or leaves
+ * a halo of near-transparent pixels drawn in full colour.
+ */
+export const ALPHA_THRESHOLD = 128
+
+/** How frames relate to one another. See the note on `GifWriter`. */
+export type GifMode = 'diff' | 'full'
+
 // ── Choosing the colours ─────────────────────────────────────────────────────
 
 /**
@@ -65,9 +104,18 @@ export class ColourCube {
   /** Running r/g/b totals per bin, so a bin's colour is its true average rather than its corner. */
   private sums = new Float64Array(BINS * 3)
 
-  /** Add every pixel of one RGBA frame. Alpha is ignored — video frames are opaque. */
+  /**
+   * Add every pixel of one RGBA frame.
+   *
+   * Transparent pixels are left out of the histogram entirely. They have
+   * an RGB — usually black, sometimes whatever the tool that wrote the file
+   * left in the buffer — and it is a colour nobody will ever see. Counting it
+   * would let a logo with a large transparent ground push real colours out of a
+   * 255-entry palette to make room for a black that never gets drawn.
+   */
   addFrame(rgba: Uint8ClampedArray | Uint8Array): void {
     for (let p = 0; p + 3 < rgba.length; p += 4) {
+      if (rgba[p + 3] < ALPHA_THRESHOLD) continue
       const r = rgba[p]
       const g = rgba[p + 1]
       const b = rgba[p + 2]
@@ -266,6 +314,12 @@ export class PaletteMap {
  * differs from frame to frame even where nothing moved — so it defeats the
  * frame differencing below and can double or triple the file. Gradients get it
  * turned on deliberately.
+ *
+ * A pixel below `ALPHA_THRESHOLD` becomes `TRANSPARENT_INDEX` rather than
+ * the nearest colour to its invisible RGB. In the dithered path it also stops
+ * the error there instead of spreading it — carrying the difference between a
+ * transparent pixel and the colour it "should" have been into its neighbours
+ * draws a coloured fringe around everything with a soft edge.
  */
 export function quantiseFrame(
   rgba: Uint8ClampedArray | Uint8Array,
@@ -278,7 +332,10 @@ export function quantiseFrame(
 
   if (!dither) {
     for (let i = 0, p = 0; i < out.length; i++, p += 4) {
-      out[i] = map.indexOf(rgba[p], rgba[p + 1], rgba[p + 2])
+      out[i] =
+        rgba[p + 3] < ALPHA_THRESHOLD
+          ? TRANSPARENT_INDEX
+          : map.indexOf(rgba[p], rgba[p + 1], rgba[p + 2])
     }
     return out
   }
@@ -292,6 +349,10 @@ export function quantiseFrame(
     for (let x = 0; x < width; x++) {
       const p = (y * width + x) * 4
       const e = x * 3
+      if (rgba[p + 3] < ALPHA_THRESHOLD) {
+        out[y * width + x] = TRANSPARENT_INDEX
+        continue
+      }
       const r = clamp255(rgba[p] + here[e])
       const g = clamp255(rgba[p + 1] + here[e + 1])
       const b = clamp255(rgba[p + 2] + here[e + 2])
@@ -340,12 +401,36 @@ function clamp255(value: number): number {
  * rather than by the caller, because getting them subtly wrong produces a file
  * that plays correctly in the browser that wrote it and smears in everything
  * else — the classic GIF failure, and not one a caller should be able to reach.
+ *
+ * ── The two modes ──────────────────────────────────────────────────────────
+ *
+ * **`'diff'`** is the original behaviour and what almost every animation gets:
+ * disposal method 1, "do not dispose", each frame sending only the rectangle
+ * that changed and marking the pixels inside it that did not as transparent.
+ *
+ * ⚠️ **Disposal 1 can add a pixel to the screen but can never take one away.**
+ * That is fine for video, which is opaque, and fine for a GIF whose transparent
+ * area never shrinks — a logo sitting still on a transparent ground. It is
+ * wrong the moment something transparent *moves*: the shape's old position has
+ * to be erased, differencing has no way to say so, and the animation smears its
+ * subject across the frame like a slug trail. This is the single most common
+ * way a hand-rolled GIF re-encoder is broken, and it looks perfect on every
+ * test file that happens to be opaque.
+ *
+ * **`'full'`** is the answer for those: every frame written whole, with
+ * disposal method 2, "restore to background", which clears the canvas before
+ * the next one. Nothing is inherited, so nothing can fail to be erased. It
+ * costs real bytes — there is no differencing left to do — which is why
+ * the caller decides between them by looking at whether the source animation
+ * ever actually erases anything, rather than by playing safe.
  */
 export class GifWriter {
   private readonly chunks: Uint8Array[] = []
   private previous: Uint8Array | null = null
   readonly width: number
   readonly height: number
+  /** See the two-modes note above. */
+  private readonly mode: GifMode
 
   // ⚠️ `width` and `height` are assigned in the body rather than declared as
   // constructor parameter properties. Node's type stripping — which is how
@@ -353,9 +438,16 @@ export class GifWriter {
   // properties outright, because they are the one TypeScript feature that
   // EMITS code rather than annotating it. The self-test is the point of this
   // module being a leaf, so the shorthand loses.
-  constructor(width: number, height: number, colours: Uint8Array, loop = true) {
+  constructor(
+    width: number,
+    height: number,
+    colours: Uint8Array,
+    loop: boolean | number = true,
+    mode: GifMode = 'diff',
+  ) {
     this.width = width
     this.height = height
+    this.mode = mode
     if (width < 1 || height < 1) throw new Error('A GIF needs a frame size')
     if (width > 65535 || height > 65535) throw new Error('A GIF frame cannot be larger than 65535 px')
     const count = Math.floor(colours.length / 3)
@@ -377,12 +469,18 @@ export class GifWriter {
     table.set(colours.subarray(0, count * 3))
     this.chunks.push(Uint8Array.from(head), table)
 
-    if (loop) {
-      // NETSCAPE2.0, loop count 0 = forever. Leaving this out is what makes a
-      // GIF play once, so it is a genuine choice rather than boilerplate.
+    // NETSCAPE2.0, loop count 0 = forever. Leaving this out is what makes a
+    // GIF play once, so it is a genuine choice rather than boilerplate.
+    //
+    // A COUNT is accepted as well as a flag, because re-encoding an
+    // existing GIF has an answer to carry across rather than a default to pick.
+    // ⚠️ Tested against `false`, never for truthiness — `0` is a legal count
+    // and the one that means "forever", which is the commonest value there is.
+    const loops = loop === true ? 0 : loop === false ? null : Math.max(0, Math.min(65535, loop))
+    if (loops !== null) {
       const ext: number[] = [0x21, 0xff, 0x0b]
       push(ext, [...'NETSCAPE2.0'].map((c) => c.charCodeAt(0)))
-      ext.push(0x03, 0x01, 0x00, 0x00, 0x00)
+      ext.push(0x03, 0x01, loops & 0xff, (loops >> 8) & 0xff, 0x00)
       this.chunks.push(Uint8Array.from(ext))
     }
   }
@@ -402,8 +500,20 @@ export class GifWriter {
     }
     const delay = Math.max(2, Math.min(65535, Math.round(delayCs)))
 
+    // Full frames, disposal 2. No previous frame is consulted and none is
+    // kept, because nothing survives to the next frame to diff against.
+    if (this.mode === 'full') {
+      this.writeFrame(0, 0, this.width, this.height, indices, true, delay, DISPOSE_BACKGROUND)
+      return
+    }
+
     if (!this.previous) {
-      this.writeFrame(0, 0, this.width, this.height, indices, false, delay)
+      // ⚠️ `transparent` was hard-coded false here, which was right when the
+      // only transparency in the file was the differencing kind — the first
+      // frame has nothing to difference against. A source GIF's own
+      // transparency reaches the first frame too, and declaring no transparent
+      // index would draw it as palette entry 255.
+      this.writeFrame(0, 0, this.width, this.height, indices, hasTransparent(indices), delay)
       this.previous = indices.slice()
       return
     }
@@ -464,14 +574,20 @@ export class GifWriter {
     indices: Uint8Array,
     transparent: boolean,
     delayCs: number,
+    disposal: number = DISPOSE_KEEP,
   ): void {
     const meta: number[] = []
 
     // Graphic control extension. Disposal method 1 — "do not dispose" — is what
     // makes differencing legal: it leaves the previous frame on screen for the
     // next one to draw over. Method 2 (restore to background) with the same
-    // frame data would flash the background through every transparent pixel.
-    meta.push(0x21, 0xf9, 0x04, transparent ? 0x05 : 0x04)
+    // frame data would flash the background through every transparent pixel —
+    // which is exactly why 'full' mode, which uses 2, never differences.
+    //
+    // The method lives in bits 4-2 of the packed field and the transparency
+    // flag in bit 0, so the old hard-coded 0x04 / 0x05 were (1 << 2) and
+    // (1 << 2) | 1 written out.
+    meta.push(0x21, 0xf9, 0x04, (disposal << 2) | (transparent ? 1 : 0))
     word(meta, delayCs)
     meta.push(TRANSPARENT_INDEX, 0x00)
 
@@ -490,6 +606,16 @@ export class GifWriter {
 }
 
 const ONE_TRANSPARENT_PIXEL = Uint8Array.from([TRANSPARENT_INDEX])
+
+/** Leave the frame on screen for the next one to draw over. */
+const DISPOSE_KEEP = 1
+/** Clear this frame's rectangle before the next one — see the two-modes note. */
+const DISPOSE_BACKGROUND = 2
+
+function hasTransparent(indices: Uint8Array): boolean {
+  for (let i = 0; i < indices.length; i++) if (indices[i] === TRANSPARENT_INDEX) return true
+  return false
+}
 
 function word(out: number[], value: number): void {
   out.push(value & 0xff, (value >> 8) & 0xff)

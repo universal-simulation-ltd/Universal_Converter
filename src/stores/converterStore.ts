@@ -148,7 +148,7 @@ async function refreshEstimates(): Promise<void> {
     if (!sample) continue
     let estimate: number | null = null
     try {
-      estimate = await estimateImageBytes(sample, settings)
+      estimate = await estimateImageBytes(sample, settings, item.frames ?? 1)
     } catch {
       // An estimate is a courtesy — a browser that will not encode a tile is
       // not a reason to paint the row red. It converts or it doesn't, and that
@@ -184,13 +184,32 @@ async function sampleAdded(items: QueueItem[]): Promise<void> {
   for (const item of items) {
     try {
       const sample = await sampleImage(item.file)
+      // Null for everything that is not an animated GIF, which is almost
+      // everything — and cheap to ask, because it scans the block headers
+      // rather than decoding anything. See `probeGifFrames`.
+      // ⚠️ Dynamic, and only for a file already named `.gif`. A static import
+      // here would put the reader, the palette builder and the LZW coder into
+      // the main bundle for everyone, undoing the split `image.ts` sets up.
+      let frames: number | null = null
+      if (item.ext === 'gif') {
+        const { probeGifFrames } = await import('../lib/imagegif')
+        frames = await probeGifFrames(item.file)
+      }
       // Dropped from the queue while it decoded — do not resurrect the row, and
       // do not leave its tile in the cache.
       if (!useConverterStore.getState().items.some((i) => i.id === item.id)) continue
       samples.set(item.id, sample)
       useConverterStore.setState({
         items: useConverterStore.getState().items.map((i) =>
-          i.id === item.id ? { ...i, detail: `${sample.width} × ${sample.height}` } : i,
+          i.id === item.id
+            ? {
+                ...i,
+                detail: frames
+                  ? `${sample.width} × ${sample.height} · ${frames} frames`
+                  : `${sample.width} × ${sample.height}`,
+                ...(frames ? { frames } : {}),
+              }
+            : i,
         ),
       })
     } catch {
