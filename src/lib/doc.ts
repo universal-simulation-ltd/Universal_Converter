@@ -20,6 +20,7 @@ import {
   type DocResult as PackageDocResult,
   type DocSettings,
 } from '@unisim/doc'
+import { loadFallbackFont } from './fallbackFont'
 import { withExtension } from './humanise'
 import type { ConvertedFile } from './types'
 
@@ -62,7 +63,10 @@ export async function convertDocument(
   settings: DocSettings,
   onProgress?: (fraction: number) => void,
 ): Promise<DocResult> {
-  const result = await convertDocumentToBlob(file, settings, onProgress)
+  // The fourth argument is the fallback FACE — see `fallbackFont.ts`. The
+  // package calls it only when a document contains something the base-14 fonts
+  // cannot spell, so an English conversion never fetches it.
+  const result = await convertDocumentToBlob(file, settings, onProgress, loadFallbackFont)
   return {
     blob: result.blob,
     name: withExtension(file.name, result.ext),

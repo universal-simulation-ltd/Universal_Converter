@@ -501,13 +501,43 @@ console.log('\n── Fonts, encoding and settings ─────────�
 {
   const greek = await page.evaluate(async () => {
     const { convertDocument, DEFAULT_DOC_SETTINGS } = await import('/src/lib/doc.ts')
-    const file = new File(['Latin fine. Greek: αβγ. Cyrillic: Привет.'], 'g.txt', { type: 'text/plain' })
-    const result = await convertDocument(file, { ...DEFAULT_DOC_SETTINGS, format: 'pdf' })
-    return { notices: result.notices.map((n) => n.message) }
+    const settings = { ...DEFAULT_DOC_SETTINGS, format: 'pdf' }
+    const read = async (text) => {
+      const file = new File([text], 'g.txt', { type: 'text/plain' })
+      const result = await convertDocument(file, settings)
+      const bytes = new Uint8Array(await result.blob.arrayBuffer())
+      return {
+        notices: result.notices.map((n) => n.message),
+        latin1: new TextDecoder('latin1').decode(bytes),
+        size: bytes.length,
+      }
+    }
+    return {
+      covered: await read('Latin fine. Greek: αβγ. Cyrillic: Привет. Hebrew: שלום.'),
+      uncovered: await read('Latin fine. Japanese: 日本語.'),
+      plain: await read('Latin only, nothing exotic at all.'),
+    }
   })
-  check('unwritable alphabets are named, not silently dropped',
-    greek.notices.some((n) => n.includes('built-in fonts') && n.includes('α')),
-    greek.notices.join(' | '))
+
+  // ⚠️ This used to assert the OPPOSITE — that Greek and Cyrillic were NAMED as
+  // lost. They are written now, so the honest test is that nothing is reported
+  // and the font is really in the file.
+  check('Greek, Cyrillic and Hebrew are written, not reported as lost',
+    greek.covered.notices.length === 0, greek.covered.notices.join(' | '))
+  check('...by a real embedded Type0 font',
+    greek.covered.latin1.includes('/Subtype /Type0') &&
+    greek.covered.latin1.includes('/Encoding /Identity-H') &&
+    greek.covered.latin1.includes('/FontFile2'))
+  // Without /ToUnicode the glyphs draw and the text cannot be copied or found.
+  check('...that can still be copied and searched (/ToUnicode)',
+    greek.covered.latin1.includes('/ToUnicode') && greek.covered.latin1.includes('beginbfchar'))
+  check('a script the fallback face lacks is STILL named, not silently dropped',
+    greek.uncovered.notices.some((n) => n.includes('日')),
+    greek.uncovered.notices.join(' | '))
+  // The whole point of fetching it on demand: an English document pays nothing.
+  check('an all-Latin document embeds no font at all',
+    !greek.plain.latin1.includes('/FontFile2') && greek.plain.size < 50_000,
+    `${greek.plain.size} bytes`)
 
   const serif = await convert('sample.md', 'pdf', { pdf: { font: 'serif', paper: 'Letter' } })
   check('serif setting selects Times', serif.ok && serif.latin1.includes('/BaseFont /Times-Roman'))

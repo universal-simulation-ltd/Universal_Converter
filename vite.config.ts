@@ -92,8 +92,24 @@ export default defineConfig(({ mode }) => {
           // every visitor at install time and undo the dynamic import in
           // `image.ts`, which exists precisely so that people who never drop an
           // iPhone photo never pay for it.
-          globIgnores: ['**/*.wasm', 'flac/*.js', '**/heic-to-*.js'],
+          // ⚠️ The Cyrillic/Greek/Hebrew fallback face is the same bargain
+          // again: 350 KB that only matters to somebody converting a document
+          // in one of those alphabets. Precaching it would hand that download
+          // to every visitor at install time and undo the point of
+          // `fallbackFont.ts`, which fetches it only when a document needs it.
+          globIgnores: ['**/*.wasm', 'flac/*.js', '**/heic-to-*.js', 'fonts/*.ttf'],
           runtimeCaching: [
+            {
+              // The fallback face — cached after the first document that needs
+              // another alphabet, so that person has it offline from then on.
+              urlPattern: /\/fonts\/.*\.ttf$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'fallback-font',
+                expiration: { maxEntries: 2, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
             {
               // libflacjs — cached after the first FLAC conversion, so it works
               // offline from then on.
