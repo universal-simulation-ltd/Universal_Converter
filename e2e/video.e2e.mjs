@@ -174,11 +174,11 @@ const fileInput = () => page.locator('input[type=file]').last()
 const chip = (label) => page.getByRole('button', { name: new RegExp(`^${label}`) })
 
 /**
- * Open the Advanced disclosure if it is shut.
+ * Open the Advanced settings disclosure if it is shut.
  *
- * ⚠️ Not a plain click. Switching target swaps the whole disclosure for the
- * other one's, and `defaultOpen` makes it start OPEN whenever anything in it is
- * off its default — so once a trim is set, clicking "Advanced" shuts it.
+ * ⚠️ Not a plain click. It is shut on arrival (2026-08-31), and switching
+ * target swaps the whole disclosure for the other one's — so a blind click
+ * after a target change would shut the one this test had just opened.
  */
 async function openAdvanced() {
   const button = page.getByRole('button', { name: /^Advanced/ })

@@ -86,8 +86,10 @@ function AudioPanel() {
   const engineReady = supported[settings.format] === true
 
   // Anything the user has moved away from its default, spelled out for the
-  // collapsed header — and a reason to start the section open, so settings
-  // carried over from an earlier conversion are never hidden.
+  // collapsed header. The section used to start OPEN when this was non-empty;
+  // it is shut on arrival now (owner ask, 2026-08-31), which makes this line the
+  // only thing standing between a setting carried over from an earlier
+  // conversion and it applying invisibly. It is not decoration.
   const changed: string[] = []
   if (target.lossy && settings.bitrateKbps !== DEFAULT_AUDIO_SETTINGS.bitrateKbps)
     changed.push(`${settings.bitrateKbps} kbps`)
@@ -136,9 +138,8 @@ function AudioPanel() {
         <Divider />
 
         <Collapsible
-          label="Advanced"
+          label="Advanced settings"
           summary={changed.length ? changed.join(' · ') : 'Default settings'}
-          defaultOpen={changed.length > 0}
         >
           {target.lossy && (
             <Field label="Bitrate">

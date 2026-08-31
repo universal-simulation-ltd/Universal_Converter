@@ -1,4 +1,6 @@
+import { useFileDrop } from '@unisim/sdk'
 import { LARGE_FILE_BYTES } from '../../lib/convert'
+import { DROP_COPY } from '../../lib/formats'
 import { formatBytes } from '../../lib/humanise'
 import { useConverterStore } from '../../stores/converterStore'
 import type { MediaKind, QueueItem } from '../../lib/types'
@@ -24,6 +26,8 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
         </span>
       </div>
 
+      <AddMore kind={kind} />
+
       <div className="grid grid-cols-[26px_minmax(0,1fr)_112px_72px_136px] gap-3 bg-slate-50 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 max-sm:hidden">
         <span />
         <span>File</span>
@@ -44,6 +48,52 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
           />
         ))}
       </ul>
+    </div>
+  )
+}
+
+/**
+ * "Add more files", at the top of the list of what you already have.
+ *
+ * ⚠️ This is the ONLY way to browse for files once a tab has a queue — owner
+ * ask, 2026-08-31. The working ring in the right-hand column used to be
+ * clickable as well, which put "add" in two places and put one of them beside
+ * the Convert button, where a stray click opened a file picker over a batch
+ * somebody was about to run. The ring still takes a DROP; it no longer takes a
+ * click. See `StudioActions`.
+ *
+ * It deliberately spreads only `inputProps` and never `dropzoneProps`: this is
+ * a button, not a second drop target. A dashed box here would be a third place
+ * to aim, and the page-wide drop from `StudioActions` already catches a file
+ * let go anywhere on this list. `useFileDrop` is still what drives it, for the
+ * one bit of mechanics a hand-rolled input always gets wrong — resetting the
+ * value, so picking the same file twice in a row fires a second `change`.
+ */
+function AddMore({ kind }: { kind: MediaKind }) {
+  const addDropped = useConverterStore((s) => s.addDropped)
+  const running = useConverterStore((s) => s.running)
+  const copy = DROP_COPY[kind]
+
+  const drop = useFileDrop({
+    onFiles: (files) => void addDropped(files, kind),
+    accept: copy.accept,
+    clickToBrowse: false,
+  })
+
+  return (
+    <div className="border-b border-slate-200 px-4 py-2.5">
+      <button
+        type="button"
+        disabled={running}
+        onClick={drop.open}
+        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-600 transition-colors hover:border-orange-300 hover:bg-orange-50 hover:text-orange-800 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Add more files
+      </button>
+      <input {...drop.inputProps} className="hidden" />
     </div>
   )
 }

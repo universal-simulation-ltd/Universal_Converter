@@ -4,8 +4,8 @@ import { useConverterStore } from '../../stores/converterStore'
 import OtherExports from './OtherExports'
 import StudioActions from './StudioActions'
 import StudioShell from './StudioShell'
-import { Divider, Field, FormatChip, Panel, Segmented, Select } from './PanelParts'
-import type { ImageFormat, MaxEdge } from '../../lib/types'
+import { Collapsible, Divider, Field, FormatChip, Panel, Segmented, Select } from './PanelParts'
+import { DEFAULT_IMAGE_SETTINGS, type ImageFormat, type MaxEdge } from '../../lib/types'
 
 const MAX_EDGES: { value: MaxEdge; label: string }[] = [
   { value: 'source', label: 'Keep original size' },
@@ -69,6 +69,17 @@ function ImagePanel() {
   const target = imageFormatMeta(settings.format)
   const ready = supported[settings.format]
 
+  // Anything moved off its default, spelled out for the collapsed header. The
+  // section is shut on arrival (owner ask, 2026-08-31), so this line is the only
+  // thing standing between a setting carried over from an earlier conversion and
+  // it applying invisibly — it is not decoration.
+  const quality = nearestQuality(settings.quality)
+  const changed: string[] = []
+  if (target.lossy && quality !== DEFAULT_IMAGE_SETTINGS.quality)
+    changed.push(QUALITIES.find((q) => q.value === quality)?.label ?? '')
+  if (settings.maxEdge !== 'source')
+    changed.push(MAX_EDGES.find((e) => e.value === settings.maxEdge)?.label ?? '')
+
   return (
     <>
       <Panel>
@@ -94,38 +105,48 @@ function ImagePanel() {
           )}
         </Field>
 
-        {target.lossy && (
-          <Field label="Quality">
-            <Segmented
-              options={QUALITIES}
-              value={nearestQuality(settings.quality)}
-              disabled={running}
-              onChange={(quality) => update({ quality })}
-            />
-            <p className="text-[10.5px] text-slate-400">
-              Lossy formats trade detail for size. Balanced is the sweet spot for photos.
-            </p>
-          </Field>
-        )}
-
-        <Field label="Size">
-          <Select
-            options={MAX_EDGES}
-            value={settings.maxEdge}
-            disabled={running}
-            onChange={(maxEdge) => update({ maxEdge })}
-          />
-          <p className="text-[10.5px] text-slate-400">
-            Scales the longest edge down, keeping the aspect ratio. Never scales up.
-          </p>
-        </Field>
-
-        <Divider />
-
+        {/* ⚠️ OUTSIDE the disclosure, and it stays outside. Everything else
+            after "Convert to" folded away on 2026-08-31, but this is not a
+            setting — it is what the conversion does to your file whatever you
+            pick, and it is the sentence somebody sharing a photo needs to have
+            read. A privacy-first app does not hide it behind a chevron. */}
         <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] text-slate-500">
           Metadata is dropped on the way through — the canvas re-encode keeps pixels, not EXIF. That
           means location and camera details don’t travel with the converted file.
         </p>
+
+        <Divider />
+
+        <Collapsible
+          label="Advanced settings"
+          summary={changed.length ? changed.join(' · ') : 'Default settings'}
+        >
+          {target.lossy && (
+            <Field label="Quality">
+              <Segmented
+                options={QUALITIES}
+                value={quality}
+                disabled={running}
+                onChange={(quality) => update({ quality })}
+              />
+              <p className="text-[10.5px] text-slate-400">
+                Lossy formats trade detail for size. Balanced is the sweet spot for photos.
+              </p>
+            </Field>
+          )}
+
+          <Field label="Size">
+            <Select
+              options={MAX_EDGES}
+              value={settings.maxEdge}
+              disabled={running}
+              onChange={(maxEdge) => update({ maxEdge })}
+            />
+            <p className="text-[10.5px] text-slate-400">
+              Scales the longest edge down, keeping the aspect ratio. Never scales up.
+            </p>
+          </Field>
+        </Collapsible>
       </Panel>
 
       <StudioActions kind="image" canConvert={ready} />

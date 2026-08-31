@@ -1,4 +1,11 @@
-import { commonTargets, type DocFormat, type FontChoice, type PageMargin, type PaperSize } from '../../lib/doc'
+import {
+  DEFAULT_PDF_SETTINGS,
+  commonTargets,
+  type DocFormat,
+  type FontChoice,
+  type PageMargin,
+  type PaperSize,
+} from '../../lib/doc'
 import { useConverterStore } from '../../stores/converterStore'
 import OtherExports from './OtherExports'
 import StudioActions from './StudioActions'
@@ -82,6 +89,24 @@ function DocumentPanel() {
   const target = TARGETS.find((t) => t.id === settings.format) ?? TARGETS[0]
   const ready = available.includes(settings.format)
 
+  // Only two targets have anything to set. Text, Markdown, HTML and CSV come out
+  // of the readers as they are, so those get no disclosure at all rather than an
+  // empty one — a chevron that opens onto nothing is worse than no chevron.
+  const pdf = settings.pdf
+  const advanced: string[] = []
+  if (settings.format === 'pdf') {
+    if (pdf.paper !== DEFAULT_PDF_SETTINGS.paper) advanced.push(pdf.paper)
+    if (pdf.font !== DEFAULT_PDF_SETTINGS.font)
+      advanced.push(FONTS.find((f) => f.value === pdf.font)?.label ?? '')
+    if (nearestSize(pdf.fontSize) !== DEFAULT_PDF_SETTINGS.fontSize)
+      advanced.push(`${SIZES.find((z) => z.value === nearestSize(pdf.fontSize))?.label ?? ''} text`)
+    if (pdf.margin !== DEFAULT_PDF_SETTINGS.margin) advanced.push(`${pdf.margin} margins`)
+    if (!pdf.pageNumbers) advanced.push('No page numbers')
+  } else if (settings.format === 'json' && !settings.inferTypes) {
+    advanced.push('All text')
+  }
+  const hasAdvanced = settings.format === 'pdf' || settings.format === 'json'
+
   return (
     <>
       <Panel>
@@ -114,91 +139,18 @@ function DocumentPanel() {
           )}
         </Field>
 
+        {/* ⚠️ The format's own limits stay OUTSIDE the disclosure. Everything
+            after "Convert to" folded away on 2026-08-31 — everything that is a
+            SETTING. These two are not: they say what this target cannot carry,
+            which is the thing to know before you press Convert rather than
+            after, and a warning behind a chevron is a warning nobody read. */}
         {settings.format === 'pdf' && (
-          <>
-            <Field label="Page">
-              <Select
-                options={PAPERS}
-                value={settings.pdf.paper}
-                disabled={running}
-                onChange={(paper) => update({ pdf: { ...settings.pdf, paper } })}
-              />
-            </Field>
-
-            <Field label="Text">
-              <Segmented
-                options={FONTS}
-                value={settings.pdf.font}
-                disabled={running}
-                onChange={(font) => update({ pdf: { ...settings.pdf, font } })}
-              />
-              <Segmented
-                options={SIZES}
-                value={nearestSize(settings.pdf.fontSize)}
-                disabled={running}
-                onChange={(fontSize) => update({ pdf: { ...settings.pdf, fontSize } })}
-              />
-              <p className="text-[10.5px] text-slate-400">
-                Headings, code and tables all scale from the body size, so one setting sets the lot.
-              </p>
-            </Field>
-
-            <Collapsible
-              label="More"
-              summary={`${settings.pdf.margin} margins · ${settings.pdf.pageNumbers ? 'numbered' : 'no numbers'}`}
-            >
-              <Field label="Margins">
-                <Segmented
-                  options={MARGINS}
-                  value={settings.pdf.margin}
-                  disabled={running}
-                  onChange={(margin) => update({ pdf: { ...settings.pdf, margin } })}
-                />
-              </Field>
-              <Field label="Page numbers">
-                <Segmented
-                  options={[
-                    { value: 'on' as const, label: 'Show' },
-                    { value: 'off' as const, label: 'Hide' },
-                  ]}
-                  value={settings.pdf.pageNumbers ? 'on' : 'off'}
-                  disabled={running}
-                  onChange={(v) => update({ pdf: { ...settings.pdf, pageNumbers: v === 'on' } })}
-                />
-                <p className="text-[10.5px] text-slate-400">
-                  Only drawn when there is more than one page.
-                </p>
-              </Field>
-            </Collapsible>
-
-            <Divider />
-
-            <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500">
-              The PDF uses the fonts every reader already has, so nothing is embedded and the file
-              stays small. That means <span className="font-medium text-slate-700">Latin alphabets
-              only</span> — Greek, Cyrillic, Hebrew, Arabic and CJK can’t be written, and any that
-              appear are named on the row afterwards rather than silently replaced.
-            </p>
-          </>
-        )}
-
-        {settings.format === 'json' && (
-          <Field label="Values">
-            <Segmented
-              options={[
-                { value: 'typed' as const, label: 'Numbers & true/false' },
-                { value: 'text' as const, label: 'All text' },
-              ]}
-              value={settings.inferTypes ? 'typed' : 'text'}
-              disabled={running}
-              onChange={(v) => update({ inferTypes: v === 'typed' })}
-            />
-            <p className="text-[10.5px] leading-relaxed text-slate-400">
-              Typed reads <code className="font-mono">42</code> as a number. A value that wouldn’t
-              survive the trip stays text either way — <code className="font-mono">007</code> keeps
-              its zeros, and a phone number keeps its <code className="font-mono">+</code>.
-            </p>
-          </Field>
+          <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500">
+            The PDF uses the fonts every reader already has, so nothing is embedded and the file
+            stays small. That means <span className="font-medium text-slate-700">Latin alphabets
+            only</span> — Greek, Cyrillic, Hebrew, Arabic and CJK can’t be written, and any that
+            appear are named on the row afterwards rather than silently replaced.
+          </p>
         )}
 
         {(settings.format === 'txt' || settings.format === 'md' || settings.format === 'html') && (
@@ -207,6 +159,103 @@ function DocumentPanel() {
             in place by its caption. Everything else — headings, emphasis, lists, tables and links —
             comes across.
           </p>
+        )}
+
+        {hasAdvanced && (
+          <>
+            <Divider />
+
+            <Collapsible
+              label="Advanced settings"
+              summary={
+                advanced.length
+                  ? advanced.join(' · ')
+                  : settings.format === 'pdf'
+                    ? `${pdf.paper} · ${pdf.margin} margins`
+                    : 'Numbers & true/false'
+              }
+            >
+              {settings.format === 'pdf' && (
+                <>
+                  <Field label="Page">
+                    <Select
+                      options={PAPERS}
+                      value={pdf.paper}
+                      disabled={running}
+                      onChange={(paper) => update({ pdf: { ...pdf, paper } })}
+                    />
+                  </Field>
+
+                  <Field label="Text">
+                    <Segmented
+                      options={FONTS}
+                      value={pdf.font}
+                      disabled={running}
+                      onChange={(font) => update({ pdf: { ...pdf, font } })}
+                    />
+                    <Segmented
+                      options={SIZES}
+                      value={nearestSize(pdf.fontSize)}
+                      disabled={running}
+                      onChange={(fontSize) => update({ pdf: { ...pdf, fontSize } })}
+                    />
+                    <p className="text-[10.5px] text-slate-400">
+                      Headings, code and tables all scale from the body size, so one setting sets
+                      the lot.
+                    </p>
+                  </Field>
+
+                  {/* Margins and page numbers used to be a second disclosure
+                      ("More") nested in this panel. With the whole panel now
+                      shut by default that would be a chevron inside a chevron,
+                      so they are flat here — the summary above names them. */}
+                  <Field label="Margins">
+                    <Segmented
+                      options={MARGINS}
+                      value={pdf.margin}
+                      disabled={running}
+                      onChange={(margin) => update({ pdf: { ...pdf, margin } })}
+                    />
+                  </Field>
+
+                  <Field label="Page numbers">
+                    <Segmented
+                      options={[
+                        { value: 'on' as const, label: 'Show' },
+                        { value: 'off' as const, label: 'Hide' },
+                      ]}
+                      value={pdf.pageNumbers ? 'on' : 'off'}
+                      disabled={running}
+                      onChange={(v) => update({ pdf: { ...pdf, pageNumbers: v === 'on' } })}
+                    />
+                    <p className="text-[10.5px] text-slate-400">
+                      Only drawn when there is more than one page.
+                    </p>
+                  </Field>
+                </>
+              )}
+
+              {settings.format === 'json' && (
+                <Field label="Values">
+                  <Segmented
+                    options={[
+                      { value: 'typed' as const, label: 'Numbers & true/false' },
+                      { value: 'text' as const, label: 'All text' },
+                    ]}
+                    value={settings.inferTypes ? 'typed' : 'text'}
+                    disabled={running}
+                    onChange={(v) => update({ inferTypes: v === 'typed' })}
+                  />
+                  <p className="text-[10.5px] leading-relaxed text-slate-400">
+                    Typed reads <code className="font-mono">42</code> as a number. A value that
+                    wouldn’t survive the trip stays text either way —{' '}
+                    <code className="font-mono">007</code> keeps its zeros, and a phone number keeps
+                    its <code className="font-mono">+</code>.
+                  </p>
+                </Field>
+              )}
+            </Collapsible>
+          </>
         )}
       </Panel>
 

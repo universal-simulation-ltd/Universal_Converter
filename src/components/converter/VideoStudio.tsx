@@ -188,10 +188,12 @@ function Mp4Advanced({ engineReady }: { engineReady: boolean }) {
   if (settings.trim.enabled) changed.push('Trimmed')
 
   return (
+    // Shut on arrival, both targets (owner ask, 2026-08-31). `summary` is what
+    // keeps that honest: a trim or a resolution carried over from an earlier
+    // conversion is still readable with the section closed.
     <Collapsible
-      label="Advanced"
+      label="Advanced settings"
       summary={changed.length ? changed.join(' · ') : 'Default settings'}
-      defaultOpen={changed.length > 0}
     >
       <Field label="Resolution">
         <Select
@@ -264,9 +266,8 @@ function GifAdvanced() {
 
   return (
     <Collapsible
-      label="Advanced"
+      label="Advanced settings"
       summary={changed.length ? changed.join(' · ') : `${DEFAULT_GIF_SETTINGS.maxEdge} px · ${DEFAULT_GIF_SETTINGS.fps} fps`}
-      defaultOpen={changed.length > 0}
     >
       <Field label="Size">
         <Select

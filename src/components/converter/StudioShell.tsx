@@ -16,13 +16,17 @@ import type { MediaKind } from '../../lib/types'
  * ⚠️ **The left column answers "what have I got"; the right one is everything
  * that happens** — Universal Compress's shape, brought across on 2026-08-30.
  * The queue used to end in a compact dashed "drop more" strip; that strip is
- * gone, and the drop target is the full circle at the top of the right-hand
- * column, directly above the Convert and Download buttons (see
+ * gone, and the drop target is the circle INSIDE the action card in the
+ * right-hand column, directly above the Convert and Download buttons (see
  * `StudioActions`, which each studio's panel column ends with).
+ *
+ * ⚠️ Since 2026-08-31 that circle takes a drop but no longer takes a CLICK:
+ * browsing for more files is "Add more files" at the top of the queue on the
+ * left (`FileQueue` → `AddMore`), beside the list of what you already have.
  *
  * The columns also change weight once something is queued: an empty tab is
  * mostly the ring it opens on, and a working one needs the extra width on the
- * right for a 300px circle to sit in without crowding the buttons.
+ * right for the ring and the buttons that share its card.
  */
 // Name the thing in front of the reader, per tab. A generic "your files" would
 // work grammatically and say less — and "your documents" in particular is the
