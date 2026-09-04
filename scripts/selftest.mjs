@@ -25,6 +25,7 @@ import { encodeAiff } from '../src/lib/aiff.ts'
 import { encodeMp3 } from '../src/lib/mp3.ts'
 import { targetSize } from '../src/lib/resize.ts'
 import { tabAfterDrop } from '../src/lib/routing.ts'
+import { heicByName, heicFromBytes } from '../src/lib/heicSniff.ts'
 import { parseClock } from '@unisim/media'
 import { createZip, crc32 } from '@unisim/media'
 import { HEADER_BOS, HEADER_EOS, buildPage, oggCrc, opusHead, opusTags } from '../src/lib/ogg.ts'
@@ -762,6 +763,61 @@ function ascii(view, offset, length) {
   assert.equal(at('image', true, []), 'image')
 
   console.log('✓ routing — every tab-after-drop rule, including the two that must NOT move you')
+}
+
+// ── HEIC, by its bytes ───────────────────────────────────────────────────────
+// What a file IS, when what it's called cannot be trusted. On Android the
+// picker hands over a display name with no extension and a MIME from whichever
+// app owns the file, so name-and-type alone lets an iPhone photo through to die
+// at `createImageBitmap` — in an app that appears to support HEIC.
+//
+// ⚠️ This does NOT test the decode. `heic-to` is the only thing that can answer
+// for that, and it cannot be tested from a made-up file anyway: a generated
+// HEIC does not test HEIC (see Docs_UNI_SIM/landmines.md). Header shapes only.
+//
+// Negative controls (2026-09-04, both run): dropping the AVIF exclusion reddens
+// the two avif cases; accepting any `ftyp` reddens the MP4.
+{
+  // A box length, `ftyp`, a major brand, then the compatible ones.
+  const ftyp = (major, ...compatible) => {
+    const brands = [major, ...compatible].join('')
+    return Uint8Array.from(`\0\0\0${String.fromCharCode(8 + brands.length)}ftyp${brands}`,
+      (c) => c.charCodeAt(0))
+  }
+  const bytes = (...nums) => Uint8Array.from(nums)
+
+  // The brand list off a current iPhone capture — the one heic2any cannot read.
+  assert.equal(heicFromBytes(ftyp('heic', 'mif1', 'MiHB', 'MiHE', 'MiPr', 'miaf', 'tmap')), true,
+    'an iPhone capture is a HEIC')
+  for (const brand of ['heix', 'heim', 'heis', 'hevc', 'hevx', 'mif1', 'msf1']) {
+    assert.equal(heicFromBytes(ftyp(brand)), true, `brand ${brand} is a HEIC`)
+  }
+  // Samsung leads with the container brand and only says `heic` further down.
+  assert.equal(heicFromBytes(ftyp('mif1', 'heic')), true, 'a generic major brand still says HEIC')
+
+  // Same container, decoded natively by every browser here: leave it alone.
+  assert.equal(heicFromBytes(ftyp('avif', 'mif1', 'miaf')), false, 'AVIF is not sent to libheif')
+  assert.equal(heicFromBytes(ftyp('avis', 'avif', 'msf1')), false, 'nor an AVIF sequence')
+  assert.equal(heicFromBytes(ftyp('isom', 'iso2', 'avc1', 'mp41')), false, 'an MP4 is not a photo')
+
+  assert.equal(heicFromBytes(bytes(0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46, 0, 1)),
+    false, 'JPEG')
+  assert.equal(heicFromBytes(bytes(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13)),
+    false, 'PNG')
+  assert.equal(heicFromBytes(Uint8Array.from('RIFF\0\0\0\0WEBPVP8 ', (c) => c.charCodeAt(0))),
+    false, 'WebP')
+
+  // Too short to hold a header: answer, don't throw.
+  assert.equal(heicFromBytes(bytes()), false, 'an empty head is not a HEIC')
+  assert.equal(heicFromBytes(bytes(0, 0, 0, 24, 0x66, 0x74)), false, 'nor a truncated one')
+
+  // The name half, which still carries Windows (no MIME registered for .heic).
+  assert.equal(heicByName(new File([], 'photo.HEIC')), true, 'a .HEIC with no MIME')
+  assert.equal(heicByName(new File([], 'photo.jpg', { type: 'image/jpeg' })), false, 'a JPEG')
+  assert.equal(heicByName(new File([], '1000012345', { type: 'image/*' })), false,
+    'what Android hands over — which is why the bytes exist')
+
+  console.log('✓ heic — the ftyp brands, including the two that must NOT be converted')
 }
 
 console.log(skipped > 0

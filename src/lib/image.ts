@@ -1,4 +1,5 @@
 import { imageFormatMeta, imageFormatSupported } from './formats'
+import { isHeicFile } from './heicSniff'
 import { withExtension } from './humanise'
 import { targetSize } from './resize'
 import type { ConvertedFile, ImageSettings } from './types'
@@ -80,20 +81,9 @@ export async function convertImage(
   }
 }
 
-const HEIC_EXT_RE = /\.(heic|heif)$/i
-const HEIC_MIME = new Set(['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'])
-
-/**
- * Is this the thing an iPhone hands you?
- *
- * ⚠️ The extension test is not belt-and-braces, it is the one that fires. A
- * `.heic` copied off a phone routinely arrives with `file.type === ''` on
- * Windows, because the OS has no MIME registered for it — so a MIME-only test
- * sends the photo down the ordinary path and it fails to decode.
- */
-function isHeic(file: File): boolean {
-  return HEIC_MIME.has(file.type.toLowerCase()) || HEIC_EXT_RE.test(file.name)
-}
+// Is this the thing a phone hands you? Name, MIME *and* the file's own first
+// bytes — see heicSniff.ts, which explains why the first two are not enough on
+// Android and is the same file in Compress and PDF.
 
 /**
  * HEIC/HEIF → an ImageBitmap, so the rest of this file can treat an iPhone
@@ -143,7 +133,7 @@ export async function decodeImage(file: File): Promise<ImageBitmap> {
   // Before the try, not inside its catch: on Safari `createImageBitmap` would
   // succeed on a HEIC and never reach a fallback, so the two engines would take
   // different paths and only one of them would be the tested one.
-  if (isHeic(file)) return await heicToBitmap(file)
+  if (await isHeicFile(file)) return await heicToBitmap(file)
 
   try {
     return await createImageBitmap(file)
