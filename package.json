@@ -12,6 +12,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
+    "credits": "node ../scripts/gen-credits.mjs . --repo https://github.com/universal-simulation-ltd/Universal_Converter",
     "test": "node scripts/selftest.mjs",
     "test:files": "node e2e/files.e2e.mjs",
     "test:images": "node e2e/images.e2e.mjs",

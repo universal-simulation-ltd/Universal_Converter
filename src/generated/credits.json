@@ -1,0 +1,153 @@
+{
+  "app": "universal-converter",
+  "appVersion": "0.1.0",
+  "generated": "2026-09-08",
+  "noticesCount": 110,
+  "ships": [
+    {
+      "name": "@breezystack/lamejs",
+      "version": "1.2.7",
+      "licence": "LGPL-3.0",
+      "repo": "https://github.com/shijinyu/lamejs",
+      "homepage": "https://github.com/shijinyu/lamejs#readme",
+      "authors": [
+        "Alex Zhukov"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "@capacitor/*",
+      "title": "Capacitor",
+      "licence": "MIT",
+      "repo": "https://github.com/ionic-team/capacitor",
+      "description": "wraps the web app as a real iPhone and Android app",
+      "authors": [
+        "Ionic Team"
+      ],
+      "source": "overlay"
+    },
+    {
+      "name": "heic-to",
+      "version": "1.5.2",
+      "licence": "LGPL-3.0",
+      "repo": "https://github.com/hoppergee/heic-to",
+      "homepage": "https://github.com/hoppergee/heic-to",
+      "description": "opens iPhone HEIC photos",
+      "authors": [
+        "Hopper Gee"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "libflacjs",
+      "version": "5.6.0",
+      "licence": "MIT",
+      "repo": "https://github.com/mmig/libflac.js",
+      "homepage": "https://github.com/mmig/libflac.js",
+      "authors": [],
+      "source": "node_modules"
+    },
+    {
+      "name": "react",
+      "title": "React",
+      "version": "18.3.1",
+      "licence": "MIT",
+      "repo": "https://github.com/facebook/react",
+      "homepage": "https://reactjs.org/",
+      "description": "the UI library every Universal App is built from",
+      "authors": [
+        "Jordan Walke"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "react-dom",
+      "title": "React DOM",
+      "version": "18.3.1",
+      "licence": "MIT",
+      "repo": "https://github.com/facebook/react",
+      "homepage": "https://reactjs.org/",
+      "description": "renders React to the browser DOM",
+      "authors": [
+        "Jordan Walke"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "zustand",
+      "title": "Zustand",
+      "version": "5.0.14",
+      "licence": "MIT",
+      "repo": "https://github.com/pmndrs/zustand",
+      "homepage": "https://github.com/pmndrs/zustand",
+      "description": "holds the editor's state",
+      "authors": [
+        "Paul Henschel"
+      ],
+      "source": "node_modules"
+    }
+  ],
+  "builds": [
+    {
+      "name": "@types/*",
+      "title": "DefinitelyTyped",
+      "licence": "MIT",
+      "repo": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+      "description": "the community type definitions TypeScript builds against",
+      "authors": [
+        "Boris Yankov"
+      ],
+      "source": "overlay"
+    },
+    {
+      "name": "tailwindcss",
+      "title": "Tailwind CSS",
+      "version": "4.3.3",
+      "licence": "MIT",
+      "repo": "https://github.com/tailwindlabs/tailwindcss",
+      "homepage": "https://tailwindcss.com",
+      "description": "the CSS framework the interfaces are styled with",
+      "authors": [
+        "Adam Wathan"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "typescript",
+      "title": "TypeScript",
+      "version": "5.9.3",
+      "licence": "Apache-2.0",
+      "repo": "https://github.com/microsoft/TypeScript",
+      "homepage": "https://www.typescriptlang.org/",
+      "authors": [
+        "Microsoft"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "vite",
+      "title": "Vite",
+      "version": "6.4.3",
+      "licence": "MIT",
+      "repo": "https://github.com/vitejs/vite",
+      "homepage": "https://vite.dev",
+      "description": "the build tool and dev server behind every web app in the suite",
+      "authors": [
+        "Evan You"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "vite-plugin-pwa",
+      "title": "vite-plugin-pwa",
+      "version": "0.21.2",
+      "licence": "MIT",
+      "repo": "https://github.com/vite-pwa/vite-plugin-pwa",
+      "homepage": "https://github.com/vite-pwa/vite-plugin-pwa#readme",
+      "authors": [
+        "Anthony Fu"
+      ],
+      "source": "node_modules"
+    }
+  ]
+}
