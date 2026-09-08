@@ -222,7 +222,7 @@ still un-taken. Working around it, one format at a time, is why only one chip is
 disabled and why video shipped anyway:
 
 - **MP3 didn't need it.** LAME's JS port is LGPL-3.0, which is a *dependency*
-  licence, not a project one, so the app stays MIT — and it's ~170 KB against the
+  licence, not a project one, so it does not change the app's own — and it's ~170 KB against the
   core's ~31 MB.
 - **Opus didn't either.** WebCodecs exposes the browser's own Opus encoder, so
   the only missing piece was the Ogg container — about a page of code, and no

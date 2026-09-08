@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "description": "Universal Converter — convert audio and video entirely in your browser. Nothing is uploaded.",
   "scripts": {
     "predev": "node scripts/sync-flac.mjs",
