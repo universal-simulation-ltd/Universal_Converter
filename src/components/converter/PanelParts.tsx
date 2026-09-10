@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 
 // The settings-panel vocabulary, shared by the audio and image studios so the
 // two tabs are the same instrument with different strings.
@@ -43,12 +43,14 @@ export function Collapsible({
   children: ReactNode
 }) {
   const [open, setOpen] = useState(defaultOpen)
+  const panelId = useId()
 
   return (
     <div className="flex flex-col gap-4">
       <button
         type="button"
         aria-expanded={open}
+        aria-controls={panelId}
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center gap-2 text-left focus:outline-none focus-visible:outline-2 focus-visible:outline-orange-600"
       >
@@ -64,7 +66,7 @@ export function Collapsible({
           <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
-      {open && <div className="flex flex-col gap-4">{children}</div>}
+      {open && <div id={panelId} className="flex flex-col gap-4">{children}</div>}
     </div>
   )
 }
