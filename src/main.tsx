@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { UniversalProvider } from '@unisim/sdk'
 import type { ProductCode } from '@unisim/sdk'
 import App from './App'
-import UsageTracker from './UsageTracker'
+import { UsageTracker } from '@unisim/sdk'
 import { useConverterStore } from './stores/converterStore'
 import './index.css'
 
