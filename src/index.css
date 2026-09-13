@@ -17,6 +17,24 @@ body {
   overscroll-behavior: none;
 }
 
+/* iOS Safari zooms the page in when a field under 16px takes focus, and it does
+   not zoom back out. The trim and option fields here are `text-[12px]`, so
+   touch devices get a 16px floor on every control that takes a caret; pointer
+   devices keep the denser size. `!important` has to beat the utility on the
+   element. The wrong fix is `maximum-scale=1` on the viewport meta — pinch-zoom
+   is an accessibility feature. Same block as Universal QR, Compress and AI.
+
+   ⚠️ Keep the `input:not(…)` chain on ONE line. Wrapped, the whitespace before
+   each continuation is a descendant combinator and the rule matches nothing
+   (Universal Jukebox, 2026-09-10). */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']),
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
 /* A row that has just finished settles into its done state rather than snapping
    there — the only motion in the queue besides the progress fill. */
 @keyframes row-settle {
