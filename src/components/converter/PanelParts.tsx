@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from 'react'
+import { ChipToggle } from '@unisim/sdk'
 
 // The settings-panel vocabulary, shared by the audio and image studios so the
 // two tabs are the same instrument with different strings.
@@ -87,23 +88,10 @@ export function FormatChip({
   onSelect: () => void
 }) {
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onSelect}
-      aria-pressed={selected}
-      title={title}
-      className={`rounded-full px-3 py-1.5 text-[11.5px] font-semibold transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-orange-600 disabled:opacity-50 ${
-        selected
-          ? 'bg-gradient-to-br from-[#FE8C01] to-[#E05504] font-bold text-white'
-          : ready
-            ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
-            : 'bg-slate-100 text-slate-400 dark:bg-slate-800'
-      }`}
-    >
+    <ChipToggle selected={selected} disabled={disabled} onClick={onSelect} title={title}>
       {label}
-      {!ready && <span className="ml-1 align-middle text-[9px]">•</span>}
-    </button>
+      {!ready && <span className="align-middle text-[9px]">•</span>}
+    </ChipToggle>
   )
 }
 
