@@ -132,10 +132,10 @@ function VideoPanel() {
               />
             ))}
           </div>
-          <p className="text-[11px] text-slate-500">{target.blurb}</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">{target.blurb}</p>
 
           {videoTarget === 'gif' && (
-            <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] leading-snug text-amber-800">
+            <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] leading-snug text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
               <span className="font-semibold">A GIF has no sound</span>, and 256 colours in the whole
               animation — so a gradient or a sunset will band a little. It is also much larger than
               the same clip as MP4: a few seconds is a few megabytes. Keep it short.
@@ -143,7 +143,7 @@ function VideoPanel() {
           )}
 
           {videoTarget === 'mp4' && encoderReady === false && (
-            <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] leading-snug text-amber-800">
+            <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] leading-snug text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
               This browser has no WebCodecs H.264 encoder, so it can’t write an MP4.
               {decoderReady === true
                 ? ' It can still read one, so GIF above will work here. Chrome and Edge do both.'
@@ -152,7 +152,7 @@ function VideoPanel() {
           )}
 
           {videoTarget === 'gif' && decoderReady === false && (
-            <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] leading-snug text-amber-800">
+            <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] leading-snug text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
               This browser has no WebCodecs H.264 decoder, so it can’t take a video apart to make a
               GIF — Chrome and Edge have one. The audio and images tabs work everywhere.
             </p>
@@ -376,10 +376,10 @@ function TrimFields() {
     'w-full rounded-lg border px-3 py-2 text-[12px] tabular-nums focus:outline-none focus-visible:outline-2 focus-visible:outline-orange-600 disabled:opacity-50'
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg bg-slate-50 p-3">
+    <div className="flex flex-col gap-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-1">
-          <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-slate-500">Start</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-slate-500 dark:text-slate-400">Start</span>
           <input
             value={startText}
             disabled={running}
@@ -387,11 +387,11 @@ function TrimFields() {
             placeholder="0:00"
             inputMode="numeric"
             aria-invalid={startBad}
-            className={`${field} ${startBad ? 'border-red-400 text-red-700' : 'border-slate-200 bg-white text-slate-900'}`}
+            className={`${field} ${startBad ? 'border-red-400 text-red-700 dark:bg-slate-950 dark:text-red-400' : 'border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100'}`}
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-slate-500">End</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-slate-500 dark:text-slate-400">End</span>
           <input
             value={endText}
             disabled={running}
@@ -399,11 +399,11 @@ function TrimFields() {
             placeholder="end of file"
             inputMode="numeric"
             aria-invalid={endBad}
-            className={`${field} ${endBad ? 'border-red-400 text-red-700' : 'border-slate-200 bg-white text-slate-900'}`}
+            className={`${field} ${endBad ? 'border-red-400 text-red-700 dark:bg-slate-950 dark:text-red-400' : 'border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100'}`}
           />
         </label>
       </div>
-      <p className={`text-[10.5px] ${startBad || endBad ? 'text-red-700' : 'text-slate-400'}`}>
+      <p className={`text-[10.5px] ${startBad || endBad ? 'text-red-700 dark:text-red-400' : 'text-slate-400'}`}>
         {startBad || endBad
           ? 'Use mm:ss, h:mm:ss, or a number of seconds.'
           : 'Cuts begin at the nearest keyframe at or before the start time.'}

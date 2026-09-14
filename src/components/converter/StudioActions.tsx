@@ -2,6 +2,7 @@ import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
 import { DROP_COPY } from '../../lib/formats'
 import { canPickSaveLocation } from '../../lib/download'
 import { formatBytes } from '../../lib/humanise'
+import { useRingColours } from '../../lib/ringTheme'
 import { kindTotals, savingPercent, useConverterStore } from '../../stores/converterStore'
 import type { MediaKind } from '../../lib/types'
 
@@ -67,6 +68,7 @@ function StudioCircle({ kind }: { kind: MediaKind }) {
     clickToBrowse: false,
     pageWide: true,
   })
+  const ring = useRingColours(drop.over)
 
   // While a run is going the ring tracks it; once everything has finished it
   // stays full, so a completed batch reads as complete rather than snapping
@@ -92,6 +94,7 @@ function StudioCircle({ kind }: { kind: MediaKind }) {
         <DropRing
           size="100%"
           over={drop.over}
+          {...ring}
           motion={running ? 'busy' : 'still'}
           fill={fill}
           watermark={false}
@@ -115,10 +118,10 @@ function QueueCentre({ kind }: { kind: MediaKind }) {
   if (running) {
     return (
       <>
-        <span className="text-[30px] font-bold leading-none tabular-nums text-slate-900">
+        <span className="text-[30px] font-bold leading-none tabular-nums text-slate-900 dark:text-slate-100">
           {Math.round(t.progress * 100)}%
         </span>
-        <span className="mt-1.5 text-[12px] font-semibold text-slate-600">Converting…</span>
+        <span className="mt-1.5 text-[12px] font-semibold text-slate-600 dark:text-slate-300">Converting…</span>
         <span className="text-[11px] tabular-nums text-slate-400">
           {t.done} of {t.eligible} done
         </span>
@@ -129,8 +132,8 @@ function QueueCentre({ kind }: { kind: MediaKind }) {
   if (finished) {
     return (
       <>
-        <span className="text-[30px] font-bold leading-none tabular-nums text-slate-900">{t.done}</span>
-        <span className="mt-1.5 text-[12px] font-semibold text-slate-600">
+        <span className="text-[30px] font-bold leading-none tabular-nums text-slate-900 dark:text-slate-100">{t.done}</span>
+        <span className="mt-1.5 text-[12px] font-semibold text-slate-600 dark:text-slate-300">
           file{t.done === 1 ? '' : 's'} converted
         </span>
         {/* The before and after, not a percentage: a conversion that GREW the
@@ -147,8 +150,8 @@ function QueueCentre({ kind }: { kind: MediaKind }) {
 
   return (
     <>
-      <span className="text-[28px] font-bold leading-none tabular-nums text-slate-900">{t.eligible}</span>
-      <span className="mt-1 text-[12px] font-semibold text-slate-600">
+      <span className="text-[28px] font-bold leading-none tabular-nums text-slate-900 dark:text-slate-100">{t.eligible}</span>
+      <span className="mt-1 text-[12px] font-semibold text-slate-600 dark:text-slate-300">
         file{t.eligible === 1 ? '' : 's'} ready
       </span>
       <span className="text-[11px] tabular-nums text-slate-400">{formatBytes(t.bytesIn)}</span>
@@ -248,24 +251,24 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
   const primary =
     'w-full rounded-xl bg-gradient-to-br from-[#FE8C01] to-[#E05504] px-4 py-3 text-[14px] font-bold text-white shadow-sm transition-opacity hover:opacity-95 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-40'
   const secondary =
-    'w-full rounded-xl bg-orange-500/12 px-4 py-2.5 text-[13px] font-bold text-orange-800 transition-colors hover:bg-orange-500/20 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-40'
+    'w-full rounded-xl bg-orange-500/12 px-4 py-2.5 text-[13px] font-bold text-orange-800 transition-colors hover:bg-orange-500/20 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-orange-300'
 
   return (
     <div
       className={`rounded-xl border ${
-        t.done > 0 ? 'border-orange-200 bg-orange-50/60' : 'border-slate-200 bg-white'
+        t.done > 0 ? 'border-orange-200 bg-orange-50/60 dark:border-orange-900/60 dark:bg-orange-950/20' : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
       }`}
     >
       {!nothingToDo && (
         <div
           className={`flex items-center gap-2.5 border-b px-4 py-3 ${
-            t.done > 0 ? 'border-orange-200/70' : 'border-slate-200'
+            t.done > 0 ? 'border-orange-200/70 dark:border-orange-900/60' : 'border-slate-200 dark:border-slate-800'
           }`}
         >
           {/* No count on the right any more: the ring directly below it is the
               count, and printing it twice in one card is the sort of thing that
               makes two numbers look like two different measurements. */}
-          <span className="text-[12.5px] font-bold text-slate-900">
+          <span className="text-[12.5px] font-bold text-slate-900 dark:text-slate-100">
             {t.done === 0 ? 'Ready to convert' : allDone ? 'Ready to download' : `${t.done} ready so far`}
           </span>
         </div>
@@ -275,17 +278,17 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
         <StudioCircle kind={kind} />
 
         {nothingToDo ? (
-          <p className="text-center text-[11px] leading-snug text-slate-500">
+          <p className="text-center text-[11px] leading-snug text-slate-500 dark:text-slate-400">
             Nothing in the list can be converted here — each row says why. Drop something else, or
-            use <span className="font-semibold text-slate-700">Add more files</span> beside the
+            use <span className="font-semibold text-slate-700 dark:text-slate-300">Add more files</span> beside the
             list.
           </p>
         ) : (
           <>
             {t.done > 0 && (
-              <div className="rounded-lg bg-white/70 px-3 py-2.5 ring-1 ring-orange-200/70">
+              <div className="rounded-lg bg-white/70 px-3 py-2.5 ring-1 ring-orange-200/70 dark:bg-slate-950/40 dark:ring-orange-900/60">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-slate-500">
+                  <span className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-slate-500 dark:text-slate-400">
                     {allDone ? 'New size' : 'So far'}
                   </span>
                   {/* Green for smaller, amber for bigger, nothing for neither.
@@ -293,20 +296,20 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
                       SUPPOSED to grow, so growth is flagged the way the queue
                       rows flag it — a surprise worth naming, not a failure. */}
                   {saved >= 1 && (
-                    <span className="rounded-full bg-[#2F9E57]/12 px-2 py-0.5 text-[11px] font-bold text-[#166534]">
+                    <span className="rounded-full bg-[#2F9E57]/12 px-2 py-0.5 text-[11px] font-bold text-[#166534] dark:text-emerald-400">
                       −{saved}%
                     </span>
                   )}
                   {saved <= -1 && (
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900 dark:bg-amber-950/60 dark:text-amber-200">
                       +{-saved}%
                     </span>
                   )}
                 </div>
-                <div className="mt-1 text-[26px] font-bold leading-none tabular-nums text-slate-900">
+                <div className="mt-1 text-[26px] font-bold leading-none tabular-nums text-slate-900 dark:text-slate-100">
                   {formatBytes(t.bytesOutDone)}
                 </div>
-                <div className="mt-1.5 text-[11px] leading-snug text-slate-500">
+                <div className="mt-1.5 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
                   {saved >= 1 || saved <= -1 ? (
                     <>
                       was{' '}
@@ -334,7 +337,7 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
                     another copy" orange is how the duplicate got pressed in the
                     first place. */}
                 {autoSaved && (
-                  <p className="text-center text-[11.5px] font-semibold text-[#166534]">
+                  <p className="text-center text-[11.5px] font-semibold text-[#166534] dark:text-emerald-400">
                     Saved to your downloads.
                   </p>
                 )}
@@ -381,7 +384,7 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
               </button>
             )}
 
-            <p className="text-center text-[10.5px] text-slate-500">
+            <p className="text-center text-[10.5px] text-slate-500 dark:text-slate-400">
               Converted files are saved straight to your downloads. Nothing is uploaded.
             </p>
           </>

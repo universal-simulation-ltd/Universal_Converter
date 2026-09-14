@@ -8,6 +8,32 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icon-180.png" />
 
+    <!-- ⚠️ THE THEME, BEFORE THE FIRST PIXEL — and it has to be here, inline,
+         rather than in the app. `createThemeStore` (the SDK) puts the same
+         class on <html> at import time, but that is after the module bundle
+         has downloaded and parsed; `index.css` paints <html>'s ground long
+         before then, so a dark-mode user would get a light frame first. This
+         runs during head parsing, so the class is already there for the first
+         paint, and the store then reads the same key and agrees.
+
+         ⚠️ THE KEY IS DUPLICATED — `src/stores/themeStore.ts` holds the other
+         copy, and renaming one silently resets everybody to light. They are
+         held together by the "theme key" block in `scripts/selftest.mjs`,
+         which fails `npm test` if the two ever drift.
+
+         Light is the default (the suite rule), so this only ever ADDS `dark`. -->
+    <script>
+      try {
+        var pref = localStorage.getItem('unisim-converter-theme')
+        if (pref === 'dark' || (pref === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark')
+          document.documentElement.style.colorScheme = 'dark'
+        }
+      } catch (e) {
+        /* private mode, storage disabled: light, exactly as the store falls back. */
+      }
+    </script>
+
     <!-- Primary SEO -->
     <title>Universal Converter — convert audio, images &amp; video in your browser, nothing uploaded</title>
     <meta name="description" content="Universal Converter — convert audio to MP3, WAV or AIFF, images to WebP, JPEG, PNG or AVIF, and video to MP4 or animated GIF, entirely in your browser. Your files never leave your device: no upload, no account, no paywall. Open source and works offline." />

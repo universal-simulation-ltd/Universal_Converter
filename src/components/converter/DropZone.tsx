@@ -1,5 +1,6 @@
 import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
 import { ConvertWatermark } from './DropWatermarks'
+import { useRingColours } from '../../lib/ringTheme'
 
 interface Props {
   onFiles: (files: File[]) => void
@@ -48,6 +49,7 @@ export default function DropZone({ onFiles, accept, title, formatsLine }: Props)
     label: `${title} — click to browse`,
     pageWide: true,
   })
+  const ring = useRingColours(drop.over)
 
   return (
     <div className="flex flex-col items-center gap-5 px-4 py-8 sm:px-8">
@@ -56,9 +58,9 @@ export default function DropZone({ onFiles, accept, title, formatsLine }: Props)
         className="relative w-full max-w-[300px] cursor-pointer rounded-full transition-transform focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-600"
         style={drop.over ? { transform: 'scale(1.02)' } : undefined}
       >
-        <DropRing size="100%" over={drop.over} motion="idle" watermark={<ConvertWatermark />}>
+        <DropRing size="100%" over={drop.over} motion="idle" watermark={<ConvertWatermark />} {...ring}>
           <UploadGlyph over={drop.over} />
-          <span className="text-[15px] font-bold leading-tight text-slate-900">{title}</span>
+          <span className="text-[15px] font-bold leading-tight text-slate-900 dark:text-slate-100">{title}</span>
           <span className="mt-1 text-[11px] text-slate-400">or click to browse</span>
         </DropRing>
       </div>
@@ -68,7 +70,7 @@ export default function DropZone({ onFiles, accept, title, formatsLine }: Props)
       {/* The format list lives UNDER the ring, not in it: eight extensions
           wrap to four lines inside a 300px circle, and the circle's job is to
           be aimed at. */}
-      <p className="max-w-sm text-center text-[11.5px] leading-relaxed text-slate-500">
+      <p className="max-w-sm text-center text-[11.5px] leading-relaxed text-slate-500 dark:text-slate-400">
         {formatsLine}
       </p>
 

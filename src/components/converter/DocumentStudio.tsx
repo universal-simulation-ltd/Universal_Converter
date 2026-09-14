@@ -130,9 +130,9 @@ function DocumentPanel() {
               />
             ))}
           </div>
-          <p className="text-[11px] text-slate-500">{target.blurb}</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">{target.blurb}</p>
           {!ready && queued.length > 0 && (
-            <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800">
+            <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
               {target.label} needs rows and columns to start from. It’s available for a CSV or a JSON
               file — a document has paragraphs, not cells.
             </p>
@@ -145,16 +145,16 @@ function DocumentPanel() {
             which is the thing to know before you press Convert rather than
             after, and a warning behind a chevron is a warning nobody read. */}
         {settings.format === 'pdf' && (
-          <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500">
+          <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
             The PDF uses the fonts every reader already has, so nothing is embedded and the file
-            stays small. That means <span className="font-medium text-slate-700">Latin alphabets
+            stays small. That means <span className="font-medium text-slate-700 dark:text-slate-300">Latin alphabets
             only</span> — Greek, Cyrillic, Hebrew, Arabic and CJK can’t be written, and any that
             appear are named on the row afterwards rather than silently replaced.
           </p>
         )}
 
         {(settings.format === 'txt' || settings.format === 'md' || settings.format === 'html') && (
-          <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500">
+          <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
             Pictures inside a document can’t travel into a {target.label} file, so each one is marked
             in place by its caption. Everything else — headings, emphasis, lists, tables and links —
             comes across.

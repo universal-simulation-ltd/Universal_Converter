@@ -17,8 +17,8 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
 
   return (
     <div>
-      <div className="flex items-center gap-2.5 border-b border-slate-200 px-4 py-3">
-        <span className="text-[12.5px] font-bold text-slate-900">Files</span>
+      <div className="flex items-center gap-2.5 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+        <span className="text-[12.5px] font-bold text-slate-900 dark:text-slate-100">Files</span>
         <span className="ml-auto font-mono text-[11px] text-slate-400">
           {doneCount > 0
             ? `${doneCount} of ${items.length} converted`
@@ -28,7 +28,7 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
 
       <AddMore kind={kind} />
 
-      <div className="grid grid-cols-[26px_minmax(0,1fr)_112px_72px_136px] gap-3 bg-slate-50 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 max-sm:hidden">
+      <div className="grid grid-cols-[26px_minmax(0,1fr)_112px_72px_136px] gap-3 bg-slate-50 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 max-sm:hidden dark:bg-slate-800/60">
         <span />
         <span>File</span>
         <span>Convert</span>
@@ -81,12 +81,12 @@ function AddMore({ kind }: { kind: MediaKind }) {
   })
 
   return (
-    <div className="border-b border-slate-200 px-4 py-2.5">
+    <div className="border-b border-slate-200 px-4 py-2.5 dark:border-slate-800">
       <button
         type="button"
         disabled={running}
         onClick={drop.open}
-        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-600 transition-colors hover:border-orange-300 hover:bg-orange-50 hover:text-orange-800 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-600 transition-colors hover:border-orange-300 hover:bg-orange-50 hover:text-orange-800 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:border-orange-700 dark:hover:bg-orange-950/40 dark:hover:text-orange-300"
       >
         <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
           <path d="M12 5v14M5 12h14" />
@@ -149,13 +149,13 @@ function Row({
 
   return (
     <li
-      className={`grid grid-cols-[26px_minmax(0,1fr)_112px_72px_136px] items-center gap-3 border-t border-slate-200 px-4 py-3 max-sm:grid-cols-[26px_minmax(0,1fr)_128px] ${
-        skipped || failed ? 'bg-red-50/40' : ''
+      className={`grid grid-cols-[26px_minmax(0,1fr)_112px_72px_136px] items-center gap-3 border-t border-slate-200 px-4 py-3 max-sm:grid-cols-[26px_minmax(0,1fr)_128px] dark:border-slate-800 ${
+        skipped || failed ? 'bg-red-50/40 dark:bg-red-950/20' : ''
       } ${item.status === 'done' ? 'row-settle' : ''}`}
     >
       <span
         className={`flex h-6.5 w-6.5 items-center justify-center rounded-md text-[8.5px] font-extrabold ${
-          skipped || failed ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'
+          skipped || failed ? 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
         }`}
         aria-hidden="true"
       >
@@ -163,11 +163,11 @@ function Row({
       </span>
 
       <span className="min-w-0">
-        <span className="block truncate text-[12.5px] font-semibold text-slate-900">{item.file.name}</span>
+        <span className="block truncate text-[12.5px] font-semibold text-slate-900 dark:text-slate-100">{item.file.name}</span>
         {/* What you brought. slate-500, not slate-400: at 10.5px on white the
             latter is 2.55:1, under AA's 4.5, and this is the size of type where
             that stops being a technicality. */}
-        <span className={`block font-mono text-[10.5px] ${skipped || failed ? 'text-red-700' : 'text-slate-500'}`}>
+        <span className={`block font-mono text-[10.5px] ${skipped || failed ? 'text-red-700 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
           {item.error ??
             [
               formatBytes(item.file.size),
@@ -186,7 +186,7 @@ function Row({
                 two tracks over already says `png → jpg`; below it, that column
                 is hidden, so this is the only place the answer to "what am I
                 getting?" appears at all. */}
-            <span className="font-mono font-bold uppercase text-orange-700 sm:hidden">
+            <span className="font-mono font-bold uppercase text-orange-700 sm:hidden dark:text-orange-400">
               → {targetExt}
             </span>
             {/* `whitespace-nowrap` is load-bearing, and it covers the WORD as
@@ -200,21 +200,21 @@ function Row({
                   own "1.2 MB" — two numbers with nothing saying which is which.
                   The arrow is the app's existing word for "out". A queued row
                   needs no such help: "≈ … expected" already says it. */}
-              {item.result && <span className="hidden font-bold text-orange-700 sm:inline">→ </span>}
-              <span className="font-semibold text-slate-900">
+              {item.result && <span className="hidden font-bold text-orange-700 sm:inline dark:text-orange-400">→ </span>}
+              <span className="font-semibold text-slate-900 dark:text-slate-100">
                 {item.result ? formatBytes(outBytes) : `≈ ${formatBytes(outBytes)}`}
               </span>
-              {!item.result && <span className="text-slate-500"> expected</span>}
+              {!item.result && <span className="text-slate-500 dark:text-slate-400"> expected</span>}
             </span>
             {growth != null && growth >= 1.5 && (
               // Amber, not red: a bigger file is a surprise worth flagging and
               // not a failure. The row converts perfectly well either way.
-              <span className="whitespace-nowrap rounded border border-amber-200 bg-amber-50 px-1.5 py-px font-semibold text-amber-900">
+              <span className="whitespace-nowrap rounded border border-amber-200 bg-amber-50 px-1.5 py-px font-semibold text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-200">
                 {growth < 10 ? growth.toFixed(1) : Math.round(growth)}× bigger
               </span>
             )}
             {savedPct != null && savedPct > 0 && (
-              <span className="whitespace-nowrap rounded border border-emerald-200 bg-emerald-50 px-1.5 py-px font-semibold text-emerald-800">
+              <span className="whitespace-nowrap rounded border border-emerald-200 bg-emerald-50 px-1.5 py-px font-semibold text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-300">
                 {savedPct}% smaller
               </span>
             )}
@@ -231,7 +231,7 @@ function Row({
             {item.notes.map((note) => (
               <span
                 key={note}
-                className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[10.5px] leading-snug text-amber-900"
+                className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[10.5px] leading-snug text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-200"
               >
                 {note}
               </span>
@@ -240,13 +240,13 @@ function Row({
         )}
       </span>
 
-      <span className="font-mono text-[11px] text-slate-600 max-sm:hidden">
+      <span className="font-mono text-[11px] text-slate-600 max-sm:hidden dark:text-slate-300">
         {skipped ? (
           <span className="text-slate-400">—</span>
         ) : (
           <>
-            {item.ext} <span className="font-bold text-orange-700">→</span>{' '}
-            <span className="font-bold text-slate-900">{targetExt}</span>
+            {item.ext} <span className="font-bold text-orange-700 dark:text-orange-400">→</span>{' '}
+            <span className="font-bold text-slate-900 dark:text-slate-100">{targetExt}</span>
           </>
         )}
       </span>
@@ -256,7 +256,7 @@ function Row({
           space goes to the Save button instead. */}
       <span className="max-sm:hidden">
         {(item.status === 'queued' || item.status === 'converting') && (
-          <span className="block h-1.5 overflow-hidden rounded-full bg-slate-100">
+          <span className="block h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
             <span
               className="block h-full rounded-full bg-gradient-to-r from-[#FE8C01] to-[#E05504] transition-[width] duration-200"
               style={{ width: `${Math.round(item.progress * 100)}%` }}
@@ -271,7 +271,7 @@ function Row({
           <button
             type="button"
             onClick={onDownload}
-            className="rounded-md bg-orange-500/12 px-2 py-1 text-[11px] font-bold text-orange-800 hover:bg-orange-500/20"
+            className="rounded-md bg-orange-500/12 px-2 py-1 text-[11px] font-bold text-orange-800 hover:bg-orange-500/20 dark:text-orange-300"
           >
             Save
           </button>
@@ -281,7 +281,7 @@ function Row({
             type="button"
             onClick={onRemove}
             aria-label={`Remove ${item.file.name}`}
-            className="rounded-md px-1.5 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            className="rounded-md px-1.5 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           >
             <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" />
@@ -297,11 +297,11 @@ function Row({
 // so "done" and "failed" read at a glance without competing with the brand.
 function Status({ item }: { item: QueueItem }) {
   const map = {
-    queued: { dot: 'bg-slate-400', text: 'text-slate-500', label: 'Queued' },
-    converting: { dot: 'bg-orange-500', text: 'text-slate-600', label: `${Math.round(item.progress * 100)}%` },
-    done: { dot: 'bg-[#2F9E57]', text: 'text-slate-600', label: 'Done' },
-    failed: { dot: 'bg-[#D5443A]', text: 'text-red-700', label: 'Failed' },
-    unsupported: { dot: 'bg-[#D5443A]', text: 'text-red-700', label: 'Skipped' },
+    queued: { dot: 'bg-slate-400', text: 'text-slate-500 dark:text-slate-400', label: 'Queued' },
+    converting: { dot: 'bg-orange-500', text: 'text-slate-600 dark:text-slate-300', label: `${Math.round(item.progress * 100)}%` },
+    done: { dot: 'bg-[#2F9E57]', text: 'text-slate-600 dark:text-slate-300', label: 'Done' },
+    failed: { dot: 'bg-[#D5443A]', text: 'text-red-700 dark:text-red-400', label: 'Failed' },
+    unsupported: { dot: 'bg-[#D5443A]', text: 'text-red-700 dark:text-red-400', label: 'Skipped' },
   }[item.status]
 
   return (

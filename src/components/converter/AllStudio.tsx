@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
 import { CONTAINER } from '../../lib/layout'
+import { useRingColours } from '../../lib/ringTheme'
 import { ALL_ACCEPT } from '../../lib/formats'
 import { KINDS, useConverterStore } from '../../stores/converterStore'
 import type { MediaKind } from '../../lib/types'
@@ -57,6 +58,7 @@ export default function AllStudio() {
     label: 'Drop any file here, or click to browse',
     pageWide: true,
   })
+  const ring = useRingColours(drop.over)
 
   const waiting = Object.fromEntries(
     KINDS.map((kind) => [kind, items.filter((i) => i.kind === kind).length]),
@@ -75,7 +77,7 @@ export default function AllStudio() {
   return (
     <div className={`${CONTAINER} flex flex-col gap-4 py-5`}>
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)]">
-        <div className="flex flex-col items-center gap-5 rounded-xl border border-slate-200 bg-white px-4 py-8 sm:px-8">
+        <div className="flex flex-col items-center gap-5 rounded-xl border border-slate-200 bg-white px-4 py-8 sm:px-8 dark:border-slate-800 dark:bg-slate-900">
           <div
             {...drop.dropzoneProps}
             className="relative w-full max-w-[300px] cursor-pointer rounded-full transition-transform focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-600"
@@ -86,13 +88,13 @@ export default function AllStudio() {
                 screen replaces the moment anything is queued — by the time you
                 are here the circle has something, so "alive and waiting" is no
                 longer the true sentence. */}
-            <DropRing size="100%" over={drop.over} motion="still" watermark={<AnyFileWatermark />}>
+            <DropRing size="100%" over={drop.over} motion="still" watermark={<AnyFileWatermark />} {...ring}>
               <SortedCentre waiting={waiting} total={total} />
             </DropRing>
           </div>
           <input {...drop.inputProps} className="hidden" />
 
-          <p className="max-w-sm text-center text-[11.5px] leading-relaxed text-slate-500">
+          <p className="max-w-sm text-center text-[11.5px] leading-relaxed text-slate-500 dark:text-slate-400">
             Everything happens on your device. Nothing is uploaded, so there is no size limit and
             no queue to wait in.
           </p>
@@ -112,8 +114,8 @@ function SortedCentre({ waiting, total }: { waiting: Record<MediaKind, number>; 
   const tabs = KINDS.filter((k) => waiting[k] > 0).length
   return (
     <>
-      <span className="text-[34px] font-bold leading-none tabular-nums text-slate-900">{total}</span>
-      <span className="mt-1.5 text-[12px] font-semibold text-slate-600">
+      <span className="text-[34px] font-bold leading-none tabular-nums text-slate-900 dark:text-slate-100">{total}</span>
+      <span className="mt-1.5 text-[12px] font-semibold text-slate-600 dark:text-slate-300">
         file{total === 1 ? '' : 's'} sorted
       </span>
       <span className="text-[11px] tabular-nums text-slate-400">
@@ -145,13 +147,13 @@ function SortingColumn({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-xl border border-slate-200 bg-white">
-        <div className="border-b border-slate-200 px-4 py-3">
-          <span className="text-[12.5px] font-bold text-slate-900">Where everything went</span>
+      <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+          <span className="text-[12.5px] font-bold text-slate-900 dark:text-slate-100">Where everything went</span>
         </div>
 
         <div className="flex flex-col gap-3 p-4">
-          <p className="text-[11.5px] leading-relaxed text-slate-500">
+          <p className="text-[11.5px] leading-relaxed text-slate-500 dark:text-slate-400">
             {tabsUsed.length === 1
               ? 'Everything went to one tab — its settings are waiting there.'
               : 'Each kind has its own settings, so pick a tab to carry on.'}
@@ -165,15 +167,15 @@ function SortingColumn({
                   onClick={() => setTab(kind)}
                   className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition-colors ${
                     tabsUsed.length === 1
-                      ? 'border-orange-500 bg-orange-50 hover:bg-orange-100'
-                      : 'border-slate-300 bg-white hover:bg-slate-50'
+                      ? 'border-orange-500 bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/40 dark:hover:bg-orange-950/70'
+                      : 'border-slate-300 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800'
                   }`}
                 >
                   <span>
-                    <span className="block text-[12.5px] font-bold text-slate-900">
+                    <span className="block text-[12.5px] font-bold text-slate-900 dark:text-slate-100">
                       {waiting[kind]} {NOUN[kind]}{waiting[kind] === 1 ? '' : 's'}
                     </span>
-                    <span className="block text-[11px] text-slate-500">{TAB_NAME[kind]} tab</span>
+                    <span className="block text-[11px] text-slate-500 dark:text-slate-400">{TAB_NAME[kind]} tab</span>
                   </span>
                   <span aria-hidden className="text-slate-400">→</span>
                 </button>
@@ -185,7 +187,7 @@ function SortingColumn({
             // Named individually rather than counted. "3 files skipped" makes
             // you go and work out which three, and the whole point of a mixed
             // drop is that you were not looking closely in the first place.
-            <p className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] leading-relaxed text-amber-900">
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] leading-relaxed text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-200">
               <span className="font-semibold">Not converted:</span> {rejected.join(', ')} — not a
               picture, a sound, a video or a document this can read.
             </p>

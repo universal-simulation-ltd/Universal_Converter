@@ -1,5 +1,7 @@
 import { DropAnywhere, DropRing, PrivacyNote, useFileDrop } from '@unisim/sdk'
 import { CONTAINER } from '../../lib/layout'
+import { useRingColours } from '../../lib/ringTheme'
+import { useThemeStore } from '../../stores/themeStore'
 import {
   ALL_ACCEPT, AUDIO_INPUT_EXTS, DOCUMENT_INPUT_EXTS, IMAGE_INPUT_EXTS, VIDEO_INPUT_EXTS,
 } from '../../lib/formats'
@@ -39,6 +41,9 @@ export default function LandingPage({
     label: 'Drop any file here, or click to browse',
     pageWide: true,
   })
+  const ring = useRingColours(drop.over)
+  // Resolved, for the SDK's inline-styled PrivacyNote — it cannot read `.dark`.
+  const theme = useThemeStore((s) => s.effective)
 
   return (
     <div className={`${CONTAINER} flex flex-col gap-4 py-5 lg:py-10`}>
@@ -56,15 +61,15 @@ export default function LandingPage({
             track cannot go below — one long unbreakable word would otherwise
             lay the whole column out wider than the phone. */}
         <div className="order-1 min-w-0 lg:order-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
-            Any file, <span className="text-orange-600">any format</span>.
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl dark:text-slate-100">
+            Any file, <span className="text-orange-600 dark:text-orange-400">any format</span>.
           </h1>
-          <p className="mt-3 max-w-md text-slate-600">
+          <p className="mt-3 max-w-md text-slate-600 dark:text-slate-300">
             Drop a mixed pile and each file finds the tab that can convert it — no size limit,
             and no queue to wait in.
           </p>
 
-          <div className="mt-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mt-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
             {/* The suite's shared drop circle (`DropRing` + `useFileDrop` from
                 @unisim/sdk) rather than a copy, so this is the same front door
                 Universal Compress, PDF and Images open on. Always `idle` —
@@ -77,7 +82,7 @@ export default function LandingPage({
                   drop.over ? 'scale-[1.02]' : ''
                 }`}
               >
-                <DropRing size="100%" over={drop.over} motion="idle" watermark={<AnyFileWatermark />}>
+                <DropRing size="100%" over={drop.over} motion="idle" watermark={<AnyFileWatermark />} {...ring}>
                   <svg
                     viewBox="0 0 24 24"
                     className={`mb-1 h-9 w-9 ${drop.over ? 'text-orange-500' : 'text-slate-400'}`}
@@ -97,10 +102,10 @@ export default function LandingPage({
                     <path d="M3.5 18 6 21l2.5-3" />
                     <path d="M15.5 18 18 21l2.5-3" />
                   </svg>
-                  <span className="text-[15px] font-bold text-slate-900">
+                  <span className="text-[15px] font-bold text-slate-900 dark:text-slate-100">
                     {drop.over ? 'Drop to sort' : 'Drop any file here'}
                   </span>
-                  <span className="text-[11.5px] leading-relaxed text-slate-500">
+                  <span className="text-[11.5px] leading-relaxed text-slate-500 dark:text-slate-400">
                     Pictures · Audio · Video · Documents
                   </span>
                   <span className="mt-1 text-[11px] text-slate-400">or click to browse</span>
@@ -113,29 +118,29 @@ export default function LandingPage({
               // Named individually rather than counted. "3 files skipped" makes
               // you go and work out which three, and the whole point of a mixed
               // drop is that you were not looking closely in the first place.
-              <p className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11.5px] leading-relaxed text-amber-900">
+              <p className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11.5px] leading-relaxed text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-200">
                 <span className="font-semibold">Not converted:</span> {rejected.join(', ')} — not a
                 picture, a sound, a video or a document this can read.
               </p>
             )}
 
-            <div className="mt-5 flex items-center gap-3 text-xs text-slate-500">
-              <span className="h-px flex-1 bg-slate-200" aria-hidden="true" />
+            <div className="mt-5 flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+              <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" aria-hidden="true" />
               <span>what it takes</span>
-              <span className="h-px flex-1 bg-slate-200" aria-hidden="true" />
+              <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" aria-hidden="true" />
             </div>
 
             {/* The quick answer, in six lines. The exhaustive one is a click
                 away below: spelling out four extension lists here made the card
                 twice the height of the drop circle, and a landing page that
                 does not fit on one screen has buried its own primary action. */}
-            <ul className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-600">
-              <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> PNG, JPEG, WebP, AVIF</li>
-              <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> MP3, M4A, Opus, FLAC</li>
-              <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> MP4, M4V, MOV</li>
-              <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> Word, ODT, RTF → PDF</li>
-              <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> Trim, resize &amp; compress</li>
-              <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> Mixed drops, one queue</li>
+            <ul className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-300">
+              <li className="flex items-center gap-2"><span className="text-orange-700 dark:text-orange-400">✓</span> PNG, JPEG, WebP, AVIF</li>
+              <li className="flex items-center gap-2"><span className="text-orange-700 dark:text-orange-400">✓</span> MP3, M4A, Opus, FLAC</li>
+              <li className="flex items-center gap-2"><span className="text-orange-700 dark:text-orange-400">✓</span> MP4, M4V, MOV</li>
+              <li className="flex items-center gap-2"><span className="text-orange-700 dark:text-orange-400">✓</span> Word, ODT, RTF → PDF</li>
+              <li className="flex items-center gap-2"><span className="text-orange-700 dark:text-orange-400">✓</span> Trim, resize &amp; compress</li>
+              <li className="flex items-center gap-2"><span className="text-orange-700 dark:text-orange-400">✓</span> Mixed drops, one queue</li>
             </ul>
 
             {/* This is the sorting column's old "What this will take" card,
@@ -147,7 +152,7 @@ export default function LandingPage({
                 again, so the card cannot drift from what the app actually
                 accepts. */}
             <details className="group mt-4">
-              <summary className="flex cursor-pointer list-none select-none items-center gap-2 text-[12px] font-semibold text-slate-600 hover:text-slate-900">
+              <summary className="flex cursor-pointer list-none select-none items-center gap-2 text-[12px] font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100">
                 <span className="text-slate-400 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
                 Every format it reads — and the four it won't
               </summary>
@@ -166,19 +171,19 @@ export default function LandingPage({
               {/* Named here rather than discovered on drop: these are the ones
                   everybody tries, and finding out after you have dragged a 2 GB
                   file across is the worst moment to be told. */}
-              <p className="mt-3 rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500">
-                <span className="font-semibold text-slate-700">Not MKV or AVI.</span> Those
+              <p className="mt-3 rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Not MKV or AVI.</span> Those
                 containers need a different engine than the one that runs in a browser tab, so they
                 are refused on drop rather than accepted and failed halfway through.
               </p>
-              <p className="mt-2 rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500">
-                <span className="font-semibold text-slate-700">Not XLSX or PPTX.</span> Save a
+              <p className="mt-2 rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Not XLSX or PPTX.</span> Save a
                 spreadsheet as CSV and it converts; export a slide deck to PDF from the app that
                 made it. And PDF is what the Files tab converts <em>to</em> — to edit or split one,
                 use{' '}
                 <a
                   href="https://opensource.unisim.co.uk/pdf"
-                  className="font-semibold text-orange-700 underline decoration-orange-300 underline-offset-2 hover:text-orange-800"
+                  className="font-semibold text-orange-700 underline decoration-orange-300 underline-offset-2 hover:text-orange-800 dark:text-orange-400 dark:decoration-orange-700 dark:hover:text-orange-300"
                 >
                   Universal PDF
                 </a>.
@@ -195,6 +200,7 @@ export default function LandingPage({
             proof="https://github.com/universal-simulation-ltd/Universal_Converter/blob/main/PRIVACY.md"
             subject="Your files"
             plural
+            theme={theme}
           />
         </div>
       </div>
@@ -212,10 +218,10 @@ export default function LandingPage({
 function Capability({ label, body }: { label: string; body: string }) {
   return (
     <li className="flex gap-2.5">
-      <span className="mt-0.5 flex h-5 w-14 shrink-0 items-center justify-center rounded bg-slate-100 text-[9.5px] font-bold uppercase tracking-wide text-slate-500">
+      <span className="mt-0.5 flex h-5 w-14 shrink-0 items-center justify-center rounded bg-slate-100 text-[9.5px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
         {label}
       </span>
-      <span className="text-[11.5px] leading-relaxed text-slate-600">{body}</span>
+      <span className="text-[11.5px] leading-relaxed text-slate-600 dark:text-slate-300">{body}</span>
     </li>
   )
 }

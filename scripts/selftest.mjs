@@ -820,6 +820,35 @@ function ascii(view, offset, length) {
   console.log('✓ heic — the ftyp brands, including the two that must NOT be converted')
 }
 
+// ── Theme key ────────────────────────────────────────────────────────────────
+// The theme key is written down TWICE, and this is what stops the two drifting.
+// `src/stores/themeStore.ts` names it for the SDK's store; `index.html` names it
+// again in the inline script that puts `.dark` on <html> before the first
+// paint — the only place early enough to matter, and one that cannot import a
+// constant. The key IS every user's saved choice: rename one copy and everybody
+// who chose dark is silently back on light.
+//
+// Negative control (2026-09-14, run on a copy): renaming the key in index.html
+// alone reddens the `localStorage.getItem` assertion below.
+{
+  const store = readFileSync(new URL('../src/stores/themeStore.ts', import.meta.url), 'utf8')
+  const key = /createThemeStore\('([^']+)'\)/.exec(store)?.[1]
+  assert.ok(key, 'themeStore.ts calls createThemeStore with a literal key')
+
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8')
+  const head = html.slice(0, html.indexOf('</head>'))
+  assert.ok(head.includes(`localStorage.getItem('${key}')`),
+    `index.html's pre-paint script reads '${key}', the same key as the store`)
+  assert.ok(head.includes("classList.add('dark')"), 'the pre-paint script adds .dark')
+  // 'system' has to be honoured here too, or somebody on the OS setting gets the
+  // light ground first and the dark one once the bundle catches up.
+  assert.ok(head.includes('prefers-color-scheme: dark'), "the pre-paint script honours 'system'")
+  assert.ok(!head.includes("classList.remove('dark')"),
+    'the pre-paint script never removes .dark — light is the default, so it only ever adds')
+
+  console.log(`✓ theme key — index.html and themeStore.ts agree on '${key}'`)
+}
+
 console.log(skipped > 0
   ? `\nself-tests passed — ${skipped} macOS-only check(s) skipped, see the warnings above`
   : '\nall self-tests passed')

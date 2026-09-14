@@ -5,9 +5,9 @@ import { useId, useState, type ReactNode } from 'react'
 
 export function Panel({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white">
-      <div className="flex items-center gap-2.5 border-b border-slate-200 px-4 py-3">
-        <span className="text-[12.5px] font-bold text-slate-900">Output</span>
+    <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex items-center gap-2.5 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+        <span className="text-[12.5px] font-bold text-slate-900 dark:text-slate-100">Output</span>
         <span className="ml-auto font-mono text-[11px] text-slate-400">applies to all</span>
       </div>
       <div className="flex flex-col gap-4 p-4">{children}</div>
@@ -18,14 +18,14 @@ export function Panel({ children }: { children: ReactNode }) {
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-slate-600">{label}</span>
+      <span className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-slate-600 dark:text-slate-300">{label}</span>
       {children}
     </div>
   )
 }
 
 export function Divider() {
-  return <div className="h-px bg-slate-200" />
+  return <div className="h-px bg-slate-200 dark:bg-slate-800" />
 }
 
 // A disclosure for settings most people never touch. `summary` keeps the panel
@@ -54,7 +54,7 @@ export function Collapsible({
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center gap-2 text-left focus:outline-none focus-visible:outline-2 focus-visible:outline-orange-600"
       >
-        <span className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-slate-600">{label}</span>
+        <span className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-slate-600 dark:text-slate-300">{label}</span>
         {!open && summary && (
           <span className="min-w-0 flex-1 truncate text-[10.5px] text-slate-400">{summary}</span>
         )}
@@ -97,8 +97,8 @@ export function FormatChip({
         selected
           ? 'bg-gradient-to-br from-[#FE8C01] to-[#E05504] font-bold text-white'
           : ready
-            ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            : 'bg-slate-100 text-slate-400'
+            ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+            : 'bg-slate-100 text-slate-400 dark:bg-slate-800'
       }`}
     >
       {label}
@@ -124,7 +124,7 @@ export function Segmented<T extends string | number>({
   unavailableTitle?: string
 }) {
   return (
-    <div className="flex overflow-hidden rounded-lg border border-slate-200">
+    <div className="flex overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
       {options.map((o) => {
         const off = unavailable?.includes(o.value) ?? false
         return (
@@ -136,10 +136,10 @@ export function Segmented<T extends string | number>({
             onClick={() => onChange(o.value)}
             className={`flex-1 py-1.5 text-[11.5px] font-semibold transition-colors disabled:opacity-50 ${
               value === o.value
-                ? 'bg-slate-900 text-white'
+                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
                 : off
                   ? 'text-slate-400 line-through'
-                  : 'text-slate-600 hover:bg-slate-50'
+                  : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'
             }`}
           >
             {o.label}
@@ -169,7 +169,7 @@ export function Select<T extends string | number>({
         const picked = options.find((o) => String(o.value) === e.target.value)
         if (picked) onChange(picked.value)
       }}
-      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[12px] text-slate-900 tabular-nums focus:outline-none focus-visible:outline-2 focus-visible:outline-orange-600 disabled:opacity-50"
+      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[12px] text-slate-900 tabular-nums dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 focus:outline-none focus-visible:outline-2 focus-visible:outline-orange-600 disabled:opacity-50"
     >
       {options.map((o) => (
         <option key={String(o.value)} value={String(o.value)}>
@@ -203,12 +203,12 @@ export function Toggle({
       className="flex w-full items-center justify-between gap-3 text-left focus:outline-none focus-visible:outline-2 focus-visible:outline-orange-600 disabled:opacity-50"
     >
       <span>
-        <span className="block text-[12px] font-semibold text-slate-900">{label}</span>
+        <span className="block text-[12px] font-semibold text-slate-900 dark:text-slate-100">{label}</span>
         <span className="block text-[10.5px] text-slate-400">{hint}</span>
       </span>
       <span
         className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
-          on ? 'bg-gradient-to-br from-[#FE8C01] to-[#E05504]' : 'bg-slate-300'
+          on ? 'bg-gradient-to-br from-[#FE8C01] to-[#E05504]' : 'bg-slate-300 dark:bg-slate-600'
         }`}
       >
         <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-[left] ${on ? 'left-4.5' : 'left-0.5'}`} />

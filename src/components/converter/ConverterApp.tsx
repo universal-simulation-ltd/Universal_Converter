@@ -24,7 +24,7 @@ export default function ConverterApp() {
 
   return (
     <div>
-      <div className="border-b border-slate-200 bg-white">
+      <div className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         {/* No `overflow-x-auto` here. Setting one axis to `auto` computes the
             other to `auto` as well, and the tabs' `-mb-px` overflows this box
             by exactly 1px — which is enough for a permanent vertical scrollbar
@@ -70,10 +70,10 @@ function TopTab({
       aria-selected={active}
       onClick={() => onClick(id)}
       className={`group relative -mb-px flex flex-col items-start rounded-t-lg px-4 py-2.5 text-left transition-colors ${
-        active ? 'border-b-2 border-orange-600' : 'border-b-2 border-transparent hover:bg-slate-50'
+        active ? 'border-b-2 border-orange-600' : 'border-b-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800'
       }`}
     >
-      <span className={`text-sm font-semibold ${active ? 'text-slate-900' : 'text-slate-600 group-hover:text-slate-900'}`}>{label}</span>
+      <span className={`text-sm font-semibold ${active ? 'text-slate-900 dark:text-slate-100' : 'text-slate-600 group-hover:text-slate-900 dark:text-slate-300 dark:group-hover:text-slate-100'}`}>{label}</span>
       {/* Phones get the bare label — five fit across two rows at 320px,
           where the hints would wrap into a three-line switcher. */}
       <span className="hidden text-[11px] text-slate-400 sm:block">{hint}</span>

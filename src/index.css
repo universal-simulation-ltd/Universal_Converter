@@ -1,8 +1,20 @@
 @import "tailwindcss";
 
+/* Tailwind 4 defaults `dark:` to the OS media query. We drive it from a class
+   on <html> instead, because the suite rule is that an app opens LIGHT and only
+   goes dark when the user says so — see stores/themeStore.ts. With the media
+   default, a laptop set to dark would override that on first paint. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 html, body {
   height: 100%;
   margin: 0;
+}
+
+/* The ground behind everything — overscroll, the gap under a short page, the
+   instant before React mounts. Without it a dark app rubber-bands onto white. */
+html.dark {
+  background-color: #020617;
 }
 
 /* min-height (not a fixed height) so the page grows with its content and the
@@ -43,6 +55,21 @@ body {
 }
 .row-settle { animation: row-settle 420ms cubic-bezier(0.22, 1, 0.36, 1); }
 
+/* ---------- The drop ring, in dark ---------- */
+
+/* The SDK's <DropRing> paints its interior as a white SVG disc (orange-50
+   while something is dragged over it). A CSS `fill` beats an SVG presentation
+   attribute, so dark repaints the disc to the card it sits in. The class only
+   exists in dark — see lib/ringTheme.ts — so light is the SDK's own pixels.
+   ⚠️ `circle:first-of-type` IS the disc: the ring's SVG is defs, disc, then the
+   pills and the progress arc. */
+.dark .cnv-ring > svg > circle:first-of-type {
+  fill: #0f172a;
+}
+.dark .cnv-ring-over > svg > circle:first-of-type {
+  fill: rgba(254, 140, 1, 0.12);
+}
+
 /* ---------- Landing illustration ---------- */
 
 /* Every part is a window on the single `--t` that ConverterIllustration.tsx
@@ -54,6 +81,25 @@ body {
 .cnv-illu {
   --t: 0;
 }
+
+/* Dark. The SVG keeps its light colours as presentation attributes, so light
+   renders exactly as it always has; these `ci-*` classes exist only to be
+   repainted here (a CSS `fill`/`stroke` beats an attribute). The cards lift to
+   slate-800 on the slate-950 page, and the pale chips become deep ones with
+   light ink, so the page reads the same way round. The orange arc stays: it is
+   4.6:1 on the dark ground already. */
+.dark .cnv-illu .ci-card { fill: #1e293b; stroke: #475569; }
+.dark .cnv-illu .ci-line { fill: #334155; }
+.dark .cnv-illu .ci-line-strong { fill: #475569; }
+.dark .cnv-illu .ci-docx-chip { fill: #0c4a6e; }
+.dark .cnv-illu .ci-docx-text { fill: #bae6fd; }
+.dark .cnv-illu .ci-pdf-chip { fill: #7f1d1d; }
+.dark .cnv-illu .ci-pdf-text { fill: #fecaca; }
+.dark .cnv-illu .ci-tick-ring { fill: #052e16; }
+.dark .cnv-illu .ci-tick-mark { stroke: #34d399; }
+.dark .cnv-illu .ci-pill { fill: #0f172a; stroke: #334155; }
+.dark .cnv-illu .ci-pill-text { fill: #cbd5e1; }
+.dark .cnv-illu .ci-pill-arrow { fill: #fb923c; }
 
 /* Defaults for every part. The universal selector is scoped to the
    illustration — about thirty nodes. */

@@ -120,9 +120,9 @@ function ImagePanel() {
               />
             ))}
           </div>
-          <p className="text-[11px] text-slate-500">{target.blurb}</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">{target.blurb}</p>
           {!ready && (
-            <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800">
+            <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
               This browser can’t write {target.label}. WebP, JPEG and PNG work everywhere.
             </p>
           )}
@@ -140,7 +140,7 @@ function ImagePanel() {
             result rather than as a loss. Universal Compress shipped the same
             silence and the same "-100%". A format's limits are not a setting. */}
         {flattening && (
-          <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800">
+          <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
             One of these GIFs is animated, and {target.label} holds a single picture — so only its
             first frame will be converted. Choose GIF to keep the animation.
           </p>
@@ -152,13 +152,13 @@ function ImagePanel() {
             background, which is the worst shape a loss can have — it is found
             long after the file was converted, by someone else. */}
         {flatteningAlpha && (
-          <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800">
+          <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
             Something here is see-through, and JPEG has no transparency — those areas will be
             filled with white. Choose PNG or WebP to keep it.
           </p>
         )}
 
-        <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] text-slate-500">
+        <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
           Metadata is dropped on the way through — the canvas re-encode keeps pixels, not EXIF. That
           means location and camera details don’t travel with the converted file.
         </p>

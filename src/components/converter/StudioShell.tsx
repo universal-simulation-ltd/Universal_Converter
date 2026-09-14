@@ -5,6 +5,7 @@ import { DROP_COPY } from '../../lib/formats'
 import DropZone from './DropZone'
 import FileQueue from './FileQueue'
 import { useConverterStore } from '../../stores/converterStore'
+import { useThemeStore } from '../../stores/themeStore'
 import type { MediaKind } from '../../lib/types'
 
 /**
@@ -55,6 +56,8 @@ export default function StudioShell({
   const addDropped = useConverterStore((s) => s.addDropped)
   const copy = DROP_COPY[kind]
   const empty = items.length === 0
+  // Resolved, for the SDK's inline-styled PrivacyNote — it cannot read `.dark`.
+  const theme = useThemeStore((s) => s.effective)
 
   return (
     <div className={`${CONTAINER} py-5 flex flex-col gap-4`}>
@@ -63,6 +66,7 @@ export default function StudioShell({
         proof="https://github.com/universal-simulation-ltd/Universal_Converter/blob/main/PRIVACY.md"
         subject={SUBJECT[kind]}
         plural
+        theme={theme}
       />
 
       <div
@@ -72,7 +76,7 @@ export default function StudioShell({
             : 'lg:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.95fr)]'
         }`}
       >
-        <div className="rounded-xl border border-slate-200 bg-white">
+        <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
           {empty ? (
             // No padding wrapper: the empty state is the ring, and it centres
             // itself in the card the same way the All tab's does.

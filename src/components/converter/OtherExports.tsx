@@ -32,9 +32,9 @@ export default function OtherExports({ kind }: { kind: MediaKind }) {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4">
-      <h2 className="text-sm font-semibold text-slate-900">Other exports</h2>
-      <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
+    <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Other exports</h2>
+      <p className="mt-0.5 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
         These change what the file <em>is</em>, not just its format — so each one loses something.
         What, is written below.
       </p>
@@ -74,11 +74,11 @@ function ImagesToPdf() {
 
   return (
     <Shell>
-      <p className="text-xs text-slate-700">
-        <span className="font-semibold text-slate-900">Save as one PDF</span> — every picture in the
+      <p className="text-xs text-slate-700 dark:text-slate-300">
+        <span className="font-semibold text-slate-900 dark:text-slate-100">Save as one PDF</span> — every picture in the
         queue becomes a page, in the order they are listed.
       </p>
-      <ul className="mt-2 space-y-1 text-[11px] leading-snug text-slate-500">
+      <ul className="mt-2 space-y-1 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
         <li>• Pages are JPEG, so this is <span className="font-medium">lossy</span> — a screenshot
           of text will soften slightly.</li>
         <li>• <span className="font-medium">Transparency is flattened onto white</span>, because
@@ -91,7 +91,7 @@ function ImagesToPdf() {
         type="button"
         disabled={busy || pictures.length === 0}
         onClick={run}
-        className="mt-3 w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+        className="mt-3 w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 dark:bg-slate-700 dark:hover:bg-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
       >
         {busy
           ? `Building… ${done}/${pictures.length}`
@@ -100,7 +100,7 @@ function ImagesToPdf() {
             : `Save ${pictures.length} picture${pictures.length === 1 ? '' : 's'} as a PDF`}
       </button>
 
-      {error && <p className="mt-2 text-xs text-red-700">{error}</p>}
+      {error && <p className="mt-2 text-xs text-red-700 dark:text-red-400">{error}</p>}
     </Shell>
   )
 }
@@ -152,11 +152,11 @@ function DocumentsToOnePdf() {
 
   return (
     <Shell>
-      <p className="text-xs text-slate-700">
-        <span className="font-semibold text-slate-900">Join into one PDF</span> — every document in
+      <p className="text-xs text-slate-700 dark:text-slate-300">
+        <span className="font-semibold text-slate-900 dark:text-slate-100">Join into one PDF</span> — every document in
         the queue, one after another, in the order they are listed.
       </p>
-      <ul className="mt-2 space-y-1 text-[11px] leading-snug text-slate-500">
+      <ul className="mt-2 space-y-1 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
         <li>• Each document starts on a <span className="font-medium">new page</span>, with its
           filename as a heading so you can still tell them apart.</li>
         <li>• The result is <span className="font-medium">one file</span>. There is no way to get
@@ -168,7 +168,7 @@ function DocumentsToOnePdf() {
         type="button"
         disabled={busy || documents.length < 1}
         onClick={() => void run()}
-        className="mt-3 w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+        className="mt-3 w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 dark:bg-slate-700 dark:hover:bg-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
       >
         {busy
           ? `Reading… ${done}/${documents.length}`
@@ -177,11 +177,11 @@ function DocumentsToOnePdf() {
             : `Join ${documents.length} document${documents.length === 1 ? '' : 's'} into one PDF`}
       </button>
 
-      {error && <p className="mt-2 text-xs text-red-700">{error}</p>}
+      {error && <p className="mt-2 text-xs text-red-700 dark:text-red-400">{error}</p>}
       {notes.map((note) => (
         <p
           key={note}
-          className="mt-2 rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] leading-snug text-amber-900"
+          className="mt-2 rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] leading-snug text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-200"
         >
           {note}
         </p>
@@ -227,17 +227,17 @@ function VideoToAudio() {
 
   return (
     <Shell>
-      <p className="text-xs text-slate-700">
-        <span className="font-semibold text-slate-900">Save the sound only</span> — takes the
+      <p className="text-xs text-slate-700 dark:text-slate-300">
+        <span className="font-semibold text-slate-900 dark:text-slate-100">Save the sound only</span> — takes the
         soundtrack out of a video.
       </p>
-      <p className="mt-2 rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] leading-snug text-amber-900">
+      <p className="mt-2 rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] leading-snug text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-200">
         <span className="font-semibold">There is no video in the result.</span> You get an audio
         file and nothing else. To keep the picture, use the panel above instead.
       </p>
 
       <div className="mt-3">
-        <span className="mb-1 block text-[11px] font-medium text-slate-600">Save the sound as</span>
+        <span className="mb-1 block text-[11px] font-medium text-slate-600 dark:text-slate-300">Save the sound as</span>
         <div className="flex flex-wrap gap-1.5">
           {SOUNDTRACK_FORMATS.map((f) => (
             <button
@@ -247,19 +247,19 @@ function VideoToAudio() {
               aria-pressed={f.id === format}
               className={`rounded-md border px-2.5 py-1.5 text-left text-[11px] transition-colors ${
                 f.id === format
-                  ? 'border-orange-500 bg-orange-50 text-orange-900'
-                  : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                  ? 'border-orange-500 bg-orange-50 text-orange-900 dark:bg-orange-950/40 dark:text-orange-200'
+                  : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
               }`}
             >
               <span className="block font-semibold">{f.label}</span>
-              <span className="block text-slate-500">{f.note}</span>
+              <span className="block text-slate-500 dark:text-slate-400">{f.note}</span>
             </button>
           ))}
         </div>
       </div>
 
       {videos.length === 0 ? (
-        <p className="mt-3 text-xs text-slate-500">Add a video and it will appear here.</p>
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Add a video and it will appear here.</p>
       ) : (
         <ul className="mt-3 space-y-1.5">
           {videos.map((item) => (
@@ -268,7 +268,7 @@ function VideoToAudio() {
                 type="button"
                 disabled={busyId !== null}
                 onClick={() => void run(item.id, item.file, item.file.name)}
-                className="w-full truncate rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-xs font-medium text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                className="w-full truncate rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-xs font-medium text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 {busyId === item.id ? 'Working…' : `Sound from ${item.file.name}`}
               </button>
@@ -277,7 +277,7 @@ function VideoToAudio() {
         </ul>
       )}
 
-      {error && <p className="mt-2 text-xs text-red-700">{error}</p>}
+      {error && <p className="mt-2 text-xs text-red-700 dark:text-red-400">{error}</p>}
     </Shell>
   )
 }

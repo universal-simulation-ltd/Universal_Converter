@@ -63,15 +63,15 @@ export default function ConverterIllustration() {
             ⚠️ It never fades: the original is still on your disk afterwards,
             and a picture in which it disappears says the opposite. */}
         <g className="cnv-source">
-          <rect x="40" y="132" width="150" height="214" rx="16" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" filter="url(#cnv-shadow)" />
-          <rect x="56" y="150" width="68" height="28" rx="7" fill="#e0f2fe" />
-          <text x="90" y="170" textAnchor="middle" fontSize="14.5" fontWeight="700" fill="#0369a1" fontFamily="ui-sans-serif, system-ui">
+          <rect className="ci-card" x="40" y="132" width="150" height="214" rx="16" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" filter="url(#cnv-shadow)" />
+          <rect className="ci-docx-chip" x="56" y="150" width="68" height="28" rx="7" fill="#e0f2fe" />
+          <text className="ci-docx-text" x="90" y="170" textAnchor="middle" fontSize="14.5" fontWeight="700" fill="#0369a1" fontFamily="ui-sans-serif, system-ui">
             DOCX
           </text>
-          <rect x="56" y="202" width="118" height="10" rx="5" fill="#e2e8f0" />
-          <rect x="56" y="224" width="118" height="10" rx="5" fill="#e2e8f0" />
-          <rect x="56" y="246" width="118" height="10" rx="5" fill="#e2e8f0" />
-          <rect x="56" y="268" width="78" height="10" rx="5" fill="#e2e8f0" />
+          <rect x="56" y="202" width="118" height="10" rx="5" fill="#e2e8f0" className="ci-line" />
+          <rect x="56" y="224" width="118" height="10" rx="5" fill="#e2e8f0" className="ci-line" />
+          <rect x="56" y="246" width="118" height="10" rx="5" fill="#e2e8f0" className="ci-line" />
+          <rect x="56" y="268" width="78" height="10" rx="5" fill="#e2e8f0" className="ci-line" />
         </g>
 
         {/* The conversion itself, in the gap the source just opened. It hops
@@ -96,27 +96,27 @@ export default function ConverterIllustration() {
         {/* What you get back: a different file, built rather than revealed —
             the chip lands first, then the page fills in line by line. */}
         <g className="cnv-target" style={{ transformOrigin: '385px 239px' }}>
-          <rect x="310" y="132" width="150" height="214" rx="16" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" filter="url(#cnv-shadow)" />
+          <rect className="ci-card" x="310" y="132" width="150" height="214" rx="16" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" filter="url(#cnv-shadow)" />
           <g className="cnv-chip" style={{ transformOrigin: '360px 164px' }}>
-            <rect x="326" y="150" width="68" height="28" rx="7" fill="#fee2e2" />
-            <text x="360" y="170" textAnchor="middle" fontSize="14.5" fontWeight="700" fill="#b91c1c" fontFamily="ui-sans-serif, system-ui">
+            <rect className="ci-pdf-chip" x="326" y="150" width="68" height="28" rx="7" fill="#fee2e2" />
+            <text className="ci-pdf-text" x="360" y="170" textAnchor="middle" fontSize="14.5" fontWeight="700" fill="#b91c1c" fontFamily="ui-sans-serif, system-ui">
               PDF
             </text>
           </g>
           {/* A heading and a laid-out block, not a copy of the source's three
               even lines — the Files tab does not photocopy a document, it sets
               it. Each grows from its left edge, in order, like type being set. */}
-          <rect className="cnv-line cnv-line-1" x="326" y="202" width="92" height="14" rx="7" fill="#cbd5e1" style={{ transformOrigin: '326px 209px' }} />
-          <rect className="cnv-line cnv-line-2" x="326" y="228" width="118" height="9" rx="4.5" fill="#e2e8f0" style={{ transformOrigin: '326px 232.5px' }} />
-          <rect className="cnv-line cnv-line-3" x="326" y="246" width="118" height="9" rx="4.5" fill="#e2e8f0" style={{ transformOrigin: '326px 250.5px' }} />
-          <rect className="cnv-line cnv-line-4" x="326" y="264" width="86" height="9" rx="4.5" fill="#e2e8f0" style={{ transformOrigin: '326px 268.5px' }} />
+          <rect className="cnv-line cnv-line-1 ci-line-strong" x="326" y="202" width="92" height="14" rx="7" fill="#cbd5e1" style={{ transformOrigin: '326px 209px' }} />
+          <rect className="cnv-line cnv-line-2 ci-line" x="326" y="228" width="118" height="9" rx="4.5" fill="#e2e8f0" style={{ transformOrigin: '326px 232.5px' }} />
+          <rect className="cnv-line cnv-line-3 ci-line" x="326" y="246" width="118" height="9" rx="4.5" fill="#e2e8f0" style={{ transformOrigin: '326px 250.5px' }} />
+          <rect className="cnv-line cnv-line-4 ci-line" x="326" y="264" width="86" height="9" rx="4.5" fill="#e2e8f0" style={{ transformOrigin: '326px 268.5px' }} />
         </g>
 
         {/* Stamped on the corner last, and green rather than orange: this is the
             "it worked" beat, and orange here would read as one more step. */}
         <g className="cnv-tick" style={{ transformOrigin: '452px 142px' }}>
-          <circle cx="452" cy="142" r="24" fill="#ecfdf5" stroke="#10b981" strokeWidth="2.5" />
-          <path d="M441 142 l7.5 8 l14.5 -16" fill="none" stroke="#059669" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+          <circle className="ci-tick-ring" cx="452" cy="142" r="24" fill="#ecfdf5" stroke="#10b981" strokeWidth="2.5" />
+          <path className="ci-tick-mark" d="M441 142 l7.5 8 l14.5 -16" fill="none" stroke="#059669" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
         </g>
 
         {/* And three more, because the two cards above can only ever show one
@@ -135,9 +135,9 @@ function Pill({ className, x, from, to }: { className: string; x: number; from: 
   const mid = x + 71
   return (
     <g className={className}>
-      <rect x={x} y="398" width="142" height="36" rx="18" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="2" />
-      <text x={mid} y="422" textAnchor="middle" fontSize="15.5" fontWeight="600" fill="#475569" fontFamily="ui-sans-serif, system-ui">
-        {from} <tspan fill="#ea580c">→</tspan> {to}
+      <rect className="ci-pill" x={x} y="398" width="142" height="36" rx="18" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="2" />
+      <text className="ci-pill-text" x={mid} y="422" textAnchor="middle" fontSize="15.5" fontWeight="600" fill="#475569" fontFamily="ui-sans-serif, system-ui">
+        {from} <tspan className="ci-pill-arrow" fill="#ea580c">→</tspan> {to}
       </text>
     </g>
   )
