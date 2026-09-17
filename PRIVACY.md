@@ -51,6 +51,12 @@ privacy page that pretended otherwise would look like a lie.
   does not include anything about your files — not their names, not their
   sizes, not what you converted them to.
   See [`src/UsageTracker.tsx`](src/UsageTracker.tsx).
+- **"This app is in use".** While the app is open and on screen, it tells our
+  server every 45 seconds that this app is in use on this device, so the menu
+  can say how many people use it and how many are using it now. That message
+  holds the app's name and a random ID made on this device, and your account
+  if you are signed in: nothing about what you are working on. See `presence.ts`
+  in `@unisim/sdk`.
 - **The changelog and update notice.**
 
 **There is no third-party analytics, no tracking pixel, and no advertising
