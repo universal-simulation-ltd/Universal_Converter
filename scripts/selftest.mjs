@@ -825,8 +825,9 @@ function ascii(view, offset, length) {
 // `src/stores/themeStore.ts` names it for the SDK's store; `index.html` names it
 // again in the inline script that puts `.dark` on <html> before the first
 // paint — the only place early enough to matter, and one that cannot import a
-// constant. The key IS every user's saved choice: rename one copy and everybody
-// who chose dark is silently back on light.
+// constant. The key IS every user's saved choice for this app (since SDK 0.143,
+// their override of the global colour scheme): rename one copy and everybody who
+// chose dark here is silently back to following global.
 //
 // Negative control (2026-09-14, run on a copy): renaming the key in index.html
 // alone reddens the `localStorage.getItem` assertion below.
@@ -839,6 +840,12 @@ function ascii(view, offset, length) {
   const head = html.slice(0, html.indexOf('</head>'))
   assert.ok(head.includes(`localStorage.getItem('${key}')`),
     `index.html's pre-paint script reads '${key}', the same key as the store`)
+  // Since SDK 0.143 an absent app key means "follow Global preferences". Without
+  // this fallback someone whose only choice is the global Dark gets a light first
+  // frame and then a flip once the store loads.
+  assert.ok(
+    new RegExp(`localStorage\\.getItem\\('${key}'\\)\\s*\\|\\|\\s*localStorage\\.getItem\\('universal:color-scheme'\\)\\s*\\|\\|\\s*'light'`).test(head),
+    "the pre-paint script falls back to 'universal:color-scheme', then to light")
   assert.ok(head.includes("classList.add('dark')"), 'the pre-paint script adds .dark')
   // 'system' has to be honoured here too, or somebody on the OS setting gets the
   // light ground first and the dark one once the bundle catches up.
