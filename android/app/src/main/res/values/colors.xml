@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The window background behind the web view.
+
+     It only shows once `android.adjustMarginsForEdgeToEdge` is on (in
+     capacitor.config.ts): Capacitor then insets the web view by the status-bar,
+     navigation-bar and camera-cutout margins, and those strips show the
+     WINDOW's background, not the page's. White, to match Universal Converter's navbar in
+     its default light theme.
+
+     ⚠️ It does NOT follow the app's own Dark setting: pick Dark and the strips
+     stay white above a dark bar. Android 15 ignores a status-bar colour set at
+     run time (so @capacitor/status-bar's setBackgroundColor can't reach it),
+     and the only fixes are a native call that repaints the window background
+     from the page's theme, or Capacitor 8's SystemBars. A white band is still
+     far better than the bar it replaces, which sat under the clock. -->
+<resources>
+    <color name="unisimWindowBackground">#ffffff</color>
+</resources>
