@@ -10,6 +10,7 @@ import ConverterApp from './components/converter/ConverterApp'
 import { CONTAINER } from './lib/layout'
 import { useConverterStore } from './stores/converterStore'
 import { useThemeStore } from './stores/themeStore'
+import { KNOWLEDGE_BASE } from './knowledge'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_Converter'
 
@@ -66,6 +67,9 @@ export default function App() {
         themeStore={useThemeStore}
         suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
         contentClassName={CONTAINER}
+        // Actions ▸ Advanced ▸ Knowledge base (SDK 0.163.0): this app's own
+        // articles, bundled from ./knowledge so they read offline.
+        knowledgeBase={KNOWLEDGE_BASE}
         about={ABOUT}
         // "Reset to defaults" (the output settings) at the foot of Tune this
         // app. Withheld mid-conversion, as the old actions-menu row was
