@@ -78,6 +78,7 @@ function AddMore({ kind }: { kind: MediaKind }) {
     onFiles: (files) => void addDropped(files, kind),
     accept: copy.accept,
     clickToBrowse: false,
+    folders: true,
   })
 
   return (
@@ -163,6 +164,14 @@ function Row({
       </span>
 
       <span className="min-w-0">
+        {/* Where it sat in a dropped folder — the place it goes back to in
+            the ZIP. A line of its own, above the name: as a prefix on the
+            name's line, `truncate` would clip the NAME to fit a deep path. */}
+        {item.folder && (
+          <span className="block truncate text-[10.5px] text-slate-500 dark:text-slate-400" title={item.folder}>
+            {item.folder}
+          </span>
+        )}
         <span className="block truncate text-[12.5px] font-semibold text-slate-900 dark:text-slate-100">{item.file.name}</span>
         {/* What you brought. slate-500, not slate-400: at 10.5px on white the
             latter is 2.55:1, under AA's 4.5, and this is the size of type where

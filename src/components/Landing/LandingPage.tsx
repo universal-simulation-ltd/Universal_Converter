@@ -1,4 +1,7 @@
 import { DropAnywhere, DropRing, PrivacyNote, useFileDrop } from '@unisim/sdk'
+import ChooseFolder from '../converter/ChooseFolder'
+import SkippedNote from '../converter/SkippedNote'
+import type { DropOutcome } from '../../stores/converterStore'
 import { CONTAINER } from '../../lib/layout'
 import { useRingColours } from '../../lib/ringTheme'
 import { useThemeStore } from '../../stores/themeStore'
@@ -25,13 +28,14 @@ import ConverterIllustration from './ConverterIllustration'
  */
 export default function LandingPage({
   onFiles,
-  rejected,
+  outcome,
 }: {
   onFiles: (files: File[]) => void
-  /** Names of files the sorter turned away — this page has to carry them, because
-      an all-rejected drop leaves the queue empty and never reaches AllStudio. */
-  rejected: string[]
+  /** What the sorter turned away — this page has to carry it, because an
+      all-rejected drop leaves the queue empty and never reaches AllStudio. */
+  outcome: DropOutcome
 }) {
+  const { rejected } = outcome
   // `pageWide`: the ring is where to aim, not where you have to land. A file
   // dropped on the headline or in the margin is sorted just the same — and
   // without it the browser navigates away to the file it was handed.
@@ -40,6 +44,7 @@ export default function LandingPage({
     accept: ALL_ACCEPT,
     label: 'Drop any file here, or click to browse',
     pageWide: true,
+    folders: true,
   })
   const ring = useRingColours(drop.over)
   // Resolved, for the SDK's inline-styled PrivacyNote — it cannot read `.dark`.
@@ -112,6 +117,9 @@ export default function LandingPage({
                 </DropRing>
               </div>
               <input {...drop.inputProps} className="hidden" />
+              <div className="mt-3">
+                <ChooseFolder drop={drop} />
+              </div>
             </div>
 
             {rejected.length > 0 && (
@@ -123,6 +131,8 @@ export default function LandingPage({
                 picture, a sound, a video or a document this can read.
               </p>
             )}
+
+            <SkippedNote skipped={outcome.skipped} className="mt-5" />
 
             <div className="mt-5 flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
               <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" aria-hidden="true" />

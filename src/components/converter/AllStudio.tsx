@@ -7,6 +7,9 @@ import { KINDS, useConverterStore } from '../../stores/converterStore'
 import type { MediaKind } from '../../lib/types'
 import { AnyFileWatermark } from './DropWatermarks'
 import LandingPage from '../Landing/LandingPage'
+import ChooseFolder from './ChooseFolder'
+import SkippedNote from './SkippedNote'
+import type { DropOutcome } from '../../stores/converterStore'
 
 /**
  * The All tab — the front door.
@@ -46,17 +49,19 @@ import LandingPage from '../Landing/LandingPage'
 export default function AllStudio() {
   const addDropped = useConverterStore((s) => s.addDropped)
   const items = useConverterStore((s) => s.items)
-  const [rejected, setRejected] = useState<string[]>([])
+  const [outcome, setOutcome] = useState<DropOutcome>({ rejected: [], skipped: 0 })
+  const onFiles = (files: File[]) => setOutcome(addDropped(files, 'all'))
 
   // `pageWide`: the ring is where to aim, not where you have to land. A file
   // dropped on the header, the sorting column or the margin is sorted just the
   // same — and without it the browser navigates away to the file it was handed,
   // which throws away whatever was already queued.
   const drop = useFileDrop({
-    onFiles: (files) => setRejected(addDropped(files, 'all').rejected),
+    onFiles,
     accept: ALL_ACCEPT,
     label: 'Drop any file here, or click to browse',
     pageWide: true,
+    folders: true,
   })
   const ring = useRingColours(drop.over)
 
@@ -66,12 +71,12 @@ export default function AllStudio() {
   const total = KINDS.reduce((sum, kind) => sum + waiting[kind], 0)
   const tabsUsed = KINDS.filter((k) => waiting[k] > 0)
 
-  // `rejected` is deliberately still ours: a drop where NOTHING is convertible
+  // `outcome` is deliberately still ours: a drop where NOTHING is convertible
   // leaves `total` at 0, so the landing page is what has to report it, and a
   // drop where only some files are turned away lands on the layout below. One
   // piece of state, read by whichever screen is up.
   if (total === 0) {
-    return <LandingPage onFiles={(files) => setRejected(addDropped(files, 'all').rejected)} rejected={rejected} />
+    return <LandingPage onFiles={onFiles} outcome={outcome} />
   }
 
   return (
@@ -93,6 +98,7 @@ export default function AllStudio() {
             </DropRing>
           </div>
           <input {...drop.inputProps} className="hidden" />
+          <ChooseFolder drop={drop} />
 
           <p className="max-w-sm text-center text-[11.5px] leading-relaxed text-slate-500 dark:text-slate-400">
             Everything happens on your device. Nothing is uploaded, so there is no size limit and
@@ -100,7 +106,7 @@ export default function AllStudio() {
           </p>
         </div>
 
-        <SortingColumn waiting={waiting} tabsUsed={tabsUsed} rejected={rejected} />
+        <SortingColumn waiting={waiting} tabsUsed={tabsUsed} outcome={outcome} />
       </div>
 
       {/* Drawn from `pageOver`, not `over`: over the ring itself the ring is
@@ -137,13 +143,14 @@ function SortedCentre({ waiting, total }: { waiting: Record<MediaKind, number>; 
  * where did each file go. A list of formats you have already used is noise.
  */
 function SortingColumn({
-  waiting, tabsUsed, rejected,
+  waiting, tabsUsed, outcome,
 }: {
   waiting: Record<MediaKind, number>
   tabsUsed: readonly MediaKind[]
-  rejected: string[]
+  outcome: DropOutcome
 }) {
   const setTab = useConverterStore((s) => s.setTab)
+  const { rejected } = outcome
 
   return (
     <div className="flex flex-col gap-4">
@@ -192,9 +199,35 @@ function SortingColumn({
               picture, a sound, a video or a document this can read.
             </p>
           )}
+          <SkippedNote skipped={outcome.skipped} />
         </div>
       </div>
+
+      <DownloadEverything />
     </div>
+  )
+}
+
+/**
+ * One ZIP of everything finished, on every tab, folders kept — shown once
+ * anything is finished. The studio tabs each download their own kind; this is
+ * the one place that gathers them up (James, 2026-09-27).
+ */
+function DownloadEverything() {
+  const items = useConverterStore((s) => s.items)
+  const running = useConverterStore((s) => s.running)
+  const downloadEverything = useConverterStore((s) => s.downloadEverything)
+  const done = items.filter((i) => i.result).length
+  if (done === 0) return null
+  return (
+    <button
+      type="button"
+      disabled={running}
+      onClick={() => void downloadEverything()}
+      className="w-full rounded-xl bg-gradient-to-br from-[#FE8C01] to-[#E05504] px-4 py-3 text-[14px] font-bold text-white shadow-sm transition-opacity hover:opacity-95 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {done === 1 ? 'Download the converted file' : `Download all ${done} converted files as one ZIP`}
+    </button>
   )
 }
 

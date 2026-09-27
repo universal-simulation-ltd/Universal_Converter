@@ -67,6 +67,7 @@ function StudioCircle({ kind }: { kind: MediaKind }) {
     accept: copy.accept,
     clickToBrowse: false,
     pageWide: true,
+    folders: true,
   })
   const ring = useRingColours(drop.over)
 
@@ -189,6 +190,7 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
   const convertAll = useConverterStore((s) => s.convertAll)
   const downloadAll = useConverterStore((s) => s.downloadAll)
   const saveItemAs = useConverterStore((s) => s.saveItemAs)
+  const downloadEverything = useConverterStore((s) => s.downloadEverything)
 
   const t = kindTotals(items, kind)
   // Every row on the tab is one this app can't open, so there is nothing to
@@ -201,6 +203,10 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
   // on it announces "Ready to download" over a run still going.
   const allDone = t.done === t.eligible && t.done > 0
   const saved = savingPercent(t.bytesInDone, t.bytesOutDone)
+  // Finished files on EVERY tab. More than this tab's own means a mixed drop
+  // (typically one folder) is spread over several tabs, and the way to get it
+  // back as one archive belongs here as well as on the All tab.
+  const doneEverywhere = items.filter((i) => i.result).length
 
   // ⚠️ No "Convert again" branch any more (James, 2026-08-31). Once a tab is
   // finished this button is GONE rather than relabelled — see the render below
@@ -351,6 +357,16 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
                 >
                   {downloadLabel}
                 </button>
+                {doneEverywhere > t.done && (
+                  <button
+                    type="button"
+                    disabled={running}
+                    onClick={() => void downloadEverything()}
+                    className={secondary}
+                  >
+                    Download all {doneEverywhere} from every tab as one ZIP
+                  </button>
+                )}
                 {/* ⚠️ "Convert again" is GONE (James, 2026-08-31), and only
                     that case: this button survives while there is still
                     something QUEUED, which is how a partly-converted tab gets

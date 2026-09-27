@@ -25,6 +25,7 @@ import { encodeAiff } from '../src/lib/aiff.ts'
 import { encodeMp3 } from '../src/lib/mp3.ts'
 import { targetSize } from '../src/lib/resize.ts'
 import { tabAfterDrop } from '../src/lib/routing.ts'
+import { archiveEntries, archiveName } from '../src/lib/archive.ts'
 import { heicByName, heicFromBytes } from '../src/lib/heicSniff.ts'
 import { parseClock } from '@unisim/media'
 import { createZip, crc32 } from '@unisim/media'
@@ -854,6 +855,41 @@ function ascii(view, offset, length) {
     'the pre-paint script never removes .dark — light is the default, so it only ever adds')
 
   console.log(`✓ theme key — index.html and themeStore.ts agree on '${key}'`)
+}
+
+// A dropped folder comes back out as the same tree (James, 2026-09-27), and
+// the ZIP is really readable that way — checked with python's `zipfile`, not
+// with our own reader.
+{
+  const b = (s) => new Blob([s])
+  const rows = [
+    { folder: 'Holiday/', name: 'a.jpg', blob: b('1') },
+    { folder: 'Holiday/Day 1/', name: 'b.jpg', blob: b('2') },
+    // photo.png and photo.heic side by side both become photo.jpg.
+    { folder: 'Holiday/Day 1/', name: 'photo.jpg', blob: b('3') },
+    { folder: 'Holiday/Day 1/', name: 'PHOTO.jpg', blob: b('4') },
+    { folder: 'Holiday/Day 1/', name: 'photo.jpg', blob: b('5') },
+  ]
+  const names = archiveEntries(rows).map((e) => e.name)
+  assert.deepEqual(names, [
+    'Holiday/a.jpg', 'Holiday/Day 1/b.jpg', 'Holiday/Day 1/photo.jpg',
+    'Holiday/Day 1/PHOTO (2).jpg', 'Holiday/Day 1/photo (3).jpg',
+  ])
+  // Loose files sit at the top, as they always did.
+  assert.deepEqual(archiveEntries([{ folder: '', name: 'x.mp3', blob: b('') }]).map((e) => e.name), ['x.mp3'])
+
+  assert.equal(archiveName(rows, 'converted'), 'Holiday-converted.zip')
+  assert.equal(archiveName([...rows, { folder: '', name: 'y.jpg', blob: b('') }], 'converted'), 'converted.zip')
+  assert.equal(archiveName([{ folder: 'A/', name: 'y', blob: b('') }, { folder: 'B/', name: 'z', blob: b('') }], 'converted-images'), 'converted-images.zip')
+
+  const dir = mkdtempSync(join(tmpdir(), 'conv-tree-'))
+  const zipPath = join(dir, 'tree.zip')
+  const zip = await createZip(archiveEntries(rows))
+  writeFileSync(zipPath, new Uint8Array(await zip.arrayBuffer()))
+  const listed = execFileSync('python3', ['-c', 'import sys,zipfile;print(chr(10).join(zipfile.ZipFile(sys.argv[1]).namelist()))', zipPath], { encoding: 'utf8' }).trim().split('\n')
+  assert.deepEqual(listed, names)
+
+  console.log('✓ archive — folders kept, clashes numbered, named after the folder')
 }
 
 console.log(skipped > 0

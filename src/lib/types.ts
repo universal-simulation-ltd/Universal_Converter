@@ -94,6 +94,12 @@ export type JobStatus = 'queued' | 'converting' | 'done' | 'failed' | 'unsupport
 export interface QueueItem {
   id: string
   file: File
+  /**
+   * Where the file sat in a dropped or picked folder — `"Holiday/Day 1/"` —
+   * or `""` for a loose file. The converted file goes back to the same place
+   * inside the ZIP; see `lib/archive.ts`.
+   */
+  folder: string
   kind: MediaKind
   /** Source extension, lower-cased, no dot. */
   ext: string

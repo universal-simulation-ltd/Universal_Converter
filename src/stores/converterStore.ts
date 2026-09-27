@@ -24,6 +24,8 @@ import {
   type VideoTarget,
 } from '../lib/types'
 import { createZip } from '@unisim/media'
+import { relativeFolderOf } from '@unisim/sdk'
+import { archiveEntries, archiveName, type Finished } from '../lib/archive'
 
 // `TabId` and the rule for where a drop leaves you both live in `lib/routing`,
 // so the rule can be tested without standing a store up. Re-exported here
@@ -32,6 +34,20 @@ export type { TabId } from '../lib/routing'
 
 /** How many of each kind a drop was sorted into. */
 export type SortedCounts = Record<MediaKind, number>
+
+/**
+ * What a drop turned away.
+ *
+ * `rejected` names loose files nothing here can convert — named, because you
+ * picked those yourself. `skipped` only COUNTS the ones inside a dropped
+ * folder: a folder is taken as "convert what you can in here" (James,
+ * 2026-09-27), and naming every `.txt` and `.xlsx` in a tree of hundreds
+ * would bury the answer.
+ */
+export interface DropOutcome {
+  rejected: string[]
+  skipped: number
+}
 
 interface ConverterState {
   tab: TabId
@@ -63,7 +79,7 @@ interface ConverterState {
    * decides where you end up, and it is what the UI calls; this stays the plain
    * sorter so the sorting and the navigation can be reasoned about separately.
    */
-  addSorted: (files: File[]) => SortedCounts & { rejected: string[] }
+  addSorted: (files: File[]) => SortedCounts & DropOutcome
   /**
    * The one entry point for every drop and every file-picker choice: queue the
    * files, then put the person on the tab that shows what they now have.
@@ -72,7 +88,7 @@ interface ConverterState {
    * assumed to belong and where they stay if nothing better applies. The rule
    * itself is `tabAfterDrop` in `lib/routing` — see the cases spelled out there.
    */
-  addDropped: (files: File[], on: TabId) => { rejected: string[] }
+  addDropped: (files: File[], on: TabId) => DropOutcome
   removeItem: (id: string) => void
   clearQueue: (kind?: MediaKind) => void
   updateAudio: (patch: Partial<AudioSettings>) => void
@@ -88,10 +104,20 @@ interface ConverterState {
   /** Save one finished row through the OS file dialog, where there is one. */
   saveItemAs: (id: string) => void
   downloadAll: (kind: MediaKind) => Promise<void>
+  /**
+   * Every finished file from EVERY tab in one ZIP, each at its place in the
+   * folder it came from (James, 2026-09-27: a mixed folder should come back as
+   * one archive, not one per kind).
+   */
+  downloadEverything: () => Promise<void>
 }
 
 /** Every kind, in tab order — the one list the sorting and clearing loops use. */
 export const KINDS: readonly MediaKind[] = ['image', 'audio', 'video', 'document']
+
+function finished(items: QueueItem[]): Finished[] {
+  return items.map((i) => ({ folder: i.folder, name: i.result!.name, blob: i.result!.blob }))
+}
 
 function newId(): string {
   return crypto.randomUUID()
@@ -276,6 +302,7 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
       return {
         id: newId(),
         file,
+        folder: relativeFolderOf(file),
         kind,
         ext,
         status: supported ? 'queued' : 'unsupported',
@@ -315,9 +342,11 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
   addSorted: (files) => {
     const buckets: Record<MediaKind, File[]> = { audio: [], image: [], video: [], document: [] }
     const rejected: string[] = []
+    let skipped = 0
     for (const file of files) {
       const kind = kindOf(extensionOf(file.name), file.type)
       if (kind) buckets[kind].push(file)
+      else if (relativeFolderOf(file)) skipped += 1
       else rejected.push(file.name)
     }
     // One call per kind rather than per file: `addFiles` appends to one array,
@@ -331,6 +360,7 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
       video: buckets.video.length,
       document: buckets.document.length,
       rejected,
+      skipped,
     }
   },
 
@@ -344,10 +374,12 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
     // how you ask for a video's soundtrack.
     const landedOn: MediaKind[] = []
     let rejected: string[] = []
+    let skipped = 0
 
     if (on === 'all') {
       const sorted = get().addSorted(files)
       rejected = sorted.rejected
+      skipped = sorted.skipped
       for (const kind of KINDS) if (sorted[kind] > 0) landedOn.push(kind)
     } else {
       // On a studio tab, that tab is the answer for everything it can take —
@@ -364,6 +396,9 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
         }
         const kind = kindOf(ext, file.type)
         if (kind && kind !== on) elsewhere[kind].push(file)
+        // Out of a folder, a file nothing can convert is skipped rather than
+        // given a red row — see `DropOutcome`.
+        else if (!kind && relativeFolderOf(file)) skipped += 1
         else mine.push(file)
       }
       if (mine.length) {
@@ -380,7 +415,7 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
 
     const next = tabAfterDrop({ from: on, hadItems, landedOn, rejected: rejected.length > 0 })
     if (next !== get().tab) set({ tab: next })
-    return { rejected }
+    return { rejected, skipped }
   },
 
   removeItem: (id) => {
@@ -533,11 +568,21 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
     // A single-entry archive is a second step between somebody and the thing
     // they converted, for no gain.
     if (done.length === 1) return saveBlob(done[0].result!.blob, done[0].result!.name)
-    const zip = await createZip(done.map((i) => ({ name: i.result!.name, blob: i.result!.blob })))
+    const rows = finished(done)
     const folder: Record<MediaKind, string> = {
       image: 'images', audio: 'audio', video: 'video', document: 'files',
     }
-    saveBlob(zip, `converted-${folder[kind]}.zip`)
+    saveBlob(await createZip(archiveEntries(rows)), archiveName(rows, `converted-${folder[kind]}`))
+  },
+
+  downloadEverything: async () => {
+    // Tab order, so the archive lists pictures, then sound, then video, then
+    // documents — the order the tabs read in.
+    const done = KINDS.flatMap((kind) => get().items.filter((i) => i.kind === kind && i.result))
+    if (done.length === 0) return
+    if (done.length === 1) return saveBlob(done[0].result!.blob, done[0].result!.name)
+    const rows = finished(done)
+    saveBlob(await createZip(archiveEntries(rows)), archiveName(rows, 'converted'))
   },
 }))
 

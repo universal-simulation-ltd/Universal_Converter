@@ -1,6 +1,7 @@
 import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
 import { ConvertWatermark } from './DropWatermarks'
 import { useRingColours } from '../../lib/ringTheme'
+import ChooseFolder from './ChooseFolder'
 
 interface Props {
   onFiles: (files: File[]) => void
@@ -48,6 +49,7 @@ export default function DropZone({ onFiles, accept, title, formatsLine }: Props)
     accept,
     label: `${title} — click to browse`,
     pageWide: true,
+    folders: true,
   })
   const ring = useRingColours(drop.over)
 
@@ -66,6 +68,7 @@ export default function DropZone({ onFiles, accept, title, formatsLine }: Props)
       </div>
 
       <input {...drop.inputProps} className="hidden" />
+      <ChooseFolder drop={drop} />
 
       {/* The format list lives UNDER the ring, not in it: eight extensions
           wrap to four lines inside a 300px circle, and the circle's job is to
