@@ -1,9 +1,4 @@
-import { AdvancedMenu, MENU } from '@unisim/sdk'
-// Generated — `npm run credits` after any dependency change. Never edit it by
-// hand: it is read off the installed tree, so a hand-kept list drifts from the
-// lockfile the first time anyone upgrades anything, and a credits list naming a
-// package we removed is worse than no list at all.
-import credits from '../../generated/credits.json'
+import { MENU } from '@unisim/sdk'
 import { useConverterStore } from '../../stores/converterStore'
 import { useThemeStore } from '../../stores/themeStore'
 
@@ -16,6 +11,10 @@ import { useThemeStore } from '../../stores/themeStore'
 // owned an `absolute left-0 w-60` panel, which on a 393px viewport put half of
 // "Reset output settings" past the right edge. The SDK's dropdown surface is
 // positioned against the live viewport and capped to it, so it can't.
+//
+// No "Reset output settings" and no Advanced ▸ About here any more
+// (2026-09-27): since SDK 0.161.0 both sit at the foot of "Tune this app", from
+// the navbar's `onResetDefaults` and `about` props in App.tsx.
 //
 // Styling is inline rather than Tailwind to match the SDK dropdown's own rows
 // (the same 8px/14px rhythm and 13px label the profile and language rows use) —
@@ -52,7 +51,6 @@ export default function AppMenu() {
   const items = useConverterStore((s) => s.items)
   const running = useConverterStore((s) => s.running)
   const clearQueue = useConverterStore((s) => s.clearQueue)
-  const resetSettings = useConverterStore((s) => s.resetSettings)
   const theme = useThemeStore((s) => s.effective)
   const c = ROW[theme]
 
@@ -64,32 +62,6 @@ export default function AppMenu() {
         label="Clear the queue"
         disabled={running || items.length === 0}
         onClick={clearQueue}
-      />
-      <MenuRow
-        c={c}
-        icon="↩️"
-        label="Reset output settings"
-        disabled={running}
-        onClick={resetSettings}
-      />
-
-      {/* Advanced — the SDK's own category, so every app in the suite has one in
-          the same place, and whatever goes in it next is one change rather than
-          nineteen. "About this app" is always its last row.
-          ⚠️ `theme` is the RESOLVED theme, the same one the nav bar gets —
-          without it the category and the About dialog render light in a dark
-          app. */}
-      <AdvancedMenu
-        theme={theme}
-        about={{
-          repo:    'https://github.com/universal-simulation-ltd/Universal_Converter',
-          proof:   'https://github.com/universal-simulation-ltd/Universal_Converter/blob/main/PRIVACY.md',
-          subject: 'Your files',
-          plural:  true,
-          version: __APP_VERSION__,
-          credits,
-          noticesHref: 'https://github.com/universal-simulation-ltd/Universal_Converter/blob/main/THIRD-PARTY-NOTICES.md',
-        }}
       />
     </>
   )

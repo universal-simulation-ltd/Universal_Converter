@@ -1,11 +1,29 @@
-import { UniversalAppsNavBar, UpdateNotice } from '@unisim/sdk'
+import { UniversalAppsNavBar, UpdateNotice, type AboutAppConfig } from '@unisim/sdk'
+// Generated — `npm run credits` after any dependency change. Never edit it by
+// hand: it is read off the installed tree, so a hand-kept list drifts from the
+// lockfile the first time anyone upgrades anything, and a credits list naming a
+// package we removed is worse than no list at all.
+import credits from './generated/credits.json'
 import AppMenu from './components/Header/AppMenu'
 import ProductLogo from './components/Header/ProductLogo'
 import ConverterApp from './components/converter/ConverterApp'
 import { CONTAINER } from './lib/layout'
+import { useConverterStore } from './stores/converterStore'
 import { useThemeStore } from './stores/themeStore'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_Converter'
+
+// "About this app" — drawn by the SDK at the foot of "Tune this app" (SDK
+// 0.161.0; it was the last row of Actions ▸ Advanced until 2026-09-27).
+const ABOUT: AboutAppConfig = {
+  repo:    REPO_URL,
+  proof:   'https://github.com/universal-simulation-ltd/Universal_Converter/blob/main/PRIVACY.md',
+  subject: 'Your files',
+  plural:  true,
+  version: __APP_VERSION__,
+  credits,
+  noticesHref: 'https://github.com/universal-simulation-ltd/Universal_Converter/blob/main/THIRD-PARTY-NOTICES.md',
+}
 
 // <UpdateNotice> is inline-styled amber, so it cannot answer the `.dark` class.
 // Its `style` spreads over the defaults, so in dark this swaps the pale card for
@@ -24,6 +42,8 @@ export default function App() {
   // The RESOLVED theme ('system' already turned into light or dark) — what the
   // SDK's inline-styled chrome needs, since it cannot read the `.dark` class.
   const theme = useThemeStore((s) => s.effective)
+  const running = useConverterStore((s) => s.running)
+  const resetSettings = useConverterStore((s) => s.resetSettings)
 
   return (
     // ⚠️ pt-[env(safe-area-inset-top)] is for the native (Capacitor) build, not
@@ -46,6 +66,11 @@ export default function App() {
         themeStore={useThemeStore}
         suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
         contentClassName={CONTAINER}
+        about={ABOUT}
+        // "Reset to defaults" (the output settings) at the foot of Tune this
+        // app. Withheld mid-conversion, as the old actions-menu row was
+        // disabled then: swapping settings under a running batch re-arms items.
+        onResetDefaults={running ? undefined : resetSettings}
       />
 
       {/* Renders nothing until this tab is genuinely running superseded code.
