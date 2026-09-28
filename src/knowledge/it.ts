@@ -122,7 +122,7 @@ I file OpenDocument (ODT) e RTF si conservano in modo simile.
 
 ## Lettere di altri alfabeti
 
-I PDF vengono scritti con caratteri standard che ogni lettore PDF possiede già. Coprono gli alfabeti latini. Per greco, cirillico ed ebraico, l’app scarica un carattere aggiuntivo la prima volta che un documento ne ha bisogno e lo conserva per le volte successive. Cinese, giapponese, coreano e arabo non si possono ancora scrivere. I caratteri che non è stato possibile scrivere sono elencati sulla riga, così sai esattamente che cosa manca.
+I PDF vengono scritti con caratteri standard che ogni lettore PDF possiede già. Coprono gli alfabeti latini. Per greco, cirillico ed ebraico, l’app scarica un carattere aggiuntivo la prima volta che un documento ne ha bisogno e lo conserva per le volte successive. Cinese, giapponese, coreano e arabo non si possono ancora scrivere. Le lettere ebraiche vengono scritte, ma ogni riga è composta da sinistra a destra, quindi per ora le parole in ebraico nel PDF risultano al contrario. I caratteri che non è stato possibile scrivere sono elencati sulla riga, così sai esattamente che cosa manca.
 
 ## Qualche consiglio
 

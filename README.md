@@ -168,8 +168,16 @@ them, so a converted Word document keeps its typography here.
 
 ### What it can't do, said out loud
 
-- **Latin alphabets only.** No font embedding means no Greek, Cyrillic, Hebrew,
-  Arabic or CJK. Characters that can't be written are **counted and named** on
+- **Latin, Greek, Cyrillic and Hebrew — not Arabic or CJK.** The base-14
+  fonts cover Latin only, so when a document contains Greek, Cyrillic or Hebrew
+  the writer embeds a fallback face, Liberation Sans
+  ([`fallbackFont.ts`](src/lib/fallbackFont.ts), SIL OFL), fetched the first
+  time a document needs it and cached for offline use after that; an all-Latin
+  document never touches the network. There is no shaping, so Arabic and the
+  Indic scripts stay out, and Chinese, Japanese and Korean aren't in the face.
+  ⚠️ **Hebrew comes out back to front:** there is no bidi reordering, so its
+  letters are drawn left to right in storage order. Characters that can't be
+  written (or anything, if the fallback font can't be fetched) are **named** on
   the row — you are shown the actual glyphs — rather than silently becoming `?`.
 - **A `.doc` gives up its text and nothing else.** The old format keeps its
   formatting in CHPX/PAPX property runs through a page tree of 512-byte bins,

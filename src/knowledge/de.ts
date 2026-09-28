@@ -122,7 +122,7 @@ OpenDocument- (ODT) und RTF-Dateien werden ähnlich übernommen.
 
 ## Buchstaben anderer Alphabete
 
-PDFs werden mit Standardschriften geschrieben, die jeder PDF-Reader bereits kennt. Sie decken lateinische Alphabete ab. Für Griechisch, Kyrillisch und Hebräisch lädt die App beim ersten Dokument, das es braucht, eine zusätzliche Schrift herunter und behält sie für das nächste Mal. Chinesisch, Japanisch, Koreanisch und Arabisch können noch nicht geschrieben werden. Zeichen, die nicht geschrieben werden konnten, werden in der Zeile aufgeführt, damit Sie genau wissen, was fehlt.
+PDFs werden mit Standardschriften geschrieben, die jeder PDF-Reader bereits kennt. Sie decken lateinische Alphabete ab. Für Griechisch, Kyrillisch und Hebräisch lädt die App beim ersten Dokument, das es braucht, eine zusätzliche Schrift herunter und behält sie für das nächste Mal. Chinesisch, Japanisch, Koreanisch und Arabisch können noch nicht geschrieben werden. Hebräische Buchstaben werden geschrieben, jede Zeile wird aber von links nach rechts gesetzt, sodass hebräische Wörter im PDF derzeit rückwärts erscheinen. Zeichen, die nicht geschrieben werden konnten, werden in der Zeile aufgeführt, damit Sie genau wissen, was fehlt.
 
 ## Einige Tipps
 

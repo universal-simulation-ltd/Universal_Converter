@@ -122,7 +122,7 @@ OpenDocument (ODT) and RTF files carry across in a similar way.
 
 ## Letters from other alphabets
 
-PDFs are written with standard fonts that every PDF reader already has. These cover Latin alphabets. For Greek, Cyrillic and Hebrew, the app downloads an extra font the first time a document needs it and keeps it for next time. Chinese, Japanese, Korean and Arabic cannot be written yet. Any characters that could not be written are listed on the row, so you know exactly what is missing.
+PDFs are written with standard fonts that every PDF reader already has. These cover Latin alphabets. For Greek, Cyrillic and Hebrew, the app downloads an extra font the first time a document needs it and keeps it for next time. Chinese, Japanese, Korean and Arabic cannot be written yet. Hebrew letters are written, but each line is laid out left to right, so Hebrew words currently come out back to front in the PDF. Any characters that could not be written are listed on the row, so you know exactly what is missing.
 
 ## A few tips
 

@@ -122,7 +122,7 @@ OpenDocument (ODT) ve RTF dosyaları da benzer şekilde aktarılır.
 
 ## Başka alfabelerdeki harfler
 
-PDF'ler, her PDF okuyucusunda zaten bulunan standart yazı tipleriyle yazılır. Bunlar Latin alfabelerini kapsar. Yunanca, Kiril ve İbranice için uygulama, bir belge ilk kez ihtiyaç duyduğunda ek bir yazı tipi indirir ve sonraki kullanımlar için saklar. Çince, Japonca, Korece ve Arapça henüz yazılamaz. Yazılamayan karakterler satırda listelenir; böylece tam olarak neyin eksik olduğunu bilirsiniz.
+PDF'ler, her PDF okuyucusunda zaten bulunan standart yazı tipleriyle yazılır. Bunlar Latin alfabelerini kapsar. Yunanca, Kiril ve İbranice için uygulama, bir belge ilk kez ihtiyaç duyduğunda ek bir yazı tipi indirir ve sonraki kullanımlar için saklar. Çince, Japonca, Korece ve Arapça henüz yazılamaz. İbranice harfler yazılır, ancak her satır soldan sağa dizildiği için İbranice sözcükler şimdilik PDF'te ters sırada çıkar. Yazılamayan karakterler satırda listelenir; böylece tam olarak neyin eksik olduğunu bilirsiniz.
 
 ## Birkaç ipucu
 
