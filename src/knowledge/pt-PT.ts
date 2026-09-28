@@ -122,7 +122,7 @@ Os ficheiros OpenDocument (ODT) e RTF mantêm-se de forma semelhante.
 
 ## Letras de outros alfabetos
 
-Os PDFs são escritos com tipos de letra padrão que qualquer leitor de PDF já tem. Estes abrangem os alfabetos latinos. Para grego, cirílico e hebraico, a aplicação transfere um tipo de letra adicional da primeira vez que um documento precisa dele e guarda-o para a próxima vez. Chinês, japonês, coreano e árabe ainda não podem ser escritos. As letras hebraicas são escritas, mas cada linha é composta da esquerda para a direita, pelo que, por agora, as palavras em hebraico aparecem de trás para a frente no PDF. Os caracteres que não foi possível escrever são indicados na linha, para que saiba exatamente o que falta.
+Os PDFs são escritos com tipos de letra padrão que qualquer leitor de PDF já tem. Estes abrangem os alfabetos latinos. Para grego, cirílico e hebraico, a aplicação transfere um tipo de letra adicional da primeira vez que um documento precisa dele e guarda-o para a próxima vez. Chinês, japonês, coreano e árabe ainda não podem ser escritos. O hebraico é composto da direita para a esquerda e os parágrafos em hebraico ficam alinhados à direita. Os caracteres que não foi possível escrever são indicados na linha, para que saiba exatamente o que falta.
 
 ## Algumas dicas
 

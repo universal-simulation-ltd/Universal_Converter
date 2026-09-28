@@ -122,7 +122,7 @@ Les fichiers OpenDocument (ODT) et RTF sont conservés de manière similaire.
 
 ## Les lettres d’autres alphabets
 
-Les PDF sont écrits avec des polices standard que tout lecteur PDF possède déjà. Elles couvrent les alphabets latins. Pour le grec, le cyrillique et l’hébreu, l’application télécharge une police supplémentaire la première fois qu’un document en a besoin et la garde pour la suite. Le chinois, le japonais, le coréen et l’arabe ne peuvent pas encore être écrits. Les lettres hébraïques sont bien écrites, mais chaque ligne est composée de gauche à droite : pour l’instant, les mots en hébreu apparaissent donc à l’envers dans le PDF. Les caractères qui n’ont pas pu être écrits sont indiqués sur la ligne, pour que vous sachiez exactement ce qui manque.
+Les PDF sont écrits avec des polices standard que tout lecteur PDF possède déjà. Elles couvrent les alphabets latins. Pour le grec, le cyrillique et l’hébreu, l’application télécharge une police supplémentaire la première fois qu’un document en a besoin et la garde pour la suite. Le chinois, le japonais, le coréen et l’arabe ne peuvent pas encore être écrits. L’hébreu est composé de droite à gauche, et les paragraphes en hébreu sont alignés à droite. Les caractères qui n’ont pas pu être écrits sont indiqués sur la ligne, pour que vous sachiez exactement ce qui manque.
 
 ## Quelques conseils
 

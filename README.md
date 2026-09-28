@@ -175,8 +175,8 @@ them, so a converted Word document keeps its typography here.
   time a document needs it and cached for offline use after that; an all-Latin
   document never touches the network. There is no shaping, so Arabic and the
   Indic scripts stay out, and Chinese, Japanese and Korean aren't in the face.
-  ⚠️ **Hebrew comes out back to front:** there is no bidi reordering, so its
-  letters are drawn left to right in storage order. Characters that can't be
+  Hebrew is laid out right to left (bidi reordering in `@unisim/doc` ≥ 0.8.0),
+  with right-to-left paragraphs right-aligned. Characters that can't be
   written (or anything, if the fallback font can't be fetched) are **named** on
   the row — you are shown the actual glyphs — rather than silently becoming `?`.
 - **A `.doc` gives up its text and nothing else.** The old format keeps its

@@ -531,6 +531,23 @@ console.log('\n── Fonts, encoding and settings ─────────�
   // Without /ToUnicode the glyphs draw and the text cannot be copied or found.
   check('...that can still be copied and searched (/ToUnicode)',
     greek.covered.latin1.includes('/ToUnicode') && greek.covered.latin1.includes('beginbfchar'))
+  // Hebrew used to come out back to front (no bidi reordering before
+  // @unisim/doc 0.8.0). The glyphs are Identity-H codes, so order can't be
+  // read back from the PDF text; check the reordering the writer draws with.
+  const bidi = await page.evaluate(async () => {
+    const { visualOrder, paragraphLevel } = await import('/node_modules/@unisim/doc/dist/index.js')
+    return {
+      pure: visualOrder('שלום עולם'),
+      mixed: visualOrder('גרסה 2.5 של Universal Converter'),
+      level: paragraphLevel('שלום, world'),
+      latin: visualOrder('Latin stays as it is.'),
+    }
+  })
+  check('Hebrew is drawn right to left', bidi.pure === 'םלוע םולש', bidi.pure)
+  check('...with English and numbers inside it kept readable',
+    bidi.mixed === 'Universal Converter לש 2.5 הסרג', bidi.mixed)
+  check('...and a Hebrew-first paragraph is right-to-left', bidi.level === 1, String(bidi.level))
+  check('Latin text is left untouched', bidi.latin === 'Latin stays as it is.', bidi.latin)
   check('a script the fallback face lacks is STILL named, not silently dropped',
     greek.uncovered.notices.some((n) => n.includes('日')),
     greek.uncovered.notices.join(' | '))

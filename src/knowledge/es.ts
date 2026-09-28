@@ -122,7 +122,7 @@ Los archivos OpenDocument (ODT) y RTF se conservan de forma parecida.
 
 ## Letras de otros alfabetos
 
-Los PDF se escriben con fuentes estándar que todo lector de PDF ya tiene. Cubren los alfabetos latinos. Para el griego, el cirílico y el hebreo, la aplicación descarga una fuente adicional la primera vez que un documento la necesita y la guarda para la próxima vez. El chino, el japonés, el coreano y el árabe todavía no se pueden escribir. Las letras hebreas sí se escriben, pero cada línea se compone de izquierda a derecha, así que por ahora las palabras en hebreo salen al revés en el PDF. Los caracteres que no se han podido escribir se indican en la fila, para que sepa exactamente qué falta.
+Los PDF se escriben con fuentes estándar que todo lector de PDF ya tiene. Cubren los alfabetos latinos. Para el griego, el cirílico y el hebreo, la aplicación descarga una fuente adicional la primera vez que un documento la necesita y la guarda para la próxima vez. El chino, el japonés, el coreano y el árabe todavía no se pueden escribir. El hebreo se compone de derecha a izquierda, y los párrafos en hebreo se alinean a la derecha. Los caracteres que no se han podido escribir se indican en la fila, para que sepa exactamente qué falta.
 
 ## Algunos consejos
 

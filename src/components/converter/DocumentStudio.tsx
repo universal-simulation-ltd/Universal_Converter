@@ -147,8 +147,7 @@ function DocumentPanel() {
         {settings.format === 'pdf' && (
           <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-relaxed text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
             The PDF uses the fonts every reader already has, so the file stays small. Greek, Cyrillic
-            and Hebrew add one embedded font, downloaded the first time it’s needed (Hebrew words
-            currently come out back to front). <span className="font-medium text-slate-700 dark:text-slate-300">Arabic,
+            and Hebrew add one embedded font, downloaded the first time it’s needed. <span className="font-medium text-slate-700 dark:text-slate-300">Arabic,
             Chinese, Japanese and Korean can’t be written</span> — any that appear are named on the row
             afterwards rather than silently replaced.
           </p>
