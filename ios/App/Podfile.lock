@@ -1,14 +1,14 @@
 PODS:
-  - Capacitor (7.6.8):
+  - Capacitor (8.5.2):
     - CapacitorCordova
-  - CapacitorCordova (7.6.8)
-  - CapacitorFilesystem (7.1.8):
+  - CapacitorCordova (8.5.2)
+  - CapacitorFilesystem (8.1.3):
     - Capacitor
     - IONFilesystemLib (~> 1.1.1)
-  - CapacitorShare (7.0.4):
+  - CapacitorShare (8.0.2):
     - Capacitor
   - IONFilesystemLib (1.1.2)
-  - UnisimSdk (0.152.0):
+  - UnisimSdk (0.163.0):
     - Capacitor
 
 DEPENDENCIES:
@@ -35,12 +35,12 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@unisim/sdk"
 
 SPEC CHECKSUMS:
-  Capacitor: ff6bf01336ac353098378828aff465095a89e459
-  CapacitorCordova: e61ee8c40101b8cd011d0224261606a290c082cf
-  CapacitorFilesystem: c63fc54df41e5a6761785a7f3c49dc696c22e296
-  CapacitorShare: 25f7fc5dd0e4edbde5d6801c6de5d14a8b450a41
+  Capacitor: 89067779e14fb7ea56af07b4817f45d1f0c2a269
+  CapacitorCordova: 5bec5648cbd09a176ce34ce5e7b6cdabb2c8a327
+  CapacitorFilesystem: b2bbd84bb91c177906c9dbc252864cb71ab9957b
+  CapacitorShare: 2fde721d06a6f83ff5c7578e6a91b190d341ac6a
   IONFilesystemLib: 21a63377696b2d8fab5632ecfb7d2ac67bddb68a
-  UnisimSdk: 7240df88217bf068fb471b690e89313f99889033
+  UnisimSdk: 674a6950776b97a6cd6bc3b5b30c92f457b21f49
 
 PODFILE CHECKSUM: 3e442d835f737950aabc16e129ae1fed9d56a4f4
 

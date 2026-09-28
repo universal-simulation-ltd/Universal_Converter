@@ -10,6 +10,7 @@ import ConverterApp from './components/converter/ConverterApp'
 import { CONTAINER } from './lib/layout'
 import { useConverterStore } from './stores/converterStore'
 import { useThemeStore } from './stores/themeStore'
+import { useSystemBarsStyle } from './lib/systemBars'
 import { KNOWLEDGE_BASE } from './knowledge'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_Converter'
@@ -43,6 +44,8 @@ export default function App() {
   // The RESOLVED theme ('system' already turned into light or dark) — what the
   // SDK's inline-styled chrome needs, since it cannot read the `.dark` class.
   const theme = useThemeStore((s) => s.effective)
+  // The native status-bar glyphs follow it wherever the page is under them.
+  useSystemBarsStyle(theme)
   const running = useConverterStore((s) => s.running)
   const resetSettings = useConverterStore((s) => s.resetSettings)
 
@@ -88,7 +91,9 @@ export default function App() {
         <ConverterApp />
       </main>
 
-      <footer className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      {/* pb-[env(safe-area-inset-bottom)] keeps the last line of the page off
+          the home indicator / gesture bar in the native build; 0 everywhere else. */}
+      <footer className="border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-slate-800 dark:bg-slate-900">
         <div className={`${CONTAINER} py-4 flex flex-row items-center gap-3 sm:gap-4 text-xs text-slate-500 dark:text-slate-400`}>
           <span>
             With{' '}
