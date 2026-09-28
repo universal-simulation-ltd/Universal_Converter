@@ -27,19 +27,6 @@ const ABOUT: AboutAppConfig = {
   noticesHref: 'https://github.com/universal-simulation-ltd/Universal_Converter/blob/main/THIRD-PARTY-NOTICES.md',
 }
 
-// <UpdateNotice> is inline-styled amber, so it cannot answer the `.dark` class.
-// Its `style` spreads over the defaults, so in dark this swaps the pale card for
-// a wash; `accent` lifts the Reload button to orange-400, under the SDK's ink
-// text (BRAND.onOrange). Light passes nothing and renders exactly as before.
-const UPDATE_NOTICE_DARK = {
-  style: {
-    background: 'rgba(245,158,11,0.10)',
-    border: '1px solid rgba(245,158,11,0.35)',
-    color: '#fde68a',
-  },
-  accent: '#fb923c',
-}
-
 export default function App() {
   // The RESOLVED theme ('system' already turned into light or dark) — what the
   // SDK's inline-styled chrome needs, since it cannot read the `.dark` class.
@@ -84,7 +71,7 @@ export default function App() {
           See the SDK's useAppUpdate: an autoUpdate PWA hands the new worker
           control but leaves the running page on its old JavaScript. */}
       <div className={`${CONTAINER} pt-4 empty:hidden`}>
-        <UpdateNotice {...(theme === 'dark' ? UPDATE_NOTICE_DARK : {})} />
+        <UpdateNotice />
       </div>
 
       <main className="flex-1">

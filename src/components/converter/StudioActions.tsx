@@ -2,7 +2,6 @@ import { DropAnywhere, DropRing, useFileDrop, ValueChip } from '@unisim/sdk'
 import { DROP_COPY } from '../../lib/formats'
 import { canPickSaveLocation } from '../../lib/download'
 import { formatBytes } from '../../lib/humanise'
-import { useRingColours } from '../../lib/ringTheme'
 import { kindTotals, savingPercent, useConverterStore } from '../../stores/converterStore'
 import type { MediaKind } from '../../lib/types'
 
@@ -69,7 +68,6 @@ function StudioCircle({ kind }: { kind: MediaKind }) {
     pageWide: true,
     folders: true,
   })
-  const ring = useRingColours(drop.over)
 
   // While a run is going the ring tracks it; once everything has finished it
   // stays full, so a completed batch reads as complete rather than snapping
@@ -95,7 +93,6 @@ function StudioCircle({ kind }: { kind: MediaKind }) {
         <DropRing
           size="100%"
           over={drop.over}
-          {...ring}
           motion={running ? 'busy' : 'still'}
           fill={fill}
           watermark={false}

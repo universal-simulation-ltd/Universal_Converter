@@ -3,7 +3,6 @@ import ChooseFolder from '../converter/ChooseFolder'
 import SkippedNote from '../converter/SkippedNote'
 import type { DropOutcome } from '../../stores/converterStore'
 import { CONTAINER } from '../../lib/layout'
-import { useRingColours } from '../../lib/ringTheme'
 import { useThemeStore } from '../../stores/themeStore'
 import {
   ALL_ACCEPT, AUDIO_INPUT_EXTS, DOCUMENT_INPUT_EXTS, IMAGE_INPUT_EXTS, VIDEO_INPUT_EXTS,
@@ -46,7 +45,6 @@ export default function LandingPage({
     pageWide: true,
     folders: true,
   })
-  const ring = useRingColours(drop.over)
   // Resolved, for the SDK's inline-styled PrivacyNote — it cannot read `.dark`.
   const theme = useThemeStore((s) => s.effective)
 
@@ -87,7 +85,7 @@ export default function LandingPage({
                   drop.over ? 'scale-[1.02]' : ''
                 }`}
               >
-                <DropRing size="100%" over={drop.over} motion="idle" watermark={<AnyFileWatermark />} {...ring}>
+                <DropRing size="100%" over={drop.over} motion="idle" watermark={<AnyFileWatermark />}>
                   <svg
                     viewBox="0 0 24 24"
                     className={`mb-1 h-9 w-9 ${drop.over ? 'text-orange-500' : 'text-slate-400'}`}

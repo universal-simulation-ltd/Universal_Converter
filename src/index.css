@@ -55,21 +55,6 @@ body {
 }
 .row-settle { animation: row-settle 420ms cubic-bezier(0.22, 1, 0.36, 1); }
 
-/* ---------- The drop ring, in dark ---------- */
-
-/* The SDK's <DropRing> paints its interior as a white SVG disc (orange-50
-   while something is dragged over it). A CSS `fill` beats an SVG presentation
-   attribute, so dark repaints the disc to the card it sits in. The class only
-   exists in dark — see lib/ringTheme.ts — so light is the SDK's own pixels.
-   ⚠️ `circle:first-of-type` IS the disc: the ring's SVG is defs, disc, then the
-   pills and the progress arc. */
-.dark .cnv-ring > svg > circle:first-of-type {
-  fill: #0f172a;
-}
-.dark .cnv-ring-over > svg > circle:first-of-type {
-  fill: rgba(254, 140, 1, 0.12);
-}
-
 /* ---------- Landing illustration ---------- */
 
 /* Every part is a window on the single `--t` that ConverterIllustration.tsx

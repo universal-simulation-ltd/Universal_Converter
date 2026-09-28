@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
 import { CONTAINER } from '../../lib/layout'
-import { useRingColours } from '../../lib/ringTheme'
 import { ALL_ACCEPT } from '../../lib/formats'
 import { KINDS, useConverterStore } from '../../stores/converterStore'
 import type { MediaKind } from '../../lib/types'
@@ -63,7 +62,6 @@ export default function AllStudio() {
     pageWide: true,
     folders: true,
   })
-  const ring = useRingColours(drop.over)
 
   const waiting = Object.fromEntries(
     KINDS.map((kind) => [kind, items.filter((i) => i.kind === kind).length]),
@@ -93,7 +91,7 @@ export default function AllStudio() {
                 screen replaces the moment anything is queued — by the time you
                 are here the circle has something, so "alive and waiting" is no
                 longer the true sentence. */}
-            <DropRing size="100%" over={drop.over} motion="still" watermark={<AnyFileWatermark />} {...ring}>
+            <DropRing size="100%" over={drop.over} motion="still" watermark={<AnyFileWatermark />}>
               <SortedCentre waiting={waiting} total={total} />
             </DropRing>
           </div>
