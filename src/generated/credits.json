@@ -1,8 +1,8 @@
 {
   "app": "universal-converter",
   "appVersion": "0.1.0",
-  "generated": "2026-09-08",
-  "noticesCount": 110,
+  "generated": "2026-09-28",
+  "noticesCount": 115,
   "ships": [
     {
       "name": "@breezystack/lamejs",
