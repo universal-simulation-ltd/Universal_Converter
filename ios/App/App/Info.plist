@@ -12,8 +12,12 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<!-- The app's name wherever iOS names it in a system prompt — "“Universal Converter”
+	     Wants to Use … to Sign In" among them. Left as $(PRODUCT_NAME) it read
+	     "App", the Xcode target's name. Kept equal to CFBundleDisplayName (the
+	     home-screen name). -->
 	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
+	<string>Universal Converter</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -26,6 +30,40 @@
 	<string>Universal Converter uses the camera only if you choose to take a photo to convert. Conversion happens on your device and nothing is uploaded.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Universal Converter saves converted files to your photo library when you choose to.</string>
+	<!-- ⚠️ THE APP DOES NOT LAUNCH WITHOUT THIS once it is built against the
+	     iOS 27 SDK. iOS terminates an app built against that SDK that still
+	     uses the old app-delegate window life cycle, before any of our code
+	     runs — "UIScene life cycle is required for apps built with this SDK" in
+	     the device log and nothing on screen.
+
+	     The manifest is only half of it: the runtime also checks that the app
+	     delegate answers application(_:configurationForConnecting:options:).
+	     Both halves, plus SceneDelegate.swift itself, are checked by
+	     `npm run check:ios-launch`.
+
+	     Capacitor adopted scenes in 8.5 and this app is on an earlier version,
+	     so the three pieces are written out by hand (ported from Universal PDF).
+	     There is deliberately NO UISceneStoryboardFile: SceneDelegate builds the
+	     window and its bridge view controller itself (it has to, to load the
+	     bridge before forwarding a launch link). Naming Main here as well would
+	     have UIKit build a second window and bridge from the storyboard. -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
