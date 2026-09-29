@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useFileDrop } from '@unisim/sdk'
 import { LARGE_FILE_BYTES } from '../../lib/convert'
 import { DROP_COPY } from '../../lib/formats'
@@ -5,15 +6,29 @@ import { formatBytes } from '../../lib/humanise'
 import { useConverterStore } from '../../stores/converterStore'
 import type { MediaKind, QueueItem } from '../../lib/types'
 
+/**
+ * A long queue shows its first few rows and a "View all" under them (James,
+ * 2026-09-29: five albums dropped as folders made a page of hundreds of rows).
+ * Only past `COLLAPSE_OVER`, so a short list never hides one or two rows behind
+ * a button that would show barely more than it hides.
+ */
+const COLLAPSE_OVER = 10
+const COLLAPSED_ROWS = 8
+
 export default function FileQueue({ kind, targetExt }: { kind: MediaKind; targetExt: string }) {
   // Filter after selecting — see the note in StudioShell.
   const items = useConverterStore((s) => s.items).filter((i) => i.kind === kind)
   const running = useConverterStore((s) => s.running)
   const removeItem = useConverterStore((s) => s.removeItem)
   const downloadItem = useConverterStore((s) => s.downloadItem)
+  const [expanded, setExpanded] = useState(false)
 
   const totalBytes = items.reduce((sum, i) => sum + i.file.size, 0)
   const doneCount = items.filter((i) => i.status === 'done').length
+  // The store converts one file at a time, so there is at most one.
+  const current = items.find((i) => i.status === 'converting')
+  const collapsible = items.length > COLLAPSE_OVER
+  const shown = collapsible && !expanded ? items.slice(0, COLLAPSED_ROWS) : items
 
   return (
     <div>
@@ -26,6 +41,25 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
         </span>
       </div>
 
+      {/* Which file the run is on. With the list collapsed the converting row
+          is usually out of sight, and even expanded it can be a long scroll
+          down — this says it without either. */}
+      {current && (
+        <div
+          className="flex items-center gap-2 border-b border-slate-200 bg-orange-50/60 px-4 py-2.5 text-[12px] dark:border-slate-800 dark:bg-orange-950/20"
+          aria-live="polite"
+        >
+          <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-orange-500" aria-hidden="true" />
+          <span className="shrink-0 font-semibold text-slate-600 dark:text-slate-300">Currently converting:</span>
+          <span className="min-w-0 truncate font-semibold text-slate-900 dark:text-slate-100" title={current.folder + current.file.name}>
+            {current.file.name}
+          </span>
+          <span className="ml-auto shrink-0 font-mono text-[11px] text-slate-500 dark:text-slate-400">
+            {Math.round(current.progress * 100)}%
+          </span>
+        </div>
+      )}
+
       <AddMore kind={kind} />
 
       <div className="grid grid-cols-[26px_minmax(0,1fr)_112px_72px_136px] gap-3 bg-slate-50 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 max-sm:hidden dark:bg-slate-800/60">
@@ -37,7 +71,7 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
       </div>
 
       <ul>
-        {items.map((item) => (
+        {shown.map((item) => (
           <Row
             key={item.id}
             item={item}
@@ -48,6 +82,19 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
           />
         ))}
       </ul>
+
+      {collapsible && (
+        <div className="border-t border-slate-200 px-4 py-2.5 dark:border-slate-800">
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            className="w-full rounded-lg px-3 py-2 text-[12px] font-semibold text-orange-800 hover:bg-orange-50 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 dark:text-orange-300 dark:hover:bg-orange-950/40"
+          >
+            {expanded ? 'Show fewer' : `View all ${items.length} files (${items.length - COLLAPSED_ROWS} more)`}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
