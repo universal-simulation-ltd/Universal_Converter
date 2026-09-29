@@ -15,11 +15,11 @@
          bar and the camera cutout instead of drawing edge-to-edge, and those
          strips show the WINDOW background. DayNight takes that background and
          the status-bar icon colour from the SYSTEM theme, so without these a
-         phone in dark mode
-         would get a near-black strip with white icons above Universal Converter's light
-         navbar. Pinned light to match the app's default theme; see colors.xml
-         for what that means when the app is set to Dark. (Until Capacitor 8 this
-         was the other half of `android.adjustMarginsForEdgeToEdge: 'auto'`,
+         phone in dark mode would get a near-black strip with white icons above
+         the app's light navbar. Pinned light to match the app's default theme;
+         when the app itself is set to Dark, WindowThemePlugin lays
+         WindowStrip.Dark (below) over this at run time. (Until Capacitor 8
+         this was the other half of `android.adjustMarginsForEdgeToEdge: 'auto'`,
          which 8 removed.) -->
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
@@ -30,6 +30,19 @@
         <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
     </style>
 
+
+    <!-- Theme overlays WindowThemePlugin applies over AppTheme.NoActionBar when
+         the app's own theme changes. Only the window background: SystemBars
+         repaints the strips from it on every style change and configuration
+         change, so the colour has to live in the theme, not on the view. The
+         glyphs are set through SystemBars from src/lib/systemBars.ts. -->
+    <style name="WindowStrip.Light" parent="">
+        <item name="android:windowBackground">@color/unisimWindowBackground</item>
+    </style>
+
+    <style name="WindowStrip.Dark" parent="">
+        <item name="android:windowBackground">@color/unisimWindowBackgroundDark</item>
+    </style>
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>

@@ -31,7 +31,7 @@ export default function App() {
   // The RESOLVED theme ('system' already turned into light or dark) — what the
   // SDK's inline-styled chrome needs, since it cannot read the `.dark` class.
   const theme = useThemeStore((s) => s.effective)
-  // The native status-bar glyphs follow it wherever the page is under them.
+  // The native status bar (its strip on Android, and the glyphs) follows it.
   useSystemBarsStyle(theme)
   const running = useConverterStore((s) => s.running)
   const resetSettings = useConverterStore((s) => s.resetSettings)

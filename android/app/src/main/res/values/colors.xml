@@ -4,16 +4,15 @@
      It shows where Capacitor 8's SystemBars (capacitor.config.ts) insets the
      web view by the status-bar, navigation-bar and camera-cutout margins,
      which it does on a WebView older than Chromium 140; those strips show the
-     WINDOW's background, not the page's. White, to match Universal Converter's navbar in
-     its default light theme.
+     WINDOW's background, not the page's. On a WebView from Chromium 140 there
+     is no strip: the page is drawn under the bars and pads itself by
+     env(safe-area-inset-*).
 
-     ⚠️ It does NOT follow the app's own Dark setting: pick Dark and the strips
-     stay white above a dark bar (so the status-bar glyphs stay dark there;
-     see src/lib/systemBars.ts). Android 15 ignores a status-bar colour set at
-     run time. On a WebView from Chromium 140 there is no strip: the page is
-     drawn under the bars and pads itself by env(safe-area-inset-*). A white
-     band is still far better than the bar it replaced, which sat under the
-     clock. -->
+     Two colours, one per app theme: the navbar's `surface` in @unisim/sdk's
+     BAR table (and the footer's). The light one is the theme's own (the app's
+     default); WindowThemePlugin switches to the dark one when the app is set
+     to Dark, or to Match my device on a phone in dark mode. -->
 <resources>
     <color name="unisimWindowBackground">#ffffff</color>
+    <color name="unisimWindowBackgroundDark">#0f172a</color>
 </resources>
