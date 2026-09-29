@@ -25,6 +25,7 @@ import {
 } from '../lib/types'
 import { createZip } from '@unisim/media'
 import { relativeFolderOf } from '@unisim/sdk'
+import { inFolderOrder } from '../lib/folderOrder'
 import { archiveEntries, archiveName, type Finished } from '../lib/archive'
 
 // `TabId` and the rule for where a drop leaves you both live in `lib/routing`,
@@ -364,7 +365,9 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
     }
   },
 
-  addDropped: (files, on) => {
+  addDropped: (dropped, on) => {
+    // A picked folder arrives in disk order — see `inFolderOrder`.
+    const files = inFolderOrder(dropped)
     // Read BEFORE anything is queued: "was the queue empty when they dropped
     // this?" is the question rule 1 in `tabAfterDrop` asks, and one `addFiles`
     // call from now the answer is always "no".

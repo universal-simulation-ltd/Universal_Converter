@@ -26,6 +26,7 @@ import { encodeMp3 } from '../src/lib/mp3.ts'
 import { targetSize } from '../src/lib/resize.ts'
 import { tabAfterDrop } from '../src/lib/routing.ts'
 import { archiveEntries, archiveName } from '../src/lib/archive.ts'
+import { inFolderOrder } from '../src/lib/folderOrder.ts'
 import { heicByName, heicFromBytes } from '../src/lib/heicSniff.ts'
 import { parseClock } from '@unisim/media'
 import { createZip, crc32 } from '@unisim/media'
@@ -890,6 +891,27 @@ function ascii(view, offset, length) {
   assert.deepEqual(listed, names)
 
   console.log('✓ archive — folders kept, clashes numbered, named after the folder')
+}
+
+// ── folder order ─────────────────────────────────────────────────────────────
+{
+  const f = (p) => ({ webkitRelativePath: p })
+  const order = (paths) => inFolderOrder(paths.map(f)).map((x) => x.webkitRelativePath)
+  // A picked album, in the disk order that asked for this.
+  assert.deepEqual(order(['A/01.mp3', 'A/14.mp3', 'A/08.mp3', 'A/2.mp3']), ['A/01.mp3', 'A/2.mp3', 'A/08.mp3', 'A/14.mp3'])
+  // Segment by segment, as the SDK's drag walk sorts: "Day 1/" before "Day 10/",
+  // and a folder's own files are compared by name alongside its subfolders.
+  assert.deepEqual(
+    order(['T/Day 10/a.jpg', 'T/b.jpg', 'T/Day 1/z.jpg', 'T/Day 1/a.jpg', 'T/a.jpg']),
+    ['T/a.jpg', 'T/b.jpg', 'T/Day 1/a.jpg', 'T/Day 1/z.jpg', 'T/Day 10/a.jpg'],
+  )
+  // Several folders at once come back grouped, each in order.
+  assert.deepEqual(order(['B/2.mp3', 'A/1.mp3', 'B/1.mp3']), ['A/1.mp3', 'B/1.mp3', 'B/2.mp3'])
+  // Loose files, or loose files mixed with a folder, keep the order dropped.
+  assert.deepEqual(order(['z.jpg', 'a.jpg']), ['z.jpg', 'a.jpg'])
+  assert.deepEqual(order(['z.jpg', 'A/b.jpg', 'A/a.jpg']), ['z.jpg', 'A/b.jpg', 'A/a.jpg'])
+  assert.deepEqual(inFolderOrder([{}, {}]).length, 2)
+  console.log('✓ folder order — a picked folder lists as a file manager does')
 }
 
 console.log(skipped > 0

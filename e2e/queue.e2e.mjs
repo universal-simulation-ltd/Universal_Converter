@@ -141,6 +141,8 @@ try {
   const rows = page.locator('li', { hasText: 'Track.wav' })
   await rows.first().waitFor({ timeout: 10000 })
   check('eight rows shown of fifteen', (await rows.count()) === 8, String(await rows.count()))
+  const firstNames = (await rows.allInnerTexts()).map((t) => t.match(/(\d\d) - Track\.wav/)?.[1]).join(' ')
+  check('the picked folder lists in name order, not disk order', firstNames === '01 02 03 04 05 06 07 08', firstNames)
   const more = page.getByRole('button', { name: `View all ${FILES} files (${FILES - 8} more)` })
   check('"View all" names the total and what it hides', await more.isVisible())
   check('no "Currently converting" before a run', (await page.getByText('Currently converting:').count()) === 0)
