@@ -24,7 +24,7 @@ import {
   type VideoTarget,
 } from '../lib/types'
 import { createZip } from '@unisim/media'
-import { relativeFolderOf } from '@unisim/sdk'
+import { readDefaultView, relativeFolderOf } from '@unisim/sdk'
 import { inFolderOrder } from '../lib/folderOrder'
 import { archiveEntries, archiveName, type Finished } from '../lib/archive'
 
@@ -273,10 +273,26 @@ function rearmed(state: ConverterState, kind: MediaKind): QueueItem[] {
   )
 }
 
+/** The top tabs, in order — also the views the "Opens on" default may name. */
+export const TABS: readonly TabId[] = ['all', 'audio', 'image', 'video', 'document']
+
+/**
+ * The tab the app opens on: `all` unless the person double-tapped another
+ * (James, 2026-09-30: "allow the user to double click the button to set that as
+ * their default view"). Read once, at start-up — a drop still moves you with
+ * `tabAfterDrop`; the default only decides where a fresh visit lands. The SDK
+ * owns the key, and its Reset to defaults clears it.
+ */
+function openingTab(): TabId {
+  const stored = readDefaultView('converter', 'tab')
+  return stored && (TABS as readonly string[]).includes(stored) ? (stored as TabId) : 'all'
+}
+
 export const useConverterStore = create<ConverterState>((set, get) => ({
   // The front door, not a converter: somebody arriving does not yet know
-  // which of the four they need, and this tab is the one that answers that.
-  tab: 'all',
+  // which of the four they need, and this tab is the one that answers that —
+  // unless they have chosen another to open on (`openingTab`).
+  tab: openingTab(),
   items: [],
   audio: DEFAULT_AUDIO_SETTINGS,
   image: DEFAULT_IMAGE_SETTINGS,

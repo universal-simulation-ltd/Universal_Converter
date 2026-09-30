@@ -1,4 +1,4 @@
-import { UniversalAppsNavBar, UpdateNotice, type AboutAppConfig } from '@unisim/sdk'
+import { DefaultViewSelect, UniversalAppsNavBar, UpdateNotice, type AboutAppConfig } from '@unisim/sdk'
 // Generated — `npm run credits` after any dependency change. Never edit it by
 // hand: it is read off the installed tree, so a hand-kept list drifts from the
 // lockfile the first time anyone upgrades anything, and a credits list naming a
@@ -61,9 +61,26 @@ export default function App() {
         // articles, bundled from ./knowledge so they read offline.
         knowledgeBase={KNOWLEDGE_BASE}
         about={ABOUT}
+        // The tab the app opens on — the twin of double-tapping a tab, for
+        // anybody who cannot double-tap (James, 2026-09-30).
+        appPreferences={
+          <DefaultViewSelect
+            id="tab"
+            label="Opens on"
+            fallback="all"
+            views={[
+              { value: 'all', label: 'All' },
+              { value: 'audio', label: 'Audio' },
+              { value: 'image', label: 'Images' },
+              { value: 'video', label: 'Video' },
+              { value: 'document', label: 'Files' },
+            ]}
+          />
+        }
         // "Reset to defaults" (the output settings) at the foot of Tune this
-        // app. Withheld mid-conversion, as the old actions-menu row was
-        // disabled then: swapping settings under a running batch re-arms items.
+        // app. The SDK's half of it forgets the "Opens on" tab by itself.
+        // Withheld mid-conversion, as the old actions-menu row was disabled
+        // then: swapping settings under a running batch re-arms items.
         onResetDefaults={running ? undefined : resetSettings}
       />
 
