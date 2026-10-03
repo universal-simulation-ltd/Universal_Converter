@@ -162,9 +162,17 @@ function readOggOpusTags(bytes: Uint8Array): Tags {
  */
 function readMp4Tags(bytes: Uint8Array): Tags {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  // ⚠️ Only inside `moov`, found by hopping the top-level boxes. The scan used
+  // to run byte by byte from the start of the file, building a string at
+  // every offset — a video with no `ilst` (most phone clips) froze the tab for
+  // seconds before its soundtrack was even decoded. `moov` is often at the END
+  // of a camera file, so a fixed-size head scan would miss it.
+  const moov = findTopLevelBox(bytes, view, 'moov')
+  if (!moov) return {}
   let ilst = -1
-  for (let at = 0; at + 8 <= bytes.length; at++) {
-    if (ascii(bytes, at, 4) === 'ilst') {
+  for (let at = moov.start; at + 4 <= moov.end; at++) {
+    // 'ilst', compared as bytes.
+    if (bytes[at] === 0x69 && bytes[at + 1] === 0x6c && bytes[at + 2] === 0x73 && bytes[at + 3] === 0x74) {
       ilst = at + 4
       break
     }
@@ -252,4 +260,28 @@ export function vorbisComments(tags: Tags): string[] {
   if (tags.artist) out.push(`ARTIST=${tags.artist}`)
   if (tags.album) out.push(`ALBUM=${tags.album}`)
   return out
+}
+
+/** A top-level ISO-BMFF box's payload range, or null. Handles 64-bit and to-end sizes. */
+function findTopLevelBox(
+  bytes: Uint8Array,
+  view: DataView,
+  type: string,
+): { start: number; end: number } | null {
+  let at = 0
+  while (at + 8 <= bytes.length) {
+    let size = view.getUint32(at)
+    let header = 8
+    if (size === 1) {
+      if (at + 16 > bytes.length) return null
+      size = Number(view.getBigUint64(at + 8))
+      header = 16
+    } else if (size === 0) {
+      size = bytes.length - at
+    }
+    if (size < header) return null
+    if (ascii(bytes, at + 4, 4) === type) return { start: at + header, end: Math.min(bytes.length, at + size) }
+    at += size
+  }
+  return null
 }

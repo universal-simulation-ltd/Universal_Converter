@@ -162,11 +162,12 @@ function forgetSample(id: string): void {
  * once when the file was added, and this only re-encodes a 224px tile. That is
  * what makes it affordable to run on every quality nudge and format click.
  */
-async function refreshEstimates(): Promise<void> {
+async function refreshEstimates(onlyId?: string): Promise<void> {
   const store = useConverterStore.getState()
   const settings = store.image
   for (const item of store.items) {
     if (item.kind !== 'image') continue
+    if (onlyId !== undefined && item.id !== onlyId) continue
     const sample = samples.get(item.id)
     if (!sample) continue
     let estimate: number | null = null
@@ -246,7 +247,10 @@ async function sampleAdded(items: QueueItem[]): Promise<void> {
       // what gets to say so, with the decoder's own words.
       continue
     }
-    await refreshEstimates()
+    // Just this row. Re-pricing EVERY image after each new one made a
+    // 100-photo drop cost ~5,000 tile encodes and as many store writes; the
+    // settings haven't changed, so the earlier rows' numbers still stand.
+    await refreshEstimates(item.id)
   }
 }
 

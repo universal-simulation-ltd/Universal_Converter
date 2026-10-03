@@ -296,7 +296,19 @@ async function eachSampledFrame(
     // decoder is kept on a short lead however much RAM is going spare.
     if (decoder.decodeQueueSize > 12) {
       await new Promise<void>((resolve) => {
-        decoder.addEventListener('dequeue', () => resolve(), { once: true })
+        // ⚠️ A codec that errors and closes may never dequeue again, and a
+        // wait parked on that event alone would hang the whole queue with
+        // the real error unread. So also look, four times a second, for the
+        // error or the close (Docs landmines: "A dead codec sends no more
+        // events").
+        const finish = () => {
+          clearInterval(watch)
+          resolve()
+        }
+        const watch = setInterval(() => {
+          if (failure || decoder.state === 'closed' || decoder.decodeQueueSize <= 12) finish()
+        }, 250)
+        decoder.addEventListener('dequeue', finish, { once: true })
       })
     }
   }

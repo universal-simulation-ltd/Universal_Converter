@@ -9,7 +9,7 @@ import { formatDuration } from './humanise'
  * shows size only.
  */
 export function probeDuration(file: File): Promise<number | null> {
-  return new Promise((resolve) => {
+  return queued(() => new Promise((resolve) => {
     const url = URL.createObjectURL(file)
     const audio = new Audio()
     let settled = false
@@ -18,6 +18,7 @@ export function probeDuration(file: File): Promise<number | null> {
       if (settled) return
       settled = true
       clearTimeout(timer)
+      release(audio)
       URL.revokeObjectURL(url)
       resolve(value)
     }
@@ -33,7 +34,7 @@ export function probeDuration(file: File): Promise<number | null> {
 
     audio.preload = 'metadata'
     audio.src = url
-  })
+  }))
 }
 
 /**
@@ -42,7 +43,7 @@ export function probeDuration(file: File): Promise<number | null> {
  * the browser can't read it, and the row still converts.
  */
 export function probeVideo(file: File): Promise<string | null> {
-  return new Promise((resolve) => {
+  return queued(() => new Promise((resolve) => {
     const url = URL.createObjectURL(file)
     const video = document.createElement('video')
     let settled = false
@@ -51,6 +52,7 @@ export function probeVideo(file: File): Promise<string | null> {
       if (settled) return
       settled = true
       clearTimeout(timer)
+      release(video)
       URL.revokeObjectURL(url)
       resolve(value)
     }
@@ -67,5 +69,40 @@ export function probeVideo(file: File): Promise<string | null> {
 
     video.preload = 'metadata'
     video.src = url
+  }))
+}
+
+/**
+ * Revoking the blob URL does not make a media element let go of what it opened;
+ * dropping its source and reloading does.
+ */
+function release(el: HTMLMediaElement) {
+  el.removeAttribute('src')
+  el.load()
+}
+
+/**
+ * At most this many probes at once. Browsers cap live media players (Chrome
+ * at a few dozen), and a dropped album folder of 300 tracks started them all
+ * together: most waited for a player, hit the 5 s timeout and showed no
+ * duration. Queued, each one's clock only starts when it really runs.
+ */
+const MAX_PROBES = 4
+let active = 0
+const waiting: (() => void)[] = []
+
+function queued<T>(run: () => Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const start = () => {
+      active++
+      run()
+        .then(resolve, reject)
+        .finally(() => {
+          active--
+          waiting.shift()?.()
+        })
+    }
+    if (active < MAX_PROBES) start()
+    else waiting.push(start)
   })
 }

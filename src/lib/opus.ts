@@ -110,7 +110,16 @@ export async function encodeOpus(
     // Let the encoder drain rather than queueing the whole file at once.
     if (encoder.encodeQueueSize > 24) {
       await new Promise<void>((resolve) => {
-        encoder.addEventListener('dequeue', () => resolve(), { once: true })
+        // A dead codec sends no more events: watch for the error or the close
+        // as well, or a failed encode waits on 'dequeue' forever.
+        const finish = () => {
+          clearInterval(watch)
+          resolve()
+        }
+        const watch = setInterval(() => {
+          if (encoderError || encoder.state === 'closed' || encoder.encodeQueueSize <= 24) finish()
+        }, 250)
+        encoder.addEventListener('dequeue', finish, { once: true })
       })
     }
   }

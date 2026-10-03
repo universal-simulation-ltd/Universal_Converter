@@ -114,6 +114,7 @@ export async function encodeFlac(
     if (status !== 0) throw new Error(`The FLAC encoder wouldn’t start (status ${status})`)
 
     const interleaved = new Int32Array(CHUNK * numberOfChannels)
+    let lastYield = performance.now()
     for (let offset = 0; offset < totalFrames; offset += CHUNK) {
       const count = Math.min(CHUNK, totalFrames - offset)
       for (let i = 0; i < count; i++) {
@@ -126,8 +127,14 @@ export async function encodeFlac(
         throw new Error(`FLAC encoding failed (encoder state ${Flac.FLAC__stream_encoder_get_state(encoder)})`)
       }
       onProgress((offset + count) / totalFrames)
-      // Yield so the progress bar repaints on long files.
-      await Promise.resolve()
+      // Yield so the progress bar repaints on long files. ⚠️ A TASK, not a
+      // microtask: `await Promise.resolve()` resumes before the browser can
+      // paint or handle input, so the bar used to sit still until the end.
+      // Every ~50 ms rather than every chunk, which costs next to nothing.
+      if (performance.now() - lastYield > 50) {
+        await new Promise((resolve) => setTimeout(resolve, 0))
+        lastYield = performance.now()
+      }
     }
 
     Flac.FLAC__stream_encoder_finish(encoder)
