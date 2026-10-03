@@ -1,7 +1,8 @@
-import { ColourCube, GifWriter, MAX_COLOURS, PaletteMap, quantiseFrame, ALPHA_THRESHOLD } from './gif'
-import { decodeGif, readGifInfo } from './gifdecode'
+import { ColourCube, GifWriter, PaletteMap, quantiseFrame } from './gif'
+import { readGifInfo } from './gifdecode'
+import { encodeAnimatedGif, paletteSize } from './gifanim'
+import GifAnimWorker from './gifanim.worker?worker'
 import { withExtension } from './humanise'
-import { targetSize } from './resize'
 import type { ConvertedFile, ImageSettings } from './types'
 
 /**
@@ -37,84 +38,14 @@ export async function convertAnimatedGif(
   const info = readGifInfo(bytes)
   if (!info || info.frames < 2) return null
 
-  const { width, height } = targetSize(info.width, info.height, settings.maxEdge)
-
-  // ── Pass one: the palette, and how the frames relate to one another ────────
-  //
-  // Two passes over the file rather than one, and the reason is memory: the
-  // palette is chosen from the WHOLE animation (a per-frame palette makes the
-  // picture shimmer and costs 768 bytes a frame), so nothing can be written
-  // until every frame has been seen. Holding them instead of re-reading them is
-  // 44 MB of live pixels for a 90-frame 640×360 GIF and near a gigabyte for a
-  // long one. Decoding is cheap; keeping is not. Same shape as `videogif.ts`,
-  // which decodes its clip twice for exactly this reason.
-  //
-  // ⚠️ The histogram is built from frames at their ORIGINAL size, before any
-  // downscale. Scaling blends new intermediate colours into the edges that the
-  // histogram then hasn't seen — but they land in the same 5-5-5 bins as the
-  // colours they were blended from, so median cut still spends the palette in
-  // the right places and `PaletteMap` finds each blend its nearest entry.
-  const cube = new ColourCube()
-  const delays: number[] = []
-  let previousAlpha: Uint8Array | null = null
-  let erases = false
-  let transparent = false
-
-  decodeGif(bytes, (frame) => {
-    delays.push(frame.delayCs)
-    cube.addFrame(frame.rgba)
-
-    // Does anything ever get RUBBED OUT? A pixel that was opaque and becomes
-    // transparent cannot be expressed by differencing, which can only add — see
-    // the two-modes note on `GifWriter`. One such pixel anywhere in the file
-    // decides how all of it is written, so this is asked once, here, rather
-    // than guessed at.
-    const alpha = new Uint8Array(frame.rgba.length / 4)
-    for (let i = 0, p = 3; i < alpha.length; i++, p += 4) {
-      const on = frame.rgba[p] >= ALPHA_THRESHOLD ? 1 : 0
-      alpha[i] = on
-      if (!on) transparent = true
-      if (!erases && previousAlpha && previousAlpha[i] === 1 && on === 0) erases = true
-    }
-    previousAlpha = alpha
-
-    onProgress(0.45 * ((frame.index + 1) / info.frames))
-  })
-
-  // ⚠️ The one repaint in the whole job. Both passes are synchronous — the
-  // decoder hands frames to a plain callback, which is what lets it be a leaf
-  // module the self-test can drive in Node — so the progress bar cannot move
-  // while either is running, and the tab looks hung rather than busy. Yielding
-  // here at least gets "45%" onto the screen before the second pass starts.
-  await new Promise((resolve) => setTimeout(resolve, 0))
-
-  const colours = cube.palette(paletteSize(settings.quality))
-  const map = new PaletteMap(colours)
-
-  // A source with no transparency at all can always be differenced; one that
-  // only ever ADDS transparent area can too. Only rubbing out forces full
-  // frames.
-  const mode = transparent && erases ? 'full' : 'diff'
-
-  // ── Pass two: quantise and write ──────────────────────────────────────────
-  //
-  // `info.loop` is carried across rather than defaulted: a GIF that was
-  // authored to play once must not come back looping forever, and 0 — the
-  // commonest value — means forever and is falsy, so it is passed as a number.
-  const writer = new GifWriter(width, height, colours, info.loop ?? false, mode)
-  const scale =
-    width === info.width && height === info.height
-      ? null
-      : makeScaler(info.width, info.height, width, height)
-
-  decodeGif(bytes, (frame) => {
-    const pixels = scale ? scale(frame.rgba) : frame.rgba
-    writer.addFrame(quantiseFrame(pixels, width, height, map, settings.dither), delays[frame.index])
-    onProgress(0.45 + 0.55 * ((frame.index + 1) / info.frames))
-  })
-
+  // In a worker where the browser can give one a canvas, so a long animation
+  // no longer freezes the tab (both passes are tight loops over every pixel of
+  // every frame); on the main thread otherwise, exactly as before.
+  const parts =
+    (await encodeInWorker(bytes, settings, onProgress)) ??
+    (await encodeAnimatedGif(bytes, info, settings, onProgress))
   onProgress(1)
-  return { blob: blobOf(writer), name: withExtension(file.name, 'gif') }
+  return { blob: new Blob(parts as BlobPart[], { type: 'image/gif' }), name: withExtension(file.name, 'gif') }
 }
 
 /**
@@ -153,60 +84,74 @@ export async function probeGifFrames(file: File): Promise<number | null> {
   }
 }
 
-/**
- * How many colours the quality control is asking for.
- *
- * The three stops are 0.6 / 0.82 / 0.95, so this is 153 / 209 / 242 of the 255
- * the format allows. Floored at 32, because below that the picture stops being
- * the picture and a palette that small saves very little anyway — LZW is
- * compressing runs of indices, and it is the runs that matter, not how wide
- * each index is.
- */
-function paletteSize(quality: number): number {
-  return Math.max(32, Math.min(MAX_COLOURS, Math.round(quality * MAX_COLOURS)))
-}
 
 function blobOf(writer: GifWriter): Blob {
   return new Blob(writer.finish() as BlobPart[], { type: 'image/gif' })
 }
 
+/** Messages the worker posts back. */
+export type GifAnimReply =
+  | { type: 'progress'; fraction: number }
+  | { type: 'done'; parts: Uint8Array[] }
+  | { type: 'error'; message: string }
+
 /**
- * A reusable full-size → output-size scaler.
- *
- * Two canvases, made once and reused for every frame: `putImageData` ignores
- * transforms, so the pixels have to land on a canvas at their own size before
- * anything can draw them smaller. A pair per frame is how a 500-frame GIF
- * allocates a thousand canvases and the tab dies.
- *
- * ⚠️ `clearRect` before each `drawImage` is load-bearing. The destination is
- * reused, and a frame with transparent areas composites OVER whatever the last
- * frame left there — so without it the output accumulates every frame of the
- * animation on top of one another.
+ * Whether a worker can do the job here. The scaler needs a 2D OffscreenCanvas
+ * inside the worker, which Safari only grew in 16.4 — asked once, on the main
+ * thread, as a stand-in for the worker's own answer.
  */
-function makeScaler(
-  sourceWidth: number,
-  sourceHeight: number,
-  width: number,
-  height: number,
-): (rgba: Uint8ClampedArray) => Uint8ClampedArray {
-  const source = document.createElement('canvas')
-  source.width = sourceWidth
-  source.height = sourceHeight
-  const sourceCtx = source.getContext('2d', { willReadFrequently: true })
-  const target = document.createElement('canvas')
-  target.width = width
-  target.height = height
-  const targetCtx = target.getContext('2d', { willReadFrequently: true })
-  if (!sourceCtx || !targetCtx) throw new Error('This browser wouldn’t give us a canvas to draw on')
-
-  targetCtx.imageSmoothingQuality = 'high'
-  const image = sourceCtx.createImageData(sourceWidth, sourceHeight)
-
-  return (rgba) => {
-    image.data.set(rgba)
-    sourceCtx.putImageData(image, 0, 0)
-    targetCtx.clearRect(0, 0, width, height)
-    targetCtx.drawImage(source, 0, 0, width, height)
-    return targetCtx.getImageData(0, 0, width, height).data
+let workerUsable: boolean | null = null
+function canUseWorker(): boolean {
+  if (workerUsable !== null) return workerUsable
+  try {
+    workerUsable =
+      typeof Worker !== 'undefined' &&
+      typeof OffscreenCanvas !== 'undefined' &&
+      new OffscreenCanvas(1, 1).getContext('2d') !== null
+  } catch {
+    workerUsable = false
   }
+  return workerUsable
+}
+
+/**
+ * `encodeAnimatedGif` in a worker. `null` means "couldn't use one" (no
+ * support, or the script failed to load) and the caller runs the same code
+ * here instead. A failure INSIDE the encode is a real answer about the file
+ * and rejects, exactly as the main-thread path would throw.
+ */
+function encodeInWorker(
+  bytes: Uint8Array,
+  settings: ImageSettings,
+  onProgress: (fraction: number) => void,
+): Promise<Uint8Array[] | null> {
+  if (!canUseWorker()) return Promise.resolve(null)
+  return new Promise((resolve, reject) => {
+    let worker: Worker
+    try {
+      worker = new GifAnimWorker()
+    } catch {
+      resolve(null)
+      return
+    }
+    worker.onmessage = (event: MessageEvent<GifAnimReply>) => {
+      const reply = event.data
+      if (reply.type === 'progress') {
+        onProgress(reply.fraction)
+        return
+      }
+      worker.terminate()
+      if (reply.type === 'done') resolve(reply.parts)
+      else reject(new Error(reply.message))
+    }
+    // The worker posts every failure of its own as 'error', so an error EVENT
+    // means the script never ran: fall back rather than fail.
+    worker.onerror = (event) => {
+      event.preventDefault()
+      worker.terminate()
+      resolve(null)
+    }
+    // Copied, not transferred: `bytes` is kept for the fallback.
+    worker.postMessage({ bytes, settings })
+  })
 }

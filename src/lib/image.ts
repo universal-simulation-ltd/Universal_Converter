@@ -16,7 +16,7 @@ export async function convertImage(
 ): Promise<ConvertedFile> {
   const meta = imageFormatMeta(settings.format)
   if (!(await imageFormatSupported(settings.format))) {
-    throw new Error(`This browser can’t write ${meta.label} — try WebP, JPEG or PNG`)
+    throw new Error(`This browser can’t write ${meta.label} — try JPEG or PNG`)
   }
 
   // ⚠️ **Before the decode, and it stays there.** `decodeImage` is
@@ -40,13 +40,45 @@ export async function convertImage(
   onProgress(0.4)
 
   try {
-    const { width, height } = targetSize(bitmap.width, bitmap.height, settings.maxEdge)
-    const canvas = document.createElement('canvas')
-    canvas.width = width
-    canvas.height = height
+    const wanted = targetSize(bitmap.width, bitmap.height, settings.maxEdge)
+    let blob = await drawAndEncode(bitmap, wanted, settings, meta)
+    // WebKit refuses any canvas over 16.7 MP (getContext or toBlob just come
+    // back empty), and a 48 MP iPhone photo at its own size is three times
+    // that. Try the size asked for; step down only when the browser says no.
+    if (!blob && wanted.width * wanted.height > MAX_CANVAS_PIXELS) {
+      const k = Math.sqrt(MAX_CANVAS_PIXELS / (wanted.width * wanted.height))
+      blob = await drawAndEncode(
+        bitmap,
+        { width: Math.max(1, Math.floor(wanted.width * k)), height: Math.max(1, Math.floor(wanted.height * k)) },
+        settings,
+        meta,
+      )
+    }
+    if (!blob) throw new Error('The image couldn’t be encoded')
+    onProgress(1)
 
+    return { blob, name: withExtension(file.name, meta.ext) }
+  } finally {
+    bitmap.close()
+  }
+}
+
+/** Just under WebKit's 16,777,216-pixel canvas limit. */
+const MAX_CANVAS_PIXELS = 16_000_000
+
+/** One draw-and-encode at a fixed size; null when the browser refuses the canvas. */
+async function drawAndEncode(
+  bitmap: ImageBitmap,
+  { width, height }: { width: number; height: number },
+  settings: ImageSettings,
+  meta: { mime: string; lossy: boolean },
+): Promise<Blob | null> {
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  try {
     const ctx = canvas.getContext('2d')
-    if (!ctx) throw new Error('This browser wouldn’t give us a canvas to draw on')
+    if (!ctx) return null
 
     // JPEG has no alpha: without a white ground, transparent pixels come out
     // black instead of the white everyone expects.
@@ -56,28 +88,24 @@ export async function convertImage(
     }
     ctx.imageSmoothingQuality = 'high'
     ctx.drawImage(bitmap, 0, 0, width, height)
-    onProgress(0.7)
 
     // GIF is the one target with no `toBlob` behind it — no engine has ever
     // shipped a GIF encoder — so the pixels go to our own writer instead. Note
     // it reads them back off the canvas rather than from the source bitmap:
     // that way the downscale, the aspect ratio and the alpha handling above are
     // the same code for every format, and only the encoder differs.
-    let blob: Blob | null
     if (settings.format === 'gif') {
       const { encodeStillAsGif } = await import('./imagegif')
-      blob = encodeStillAsGif(ctx.getImageData(0, 0, width, height).data, width, height, settings)
-    } else {
-      blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, meta.mime, meta.lossy ? settings.quality : undefined),
-      )
+      return encodeStillAsGif(ctx.getImageData(0, 0, width, height).data, width, height, settings)
     }
-    if (!blob) throw new Error('The image couldn’t be encoded')
-    onProgress(1)
-
-    return { blob, name: withExtension(file.name, meta.ext) }
+    return await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, meta.mime, meta.lossy ? settings.quality : undefined),
+    )
   } finally {
-    bitmap.close()
+    // iOS counts canvas memory against a small budget until collection; a
+    // batch of photos can run it out ("wouldn't give us a canvas") without this.
+    canvas.width = 0
+    canvas.height = 0
   }
 }
 

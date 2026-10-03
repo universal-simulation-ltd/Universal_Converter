@@ -72,6 +72,13 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: {
       exclude: ['@unisim/sdk']
     },
+    // Classic (IIFE) workers, as Compress and PDF build them: the iOS app's
+    // WebView must not be asked to import an ES-module worker. The one worker
+    // here (the animated-GIF re-encode) has no dynamic imports, which IIFE
+    // cannot split.
+    worker: {
+      format: 'iife'
+    },
     plugins: [
       {
         name: 'build-sha-meta',
