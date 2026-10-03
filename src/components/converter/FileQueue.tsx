@@ -29,9 +29,24 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
   const current = items.find((i) => i.status === 'converting')
   const collapsible = items.length > COLLAPSE_OVER
   const shown = collapsible && !expanded ? items.slice(0, COLLAPSED_ROWS) : items
+  const failedCount = items.filter((i) => i.status === 'failed').length
+  // What a screen reader hears: the file being worked on, then the outcome.
+  // Per FILE, never per percent — the visible strip below carries a live
+  // number, and reading that out was a counter nobody can follow.
+  const announcement = current
+    ? `Converting ${current.file.name}`
+    : !running && doneCount + failedCount > 0
+      ? `Finished: ${doneCount} ${doneCount === 1 ? 'file' : 'files'} ready` +
+        (failedCount > 0 ? `, ${failedCount} couldn’t be converted` : '')
+      : ''
 
   return (
     <div>
+      {/* Mounted with the queue, before anything runs, so the first message
+          is heard: a live region that appears WITH its text often is not. */}
+      <p role="status" aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
       <div className="flex items-center gap-2.5 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
         <span className="text-[12.5px] font-bold text-slate-900 dark:text-slate-100">Files</span>
         <span className="ml-auto font-mono text-[11px] text-slate-400">
@@ -47,7 +62,6 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
       {current && (
         <div
           className="flex items-center gap-2 border-b border-slate-200 bg-orange-50/60 px-4 py-2.5 text-[12px] dark:border-slate-800 dark:bg-orange-950/20"
-          aria-live="polite"
         >
           <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-orange-500" aria-hidden="true" />
           <span className="shrink-0 font-semibold text-slate-600 dark:text-slate-300">Currently converting:</span>
@@ -312,7 +326,14 @@ function Row({
           space goes to the Save button instead. */}
       <span className="max-sm:hidden">
         {(item.status === 'queued' || item.status === 'converting') && (
-          <span className="block h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+          <span
+            role="progressbar"
+            aria-label={`Converting ${item.file.name}`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(item.progress * 100)}
+            className="block h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
+          >
             <span
               className="block h-full rounded-full bg-gradient-to-r from-[#FE8C01] to-[#E05504] transition-[width] duration-200"
               style={{ width: `${Math.round(item.progress * 100)}%` }}
@@ -327,6 +348,8 @@ function Row({
           <button
             type="button"
             onClick={onDownload}
+            // Which file, by the name it will be SAVED as.
+            aria-label={`Save ${item.result?.name ?? item.file.name}`}
             className="rounded-md bg-orange-500/12 px-2 py-1 text-[11px] font-bold text-orange-800 hover:bg-orange-500/20 dark:text-orange-300"
           >
             Save

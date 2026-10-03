@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react'
+import { createContext, useContext, useId, useState, type ReactNode } from 'react'
 import { ChipToggle } from '@unisim/sdk'
 
 // The settings-panel vocabulary, shared by the audio and image studios so the
@@ -16,11 +16,19 @@ export function Panel({ children }: { children: ReactNode }) {
   )
 }
 
+/**
+ * The id of the enclosing `Field`'s label, so a control inside it can name
+ * itself by it — the label was a bare <span> nothing pointed at, so every
+ * select met a screen reader as an unnamed combo box.
+ */
+const FieldLabel = createContext<string | undefined>(undefined)
+
 export function Field({ label, children }: { label: string; children: ReactNode }) {
+  const id = useId()
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-slate-600 dark:text-slate-300">{label}</span>
-      {children}
+    <div role="group" aria-labelledby={id} className="flex flex-col gap-2">
+      <span id={id} className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-slate-600 dark:text-slate-300">{label}</span>
+      <FieldLabel.Provider value={id}>{children}</FieldLabel.Provider>
     </div>
   )
 }
@@ -121,8 +129,9 @@ export function Segmented<T extends string | number>({
             type="button"
             disabled={disabled || off}
             title={off ? unavailableTitle : undefined}
+            aria-pressed={value === o.value}
             onClick={() => onChange(o.value)}
-            className={`flex-1 py-1.5 text-[11.5px] font-semibold transition-colors disabled:opacity-50 ${
+            className={`flex-1 py-1.5 text-[11.5px] font-semibold transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-orange-600 disabled:opacity-50 ${
               value === o.value
                 ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
                 : off
@@ -149,8 +158,10 @@ export function Select<T extends string | number>({
   disabled: boolean
   onChange: (value: T) => void
 }) {
+  const labelledBy = useContext(FieldLabel)
   return (
     <select
+      aria-labelledby={labelledBy}
       value={String(value)}
       disabled={disabled}
       onChange={(e) => {

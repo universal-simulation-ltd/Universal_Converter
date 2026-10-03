@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from 'react'
 import { useConverterStore } from '../../stores/converterStore'
 import { CONTAINER } from '../../lib/layout'
 import AllStudio from './AllStudio'
@@ -31,7 +32,16 @@ export default function ConverterApp() {
             on platforms with classic (space-taking) scrollbars. The labels fit
             unaided at every width now that the hints drop out below `sm` and
             the row wraps, so nothing needs to scroll. */}
-        <div className={`${CONTAINER} flex flex-wrap items-center gap-1 pt-3`}>
+        {/* A real tablist: one Tab stop for the row, arrows (and Home/End)
+            move between tabs, and the panel below names its tab. It had the
+            tab ROLE without the rest, which tells a screen reader to expect
+            arrow keys that then did nothing. */}
+        <div
+          role="tablist"
+          aria-label="What to convert"
+          onKeyDown={onTabKey}
+          className={`${CONTAINER} flex flex-wrap items-center gap-1 pt-3`}
+        >
           <TopTab id="all" current={tab} onClick={setTab} label="All" hint="Drop anything — it works out where it goes" />
           <TopTab id="audio" current={tab} onClick={setTab} label="Audio" hint="MP3, M4A, Opus, FLAC, WAV & AIFF · on your device" />
           <TopTab id="image" current={tab} onClick={setTab} label="Images" hint="Convert & resize · on your device" />
@@ -40,14 +50,34 @@ export default function ConverterApp() {
         </div>
       </div>
 
-      {tab === 'all' && <AllStudio />}
-      {tab === 'audio' && <AudioStudio />}
-      {tab === 'image' && <ImageStudio />}
-      {tab === 'video' && <VideoStudio />}
-      {tab === 'document' && <DocumentStudio />}
+      <div role="tabpanel" id={panelId(tab)} aria-labelledby={tabId(tab)}>
+        {tab === 'all' && <AllStudio />}
+        {tab === 'audio' && <AudioStudio />}
+        {tab === 'image' && <ImageStudio />}
+        {tab === 'video' && <VideoStudio />}
+        {tab === 'document' && <DocumentStudio />}
+      </div>
     </div>
   )
+
+  function onTabKey(e: KeyboardEvent<HTMLDivElement>) {
+    const at = TAB_ORDER.indexOf(tab)
+    const next =
+      e.key === 'ArrowRight' ? TAB_ORDER[(at + 1) % TAB_ORDER.length]
+      : e.key === 'ArrowLeft' ? TAB_ORDER[(at - 1 + TAB_ORDER.length) % TAB_ORDER.length]
+      : e.key === 'Home' ? TAB_ORDER[0]
+      : e.key === 'End' ? TAB_ORDER[TAB_ORDER.length - 1]
+      : null
+    if (!next) return
+    e.preventDefault()
+    setTab(next)
+    document.getElementById(tabId(next))?.focus()
+  }
 }
+
+const TAB_ORDER: TabId[] = ['all', 'audio', 'image', 'video', 'document']
+const tabId = (id: TabId) => `converter-tab-${id}`
+const panelId = (id: TabId) => `converter-panel-${id}`
 
 function TopTab({
   id,
@@ -67,7 +97,10 @@ function TopTab({
     <button
       type="button"
       role="tab"
+      id={tabId(id)}
       aria-selected={active}
+      aria-controls={active ? panelId(id) : undefined}
+      tabIndex={active ? 0 : -1}
       onClick={() => onClick(id)}
       className={`group relative -mb-px flex flex-col items-start rounded-t-lg px-4 py-2.5 text-left transition-colors ${
         active ? 'border-b-2 border-orange-600' : 'border-b-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800'

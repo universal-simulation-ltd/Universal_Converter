@@ -22,6 +22,11 @@ import path from 'node:path'
 import zlib from 'node:zlib'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
+// The ROW's Save button, named for the file it saves ("Save sample.jpg") since
+// 2026-10-04 — distinct from the action card's "Save another copy" and
+// "Save 2 pictures as a PDF", which end in no file extension.
+const ROW_SAVE = /^Save .+\.[a-z0-9]{2,5}$/i
+
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const TMP = path.join(HERE, '.tmp-images')
 // ⚠️ Found by LOOKING, not by hard-coding a sibling's name. This used to be
@@ -559,7 +564,7 @@ console.log('\n── An estimate first, and another go at it ──────
     await page.getByText(/≈ /).first().isVisible().catch(() => false))
   // The old PNG must not still be downloadable: it is not what the panel says.
   check('the stale result is dropped with the status',
-    !(await page.getByRole('button', { name: 'Save', exact: true }).first().isVisible().catch(() => false)))
+    !(await page.getByRole('button', { name: ROW_SAVE }).first().isVisible().catch(() => false)))
 
   const before = downloads.length
   await page.getByRole('button', { name: /Convert and save 1 file/ }).click()
@@ -586,7 +591,7 @@ console.log('\n── Two files do NOT save themselves ────────�
 
   const saved = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Save', exact: true }).first().click(),
+    page.getByRole('button', { name: ROW_SAVE }).first().click(),
   ]).then(([d]) => d)
   check('the row’s Save button still names the file properly',
     saved.suggestedFilename() === 'sample.png', saved.suggestedFilename())
