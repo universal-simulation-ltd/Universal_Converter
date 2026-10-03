@@ -113,12 +113,20 @@ export async function convertAudio(
 
 // A throwaway context purely for decoding — its own rate doesn't affect the
 // decoded buffer, which keeps the file's native sample rate.
+/** The browser found no audio it could read in the file. */
+export class AudioDecodeError extends Error {
+  constructor() {
+    super('This file couldn’t be decoded — it may be corrupt or use a codec this browser can’t read')
+    this.name = 'AudioDecodeError'
+  }
+}
+
 async function decode(bytes: ArrayBuffer): Promise<AudioBuffer> {
   const ctx = new OfflineAudioContext(1, 1, 44100)
   try {
     return await ctx.decodeAudioData(bytes)
   } catch {
-    throw new Error('This file couldn’t be decoded — it may be corrupt or use a codec this browser can’t read')
+    throw new AudioDecodeError()
   }
 }
 

@@ -43,7 +43,7 @@ export const IMAGE_FORMATS: FormatMeta<ImageFormat>[] = [
   { id: 'webp', label: 'WebP', ext: 'webp', mime: 'image/webp', lossy: true,  engine: 'built-in', blurb: 'Smaller than JPEG at the same quality, and it keeps transparency.' },
   { id: 'jpeg', label: 'JPEG', ext: 'jpg',  mime: 'image/jpeg', lossy: true,  engine: 'built-in', blurb: 'Universal. No transparency — anything see-through fills with white.' },
   { id: 'png',  label: 'PNG',  ext: 'png',  mime: 'image/png',  lossy: false, engine: 'built-in', blurb: 'Lossless with transparency. Best for screenshots, logos and line art.' },
-  { id: 'avif', label: 'AVIF', ext: 'avif', mime: 'image/avif', lossy: true,  engine: 'built-in', blurb: 'The smallest of the four, but slower to encode and newer to support.' },
+  { id: 'avif', label: 'AVIF', ext: 'avif', mime: 'image/avif', lossy: true,  engine: 'built-in', blurb: 'Usually the smallest of these, but slower to encode and newer to support.' },
   // GIF is the odd one out here for the same reason it is on the video tab:
   // no engine will encode one, so the palette, the LZW and the file are ours.
   // It is on the IMAGE tab as well as the video tab because an animated GIF

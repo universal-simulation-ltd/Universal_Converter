@@ -123,7 +123,7 @@ function ImagePanel() {
           <p className="text-[11px] text-slate-500 dark:text-slate-400">{target.blurb}</p>
           {!ready && (
             <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11.5px] text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-              This browser can’t write {target.label}. WebP, JPEG and PNG work everywhere.
+              This browser can’t write {target.label}. JPEG, PNG and GIF work everywhere.
             </p>
           )}
         </Field>

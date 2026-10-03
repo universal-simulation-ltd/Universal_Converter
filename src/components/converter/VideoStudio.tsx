@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { VIDEO_FORMATS, videoFormatMeta } from '../../lib/formats'
 import { formatDuration, parseClock } from '../../lib/humanise'
 import { videoSupported } from '@unisim/media'
@@ -346,6 +346,7 @@ function TrimToggle() {
 // unparseable field says so and holds the last good value rather than silently
 // trimming from zero.
 function TrimFields() {
+  const hintId = useId()
   const trim = useConverterStore((s) => s.video.trim)
   const running = useConverterStore((s) => s.running)
   const update = useConverterStore((s) => s.updateVideo)
@@ -385,7 +386,10 @@ function TrimFields() {
             disabled={running}
             onChange={(e) => commitStart(e.target.value)}
             placeholder="0:00"
-            inputMode="numeric"
+            // Text, not numeric: an iPhone's number pad has no ":" and the
+            // format asked for is mm:ss.
+            inputMode="text"
+            aria-describedby={hintId}
             aria-invalid={startBad}
             className={`${field} ${startBad ? 'border-red-400 text-red-700 dark:bg-slate-950 dark:text-red-400' : 'border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100'}`}
           />
@@ -397,13 +401,14 @@ function TrimFields() {
             disabled={running}
             onChange={(e) => commitEnd(e.target.value)}
             placeholder="end of file"
-            inputMode="numeric"
+            inputMode="text"
+            aria-describedby={hintId}
             aria-invalid={endBad}
             className={`${field} ${endBad ? 'border-red-400 text-red-700 dark:bg-slate-950 dark:text-red-400' : 'border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100'}`}
           />
         </label>
       </div>
-      <p className={`text-[10.5px] ${startBad || endBad ? 'text-red-700 dark:text-red-400' : 'text-slate-400'}`}>
+      <p id={hintId} className={`text-[10.5px] ${startBad || endBad ? 'text-red-700 dark:text-red-400' : 'text-slate-400'}`}>
         {startBad || endBad
           ? 'Use mm:ss, h:mm:ss, or a number of seconds.'
           : 'Cuts begin at the nearest keyframe at or before the start time.'}

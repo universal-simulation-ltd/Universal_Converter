@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { convertAudio } from '../../lib/convert'
+import { AudioDecodeError, convertAudio } from '../../lib/convert'
 import { saveBlob } from '../../lib/download'
 import { buildPdf, imageToJpeg } from '../../lib/pdf'
 import { useConverterStore } from '../../stores/converterStore'
@@ -213,13 +213,26 @@ function VideoToAudio() {
       // The existing audio pipeline, unchanged: `decodeAudioData` reads an
       // MP4's audio track directly, which is why extracting a soundtrack needs
       // no demuxer and no second engine.
-      const result = await convertAudio(file, { ...audio, format })
+      //
+      // ⚠️ The WHOLE soundtrack: the Audio tab's trim is for the audio files
+      // on that tab, and inheriting it silently cut a video's sound short.
+      const result = await convertAudio(file, {
+        ...audio,
+        format,
+        trim: { enabled: false, startSec: 0, endSec: null },
+      })
       saveBlob(result.blob, result.name)
-    } catch {
+    } catch (err) {
       // The overwhelmingly likely cause, and the one worth naming: plenty of
       // phone and screen-recording clips genuinely have no audio track, and
-      // "conversion failed" would send somebody hunting for a bug.
-      setError(`Could not get any audio out of ${name}. It may not have a soundtrack at all.`)
+      // "conversion failed" would send somebody hunting for a bug. Anything
+      // else (an encoder this browser lacks, say) is a different problem and
+      // says so in its own words.
+      setError(
+        err instanceof AudioDecodeError || !(err instanceof Error)
+          ? `Could not get any audio out of ${name}. It may not have a soundtrack at all.`
+          : `Could not save the sound of ${name}: ${err.message}`,
+      )
     } finally {
       setBusyId(null)
     }

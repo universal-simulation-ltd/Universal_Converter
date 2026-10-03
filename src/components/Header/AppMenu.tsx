@@ -61,7 +61,10 @@ export default function AppMenu() {
         icon="🧹"
         label="Clear the queue"
         disabled={running || items.length === 0}
-        onClick={clearQueue}
+        // A wrapper, not `clearQueue` itself: MenuRow hands its onClick the
+        // click event, which arrived as clearQueue's `kind` and cleared
+        // nothing at all.
+        onClick={() => clearQueue()}
       />
     </>
   )
