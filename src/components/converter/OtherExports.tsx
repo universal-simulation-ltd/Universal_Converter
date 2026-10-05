@@ -166,7 +166,7 @@ function DocumentsToOnePdf() {
 
       <button
         type="button"
-        disabled={busy || documents.length < 1}
+        disabled={busy || documents.length < 2}
         onClick={() => void run()}
         className="mt-3 w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 dark:bg-slate-700 dark:hover:bg-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
       >
@@ -174,7 +174,12 @@ function DocumentsToOnePdf() {
           ? `Reading… ${done}/${documents.length}`
           : documents.length === 0
             ? 'Add some documents first'
-            : `Join ${documents.length} document${documents.length === 1 ? '' : 's'} into one PDF`}
+            // One document has nothing to join, and "Join 1 document into one
+            // PDF" sat as a dark button under Convert offering the same file
+            // twice. It says what would make it useful instead.
+            : documents.length === 1
+              ? 'Add another document to join them'
+              : `Join ${documents.length} documents into one PDF`}
       </button>
 
       {error && <p className="mt-2 text-xs text-red-700 dark:text-red-400">{error}</p>}

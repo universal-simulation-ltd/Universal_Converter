@@ -42,11 +42,17 @@ export default function ConverterApp() {
           onKeyDown={onTabKey}
           className={`${CONTAINER} flex flex-wrap items-center gap-1 pt-3`}
         >
-          <TopTab id="all" current={tab} onClick={setTab} label="All" hint="Drop anything — it works out where it goes" />
-          <TopTab id="audio" current={tab} onClick={setTab} label="Audio" hint="MP3, M4A, Opus, FLAC, WAV & AIFF · on your device" />
-          <TopTab id="image" current={tab} onClick={setTab} label="Images" hint="Convert & resize · on your device" />
-          <TopTab id="video" current={tab} onClick={setTab} label="Video" hint="Trim, resize & compress · on your device" />
-          <TopTab id="document" current={tab} onClick={setTab} label="Files" hint="Word, text & data → PDF · on your device" />
+          {/* ⚠️ Hints short enough that all five tabs sit on ONE row. The old
+              ones ("MP3, M4A, Opus, FLAC, WAV & AIFF · on your device" …) were
+              wider than the 1216px container, so Files wrapped onto a row of
+              its own on every desktop — the first thing a newcomer saw was a
+              tab bar that looked broken. "On your device" is not lost: every
+              tab opens on a PrivacyNote, and the landing lead says it too. */}
+          <TopTab id="all" current={tab} onClick={setTab} label="All" hint="Anything — sorted for you" />
+          <TopTab id="audio" current={tab} onClick={setTab} label="Audio" hint="MP3, M4A, FLAC & more" />
+          <TopTab id="image" current={tab} onClick={setTab} label="Images" hint="Convert & resize" />
+          <TopTab id="video" current={tab} onClick={setTab} label="Video" hint="Trim, resize & compress" />
+          <TopTab id="document" current={tab} onClick={setTab} label="Files" hint="Word & text → PDF" />
         </div>
       </div>
 
@@ -107,9 +113,10 @@ function TopTab({
       }`}
     >
       <span className={`text-sm font-semibold ${active ? 'text-slate-900 dark:text-slate-100' : 'text-slate-600 group-hover:text-slate-900 dark:text-slate-300 dark:group-hover:text-slate-100'}`}>{label}</span>
-      {/* Phones get the bare label — five fit across two rows at 320px,
-          where the hints would wrap into a three-line switcher. */}
-      <span className="hidden text-[11px] text-slate-400 sm:block">{hint}</span>
+      {/* Phones and tablets get the bare label — five fit across two rows at
+          320px, where the hints would wrap into a three-line switcher, and
+          below `lg` even the short hints do not fit five abreast. */}
+      <span className="hidden text-[11px] text-slate-400 lg:block">{hint}</span>
     </button>
   )
 }

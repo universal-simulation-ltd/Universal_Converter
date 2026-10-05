@@ -67,9 +67,14 @@ export default function LandingPage({
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl dark:text-slate-100">
             Any file, <span className="text-orange-600 dark:text-orange-400">any format</span>.
           </h1>
+          {/* What it does and where, in the reader's words rather than ours —
+              "finds the tab that can convert it" described the app's layout
+              to someone who had not seen it yet. "On your device" is the
+              PrivacyNote's claim in short: on a laptop that note is under the
+              card, below the fold. */}
           <p className="mt-3 max-w-md text-slate-600 dark:text-slate-300">
-            Drop a mixed pile and each file finds the tab that can convert it — no size limit,
-            and no queue to wait in.
+            Turn pictures, audio, video and documents into the format you need, right here on your
+            device — no upload, no size limit. Drop a mix and each file is sorted for you.
           </p>
 
           <div className="mt-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
