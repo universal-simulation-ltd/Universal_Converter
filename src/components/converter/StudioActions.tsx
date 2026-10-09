@@ -78,7 +78,10 @@ function StudioCircle({ kind }: { kind: MediaKind }) {
     <div className="flex w-full flex-col items-center">
       <div
         {...drop.dropzoneProps}
-        className={`relative w-full max-w-[240px] rounded-full transition-transform ${
+        // ⚠️ 160px under `sm`, not 240 (James, 2026-10-09): at 390×844 the
+        // full ring pushed Convert ~1,100px down the page. See `ActionCard`
+        // for the other half — the card comes first on a stacked layout.
+        className={`relative w-full max-w-[160px] sm:max-w-[240px] rounded-full transition-transform ${
           drop.over ? 'scale-[1.02]' : ''
         }`}
       >
@@ -141,7 +144,7 @@ function QueueCentre({ kind }: { kind: MediaKind }) {
         <span className="text-[11px] tabular-nums text-slate-400">
           {formatBytes(t.bytesInDone)} → {formatBytes(t.bytesOutDone)}
         </span>
-        <span className="mt-1.5 text-[10.5px] text-slate-400">drop more, or download below</span>
+        <span className="mt-1.5 text-[10.5px] text-slate-400 max-sm:hidden">drop more, or download below</span>
       </>
     )
   }
@@ -155,7 +158,8 @@ function QueueCentre({ kind }: { kind: MediaKind }) {
       <span className="text-[11px] tabular-nums text-slate-400">{formatBytes(t.bytesIn)}</span>
       {/* The tail names the thing to do next, and there is no Convert button
           under the ring when nothing on the tab can be converted. */}
-      <span className="mt-1.5 text-[10.5px] text-slate-400">
+      {/* Not in the smaller ring a phone gets: it doesn't fit inside it. */}
+      <span className="mt-1.5 text-[10.5px] text-slate-400 max-sm:hidden">
         {t.eligible === 0 ? 'drop more to get started' : 'drop more, or press Convert'}
       </span>
     </>
@@ -256,9 +260,14 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
   const secondary =
     'w-full rounded-xl bg-orange-500/12 px-4 py-2.5 text-[13px] font-bold text-orange-800 transition-colors hover:bg-orange-500/20 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-orange-300'
 
+  // ⚠️ `max-lg:order-first`: on a stacked (phone/tablet) layout this card
+  // comes BEFORE the Output card in its column, straight under the file list.
+  // Last, it sat below the Output card and Convert was off the screen at
+  // 390×844 however small the ring got (James, 2026-10-09). Each row in the
+  // list still names its target ("→ JPG"), and Output is directly beneath.
   return (
     <div
-      className={`rounded-xl border ${
+      className={`rounded-xl border max-lg:order-first ${
         t.done > 0 ? 'border-orange-200 bg-orange-50/60 dark:border-orange-900/60 dark:bg-orange-950/20' : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
       }`}
     >
