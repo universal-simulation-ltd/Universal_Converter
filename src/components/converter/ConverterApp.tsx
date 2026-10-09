@@ -1,5 +1,6 @@
 import type { KeyboardEvent } from 'react'
-import { useConverterStore } from '../../stores/converterStore'
+import { useDefaultView, type UseDefaultView } from '@unisim/sdk'
+import { TABS, useConverterStore } from '../../stores/converterStore'
 import { CONTAINER } from '../../lib/layout'
 import AllStudio from './AllStudio'
 import AudioStudio from './AudioStudio'
@@ -22,6 +23,10 @@ import type { TabId } from '../../stores/converterStore'
 export default function ConverterApp() {
   const tab = useConverterStore((s) => s.tab)
   const setTab = useConverterStore((s) => s.setTab)
+  // Double-tap a tab to open the app on it (James, 2026-09-30). The store read
+  // the same default at start-up; this is the tap that sets it and the orange
+  // mark that shows which one it is. Tune this app has the same choice.
+  const dv = useDefaultView<TabId>('tab', 'all', { views: TABS })
 
   return (
     <div>
@@ -48,11 +53,11 @@ export default function ConverterApp() {
               its own on every desktop — the first thing a newcomer saw was a
               tab bar that looked broken. "On your device" is not lost: every
               tab opens on a PrivacyNote, and the landing lead says it too. */}
-          <TopTab id="all" current={tab} onClick={setTab} label="All" hint="Anything — sorted for you" />
-          <TopTab id="audio" current={tab} onClick={setTab} label="Audio" hint="MP3, M4A, FLAC & more" />
-          <TopTab id="image" current={tab} onClick={setTab} label="Images" hint="Convert & resize" />
-          <TopTab id="video" current={tab} onClick={setTab} label="Video" hint="Trim, resize & compress" />
-          <TopTab id="document" current={tab} onClick={setTab} label="Files" hint="Word & text → PDF" />
+          <TopTab id="all" current={tab} onClick={setTab} dv={dv} label="All" hint="Anything — sorted for you" />
+          <TopTab id="audio" current={tab} onClick={setTab} dv={dv} label="Audio" hint="MP3, M4A, FLAC & more" />
+          <TopTab id="image" current={tab} onClick={setTab} dv={dv} label="Images" hint="Convert & resize" />
+          <TopTab id="video" current={tab} onClick={setTab} dv={dv} label="Video" hint="Trim, resize & compress" />
+          <TopTab id="document" current={tab} onClick={setTab} dv={dv} label="Files" hint="Word & text → PDF" />
         </div>
       </div>
 
@@ -91,14 +96,20 @@ function TopTab({
   onClick,
   label,
   hint,
+  dv,
 }: {
   id: TabId
   current: TabId
   onClick: (v: TabId) => void
   label: string
   hint: string
+  dv: UseDefaultView<TabId>
 }) {
   const active = current === id
+  const dvProps = dv.buttonProps(id, label)
+  // The tab the app opens on is orange, as Jukebox's library tabs are: filled
+  // while you are on it, outlined while you are not.
+  const isDefault = dvProps['data-default-view'] === 'true'
   return (
     <button
       type="button"
@@ -107,16 +118,29 @@ function TopTab({
       aria-selected={active}
       aria-controls={active ? panelId(id) : undefined}
       tabIndex={active ? 0 : -1}
-      onClick={() => onClick(id)}
+      {...dvProps}
+      onClick={() => { dv.tap(id); onClick(id) }}
       className={`group relative -mb-px flex flex-col items-start rounded-t-lg px-4 py-2.5 text-left transition-colors ${
-        active ? 'border-b-2 border-orange-600' : 'border-b-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800'
+        active
+          ? isDefault
+            ? 'border-b-2 border-[#E05504] bg-gradient-to-br from-[#FE8C01] to-[#E05504]'
+            : 'border-b-2 border-orange-600'
+          : isDefault
+            ? 'border-b-2 border-transparent ring-1 ring-inset ring-orange-400/70 hover:bg-orange-50 dark:hover:bg-orange-950/40'
+            : 'border-b-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800'
       }`}
     >
-      <span className={`text-sm font-semibold ${active ? 'text-slate-900 dark:text-slate-100' : 'text-slate-600 group-hover:text-slate-900 dark:text-slate-300 dark:group-hover:text-slate-100'}`}>{label}</span>
+      <span className={`text-sm font-semibold ${
+        active
+          ? isDefault ? 'text-white' : 'text-slate-900 dark:text-slate-100'
+          : isDefault
+            ? 'text-orange-700 dark:text-orange-400'
+            : 'text-slate-600 group-hover:text-slate-900 dark:text-slate-300 dark:group-hover:text-slate-100'
+      }`}>{label}</span>
       {/* Phones and tablets get the bare label — five fit across two rows at
           320px, where the hints would wrap into a three-line switcher, and
           below `lg` even the short hints do not fit five abreast. */}
-      <span className="hidden text-[11px] text-slate-400 lg:block">{hint}</span>
+      <span className={`hidden text-[11px] lg:block ${active && isDefault ? 'text-white/85' : 'text-slate-400'}`}>{hint}</span>
     </button>
   )
 }
