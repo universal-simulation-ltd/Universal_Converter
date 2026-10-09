@@ -192,7 +192,7 @@ function Mp4Advanced({ engineReady }: { engineReady: boolean }) {
     // keeps that honest: a trim or a resolution carried over from an earlier
     // conversion is still readable with the section closed.
     <Collapsible
-      label="Advanced settings"
+      label="Fine-tune"
       summary={changed.length ? changed.join(' · ') : 'Default settings'}
     >
       <Field label="Resolution">
@@ -266,7 +266,7 @@ function GifAdvanced() {
 
   return (
     <Collapsible
-      label="Advanced settings"
+      label="Fine-tune"
       summary={changed.length ? changed.join(' · ') : `${DEFAULT_GIF_SETTINGS.maxEdge} px · ${DEFAULT_GIF_SETTINGS.fps} fps`}
     >
       <Field label="Size">

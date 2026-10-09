@@ -174,14 +174,14 @@ const fileInput = () => page.locator('input[type=file]').last()
 const chip = (label) => page.getByRole('button', { name: new RegExp(`^${label}`) })
 
 /**
- * Open the Advanced settings disclosure if it is shut.
+ * Open the Fine-tune disclosure if it is shut.
  *
  * ⚠️ Not a plain click. It is shut on arrival (2026-08-31), and switching
  * target swaps the whole disclosure for the other one's — so a blind click
  * after a target change would shut the one this test had just opened.
  */
 async function openAdvanced() {
-  const button = page.getByRole('button', { name: /^Advanced/ })
+  const button = page.getByRole('button', { name: /^Fine-tune/ })
   if ((await button.getAttribute('aria-expanded')) !== 'true') await button.click()
 }
 

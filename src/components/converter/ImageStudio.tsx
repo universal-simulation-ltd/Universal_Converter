@@ -166,7 +166,7 @@ function ImagePanel() {
         <Divider />
 
         <Collapsible
-          label="Advanced settings"
+          label="Fine-tune"
           summary={changed.length ? changed.join(' · ') : 'Default settings'}
         >
           {target.lossy && (

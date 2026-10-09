@@ -166,7 +166,7 @@ function DocumentPanel() {
             <Divider />
 
             <Collapsible
-              label="Advanced settings"
+              label="Fine-tune"
               summary={
                 advanced.length
                   ? advanced.join(' · ')
