@@ -254,7 +254,7 @@ Licence: MIT
 
 _Licence text not found in the published package._
 
-## @unisim/sdk 0.164.0
+## @unisim/sdk 0.183.2
 
 Universal Simulation Ltd et al.
 <https://github.com/universal-simulation-ltd/universal-platform>
@@ -500,9 +500,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## libflacjs 5.6.0
+## libflac.js 5.6.0
 
-
+DFKI GmbH, Josh Coalson, Xiph.Org Foundation et al.
 <https://github.com/mmig/libflac.js>
 Licence: MIT
 

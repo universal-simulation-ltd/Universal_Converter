@@ -1,7 +1,7 @@
 {
   "app": "universal-converter",
   "appVersion": "0.1.0",
-  "generated": "2026-09-28",
+  "generated": "2026-10-10",
   "noticesCount": 21,
   "ships": [
     {
@@ -40,11 +40,16 @@
     },
     {
       "name": "libflacjs",
+      "title": "libflac.js",
       "version": "5.6.0",
       "licence": "MIT",
       "repo": "https://github.com/mmig/libflac.js",
       "homepage": "https://github.com/mmig/libflac.js",
-      "authors": [],
+      "authors": [
+        "DFKI GmbH",
+        "Josh Coalson",
+        "Xiph.Org Foundation"
+      ],
       "source": "node_modules"
     },
     {
