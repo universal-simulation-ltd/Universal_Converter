@@ -18,6 +18,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import assert from 'node:assert/strict'
 
 import { encodeWav } from '../src/lib/wav.ts'
@@ -664,7 +665,9 @@ function ascii(view, offset, length) {
     // ⚠️ A real GIF written by a real tool, if this machine happens to have one.
     // It is borrowed from a sibling repo's node_modules and WILL be absent on a
     // fresh clone — so a green run is not proof this ran. Read the warning.
-    const real = new URL('../../Universal_PDF/node_modules/tesseract.js/docs/images/demo.gif', import.meta.url).pathname
+    // fileURLToPath, not `.pathname`: on Windows that is "/D:/…", which no file
+    // call finds, so the check skipped itself there with the file present.
+    const real = fileURLToPath(new URL('../../Universal_PDF/node_modules/tesseract.js/docs/images/demo.gif', import.meta.url))
     if (existsSync(real)) {
       readerAgreesWithFfmpeg('a real screen-recording GIF', real)
     } else {
@@ -887,7 +890,8 @@ function ascii(view, offset, length) {
   const zipPath = join(dir, 'tree.zip')
   const zip = await createZip(archiveEntries(rows))
   writeFileSync(zipPath, new Uint8Array(await zip.arrayBuffer()))
-  const listed = execFileSync('python3', ['-c', 'import sys,zipfile;print(chr(10).join(zipfile.ZipFile(sys.argv[1]).namelist()))', zipPath], { encoding: 'utf8' }).trim().split('\n')
+  // /\r?\n/: python's `print` ends lines with CRLF on Windows (see the zip check).
+  const listed = execFileSync('python3', ['-c', 'import sys,zipfile;print(chr(10).join(zipfile.ZipFile(sys.argv[1]).namelist()))', zipPath], { encoding: 'utf8' }).trim().split(/\r?\n/)
   assert.deepEqual(listed, names)
 
   console.log('✓ archive — folders kept, clashes numbered, named after the folder')
