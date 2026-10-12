@@ -178,12 +178,10 @@ Uygulamanın bazı bölümleri büyüktür ve yalnızca ara sıra gerekir; bu y�
 
 ## Uygulamanın gönderdikleri
 
-- **Oturum açma**, eğer siz isterseniz. Uygulamadaki hiçbir şey hesap gerektirmez.
-- Oturum açtığınızda, Universal ID etkinliğinizin doğru olması için **"uygulama açıldı" bildirimi**. Dosyalarınız hakkında hiçbir şey içermez.
-- Uygulama açık ve ekrandayken her 45 saniyede bir **"uygulama kullanımda" sinyali**. Uygulamanın adını, cihazınızda oluşturulan rastgele bir kimliği ve oturum açtıysanız hesabınızı içerir. Uygulamayı kaç kişinin kullandığını göstermek için kullanılır.
+- **"Bu uygulama kullanılıyor" sinyali**, yalnızca web sitesinden: uygulama açık ve ekranda olduğu sürece her 45 saniyede bir uygulamanın adını, cihazınızda oluşturulan rastgele bir kimliği ve cihaz türünü (web, telefon veya bilgisayar) gönderir; böylece uygulamayı kaç kişinin kullandığını sayabiliriz. Dosyalarınız hakkında hiçbir şey söylemez ve size bağlı değildir. Telefon uygulaması bunu göndermez.
 - **Güncellemelerin denetlenmesi** ve yenilikler listesinin alınması.
 
-Reklam ya da üçüncü taraf izleme yoktur.
+Oturum açma, reklam ya da üçüncü taraf izleme yoktur.
 
 ## Kendiniz doğrulayın
 

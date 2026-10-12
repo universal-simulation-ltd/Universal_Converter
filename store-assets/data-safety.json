@@ -1,0 +1,7 @@
+{
+ "_about": "Play Data safety answers. Build the importable CSV with: node Docs_UNI_SIM/store-kit/data-safety.mjs Universal_Apps/Universal_Converter/store-assets/data-safety.json Universal_Apps/Universal_Converter/store-assets/out/play/data-safety.csv. Checked against the code 2026-10-12 (privacy audit): files are processed on the device and never uploaded; no accounts (noAccounts in src/main.tsx, no <UsageTracker />); the suite user count (@unisim/sdk presence) is OFF in the phone app (src/main.tsx `presence: !Capacitor.isNativePlatform()`), so no install id or app interactions. Nothing is collected or shared. Mirrors ios/App/App/PrivacyInfo.xcprivacy.",
+ "accountCreation": [
+  "PSL_ACM_NONE"
+ ],
+ "types": {}
+}

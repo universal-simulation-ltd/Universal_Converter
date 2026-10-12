@@ -178,12 +178,10 @@ Alcune parti dell’app sono grandi e servono solo ogni tanto, quindi vengono sc
 
 ## Che cosa invia l’app
 
-- **L’accesso**, se scegli di farlo. Niente nell’app richiede un account.
-- **Una nota di «app aperta»** quando hai effettuato l’accesso, perché l’attività del tuo Universal ID sia corretta. Non dice nulla dei tuoi file.
-- **Un segnale di «app in uso»** ogni 45 secondi mentre l’app è aperta e visibile. Contiene il nome dell’app, un identificativo casuale creato sul tuo dispositivo e il tuo account se hai effettuato l’accesso. Serve a mostrare quante persone usano l’app.
+- **Un segnale «app in uso»**, solo dal sito web: ogni 45 secondi mentre l’app è aperta e sullo schermo, invia il nome dell’app, un ID casuale creato sul tuo dispositivo e il tipo di dispositivo (web, telefono o computer), così possiamo contare quante persone usano l’app. Non dice nulla dei tuoi file e non è collegato a te. L’app per telefono non lo invia.
 - **Il controllo degli aggiornamenti** e il recupero dell’elenco delle novità.
 
-Non ci sono pubblicità né tracciamento di terze parti.
+Non ci sono accesso, pubblicità né tracciamento di terze parti.
 
 ## Verificalo tu stesso
 

@@ -178,12 +178,10 @@ A few parts of the app are large and only needed occasionally, so they are downl
 
 ## What the app sends
 
-- **Signing in**, if you choose to. Nothing in the app requires an account.
-- **An "app opened" note** when you are signed in, so your Universal ID activity is accurate. It says nothing about your files.
-- **A "this app is in use" signal** every 45 seconds while the app is open and on screen. It contains the app's name, a random ID made on your device, and your account if you are signed in. It is used to show how many people are using the app.
+- **A "this app is in use" signal**, from the website only: every 45 seconds while the app is open and on screen, it sends the app's name, a random ID made on your device and the kind of device (web, phone or computer), so we can count how many people use the app. It says nothing about your files and is not linked to you. The phone app does not send it.
 - **Checking for updates** and fetching the list of changes.
 
-There is no advertising and no third-party tracking.
+There is no sign-in, no advertising and no third-party tracking.
 
 ## Check it yourself
 

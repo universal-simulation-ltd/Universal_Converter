@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  Apple's privacy manifest, required for App Store submission.
+
+  Universal Converter converts files on the phone and sends nothing (PRIVACY.md). Files
+  are read in the app, the results are saved through the share sheet
+  (@unisim/media/save: @capacitor/filesystem writes to the app's cache, then
+  @capacitor/share), and they are gone when the app closes.
+
+  No accounts (src/main.tsx `noAccounts: true`, no sign-in, no <UsageTracker />)
+  and no suite user count from the phone app: the SDK's presence heartbeat (a
+  random install id + platform every 45 s) is switched off in the iOS/Android
+  shell (src/main.tsx `presence: !Capacitor.isNativePlatform()`), because the
+  App Store and Play figures already count installs. The website still sends
+  it; this manifest does not cover the website. So no data is collected, and
+  nothing is used for tracking. The only network requests are the changelog
+  (changelog.unisim.co.uk) and the app's own update check, neither of which
+  carries anything about the user.
+
+  Required-reason APIs: @capacitor/filesystem's native code reads file
+  creation and modification dates (its `stat`), only for files in the app's
+  own container, and the plugin ships no manifest of its own, so C617.1 is
+  declared here. Capacitor's core frameworks carry their own manifests.
+
+  Keep this in step with store-assets/data-safety.json, the App Store Connect
+  privacy answers ("Data Not Collected") and PRIVACY.md. Written 2026-10-12
+  (privacy audit).
+-->
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<!-- @capacitor/filesystem: files in the app container. C617.1. -->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+</dict>
+</plist>

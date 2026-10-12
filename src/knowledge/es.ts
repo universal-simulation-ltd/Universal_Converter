@@ -178,12 +178,10 @@ Algunas partes de la aplicación son grandes y solo se necesitan de vez en cuand
 
 ## Qué envía la aplicación
 
-- **Iniciar sesión**, si usted lo decide. Nada en la aplicación exige una cuenta.
-- **Un aviso de «aplicación abierta»** cuando ha iniciado sesión, para que la actividad de su Universal ID sea correcta. No dice nada de sus archivos.
-- **Una señal de «aplicación en uso»** cada 45 segundos mientras la aplicación está abierta y en pantalla. Contiene el nombre de la aplicación, un identificador aleatorio creado en su dispositivo y su cuenta si ha iniciado sesión. Sirve para mostrar cuántas personas usan la aplicación.
+- **Una señal de «aplicación en uso»**, solo desde el sitio web: cada 45 segundos mientras la aplicación está abierta y en pantalla, envía el nombre de la aplicación, un identificador aleatorio creado en su dispositivo y el tipo de dispositivo (web, teléfono u ordenador), para que podamos contar cuántas personas usan la aplicación. No dice nada de sus archivos y no está vinculada a usted. La aplicación para teléfono no la envía.
 - **La búsqueda de actualizaciones** y la descarga de la lista de novedades.
 
-No hay publicidad ni seguimiento de terceros.
+No hay inicio de sesión, ni publicidad, ni seguimiento de terceros.
 
 ## Compruébelo usted mismo
 

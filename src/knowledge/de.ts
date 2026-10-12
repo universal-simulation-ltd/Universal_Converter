@@ -178,12 +178,10 @@ Einige Teile der App sind groß und werden nur gelegentlich gebraucht. Sie werde
 
 ## Was die App sendet
 
-- **Die Anmeldung**, falls Sie sich dafür entscheiden. Nichts in der App erfordert ein Konto.
-- **Eine Meldung „App geöffnet“**, wenn Sie angemeldet sind, damit die Aktivität Ihrer Universal ID stimmt. Sie enthält nichts über Ihre Dateien.
-- **Ein Signal „App in Benutzung“** alle 45 Sekunden, solange die App geöffnet und sichtbar ist. Es enthält den Namen der App, eine zufällige, auf Ihrem Gerät erzeugte Kennung und Ihr Konto, falls Sie angemeldet sind. Damit wird angezeigt, wie viele Menschen die App nutzen.
+- **Ein Signal „App in Benutzung“**, nur von der Website: alle 45 Sekunden, solange die App geöffnet und sichtbar ist, sendet sie den Namen der App, eine auf Ihrem Gerät erzeugte Zufalls-ID und die Geräteart (Web, Telefon oder Computer), damit wir zählen können, wie viele Menschen die App nutzen. Es sagt nichts über Ihre Dateien und ist nicht mit Ihnen verknüpft. Die Telefon-App sendet es nicht.
 - **Die Suche nach Updates** und das Abrufen der Liste der Neuerungen.
 
-Es gibt keine Werbung und kein Tracking durch Dritte.
+Es gibt keine Anmeldung, keine Werbung und kein Tracking durch Dritte.
 
 ## Prüfen Sie es selbst
 

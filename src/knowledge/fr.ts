@@ -178,12 +178,10 @@ Quelques éléments de l’application sont volumineux et rarement utiles ; ils 
 
 ## Ce que l’application envoie
 
-- **La connexion**, si vous le souhaitez. Rien dans l’application n’exige de compte.
-- **Une note « application ouverte »** lorsque vous êtes connecté, pour que l’activité de votre Universal ID soit exacte. Elle ne dit rien de vos fichiers.
-- **Un signal « application en cours d’utilisation »** toutes les 45 secondes tant que l’application est ouverte et affichée. Il contient le nom de l’application, un identifiant aléatoire créé sur votre appareil et votre compte si vous êtes connecté. Il sert à indiquer combien de personnes utilisent l’application.
+- **Un signal « application en cours d’utilisation »**, depuis le site web uniquement : toutes les 45 secondes tant que l’application est ouverte et affichée, il envoie le nom de l’application, un identifiant aléatoire créé sur votre appareil et le type d’appareil (web, téléphone ou ordinateur), pour que nous puissions compter combien de personnes utilisent l’application. Il ne dit rien de vos fichiers et n’est pas lié à vous. L’application pour téléphone ne l’envoie pas.
 - **La recherche de mises à jour** et la récupération de la liste des nouveautés.
 
-Il n’y a ni publicité ni suivi par des tiers.
+Il n’y a ni connexion, ni publicité, ni suivi par des tiers.
 
 ## Vérifiez par vous-même
 
