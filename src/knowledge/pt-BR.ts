@@ -178,10 +178,9 @@ Algumas partes do app são grandes e só são usadas de vez em quando, então s�
 
 ## O que o app envia
 
-- **Um sinal de "app em uso"**, só pelo site: a cada 45 segundos enquanto o app está aberto e na tela, ele envia o nome do app, um ID aleatório criado no seu dispositivo e o tipo de dispositivo (web, celular ou computador), para contarmos quantas pessoas usam o app. Não diz nada sobre os seus arquivos e não está ligado a você. O app para celular não o envia.
 - **A verificação de atualizações** e a busca da lista de novidades.
 
-Não há login, publicidade nem rastreamento de terceiros.
+Não há login, contagem de uso, publicidade nem rastreamento de terceiros: o app nem sequer nos avisa que foi aberto.
 
 ## Confira você mesmo
 

@@ -178,10 +178,9 @@ Quelques éléments de l’application sont volumineux et rarement utiles ; ils 
 
 ## Ce que l’application envoie
 
-- **Un signal « application en cours d’utilisation »**, depuis le site web uniquement : toutes les 45 secondes tant que l’application est ouverte et affichée, il envoie le nom de l’application, un identifiant aléatoire créé sur votre appareil et le type d’appareil (web, téléphone ou ordinateur), pour que nous puissions compter combien de personnes utilisent l’application. Il ne dit rien de vos fichiers et n’est pas lié à vous. L’application pour téléphone ne l’envoie pas.
 - **La recherche de mises à jour** et la récupération de la liste des nouveautés.
 
-Il n’y a ni connexion, ni publicité, ni suivi par des tiers.
+Il n’y a ni connexion, ni comptage d’utilisation, ni publicité, ni suivi par des tiers : l’application ne nous signale même pas qu’elle a été ouverte.
 
 ## Vérifiez par vous-même
 

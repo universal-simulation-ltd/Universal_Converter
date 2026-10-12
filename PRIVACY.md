@@ -45,28 +45,24 @@ there isn't one. The only ceiling is your own computer's memory.
 If you open your browser's Network tab you will see a few requests, and a
 privacy page that pretended otherwise would look like a lie.
 
-- **"This app is in use"** — on the website only. While
-  the app is open and on screen, it tells our server every 45 seconds that it
-  is in use, so the menu can say how many people use it and how many are using
-  it now. That message holds the app's name, a random ID made on this device
-  (kept in the browser's storage) and the platform field, which on the website
-  is always "web": nothing about what you are working on, and nothing that
-  links it to you. See `presence.ts` in `@unisim/sdk` and `presence` in
-  [`src/main.tsx`](src/main.tsx). **The iPhone and Android apps don't send it**
-  (`presence: !Capacitor.isNativePlatform()`), because the App Store and Google
-  Play already count installs.
 - **The changelog and update notice.**
 
 There is **no sign-in** (`noAccounts` in [`src/main.tsx`](src/main.tsx)) and no
-usage tracking: nothing records that you opened the app.
+usage tracking: nothing records that you opened the app. **There is no user
+count either**, on any platform. The suite's old "this app is in use" signal
+(a random install ID sent every 45 seconds) was retired in `@unisim/sdk`
+0.187.0, and the anonymous daily open count that replaced it in other UNI·SIM
+apps is off here, because `noAccounts` switches it off (and `openCount:
+!Capacitor.isNativePlatform()` keeps it off in the iPhone and Android apps
+regardless).
 
 **There is no third-party analytics, no tracking pixel, and no advertising
 script.** You can check that without reading any code: view the page source of
 [the live app](https://opensource.unisim.co.uk/converter/) and look at what it
 loads. The page, its scripts, styles and fonts all come from our own domain
-(opensource.unisim.co.uk), and the changelog from changelog.unisim.co.uk. The
-one other server it talks to is our database host, Supabase
-(`rygfxgalojojppxmhddo.supabase.co`), for the "in use" count above.
+(opensource.unisim.co.uk), and the changelog from changelog.unisim.co.uk. No
+count or usage figure is sent to our database host, Supabase
+(`rygfxgalojojppxmhddo.supabase.co`), or anywhere else.
 
 ---
 

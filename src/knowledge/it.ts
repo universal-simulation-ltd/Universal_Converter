@@ -178,10 +178,9 @@ Alcune parti dell’app sono grandi e servono solo ogni tanto, quindi vengono sc
 
 ## Che cosa invia l’app
 
-- **Un segnale «app in uso»**, solo dal sito web: ogni 45 secondi mentre l’app è aperta e sullo schermo, invia il nome dell’app, un ID casuale creato sul tuo dispositivo e il tipo di dispositivo (web, telefono o computer), così possiamo contare quante persone usano l’app. Non dice nulla dei tuoi file e non è collegato a te. L’app per telefono non lo invia.
 - **Il controllo degli aggiornamenti** e il recupero dell’elenco delle novità.
 
-Non ci sono accesso, pubblicità né tracciamento di terze parti.
+Non ci sono accesso, conteggio degli utilizzi, pubblicità né tracciamento di terze parti: l’app non ci comunica nemmeno di essere stata aperta.
 
 ## Verificalo tu stesso
 

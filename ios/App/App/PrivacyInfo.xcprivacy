@@ -10,11 +10,11 @@
   @capacitor/share), and they are gone when the app closes.
 
   No accounts (src/main.tsx `noAccounts: true`, no sign-in, no <UsageTracker />)
-  and no suite user count from the phone app: the SDK's presence heartbeat (a
-  random install id + platform every 45 s) is switched off in the iOS/Android
-  shell (src/main.tsx `presence: !Capacitor.isNativePlatform()`), because the
-  App Store and Play figures already count installs. The website still sends
-  it; this manifest does not cover the website. So no data is collected, and
+  and no usage count: the suite user count (an install id every 45 s) was
+  retired in @unisim/sdk 0.187.0, and its replacement, the anonymous daily
+  open count, is off under `noAccounts` and, in the iOS/Android shell, also
+  under src/main.tsx `openCount: !Capacitor.isNativePlatform()`, because the
+  App Store and Play figures already count installs. So no data is collected, and
   nothing is used for tracking. The only network requests are the changelog
   (changelog.unisim.co.uk) and the app's own update check, neither of which
   carries anything about the user.

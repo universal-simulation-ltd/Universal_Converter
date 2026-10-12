@@ -178,10 +178,9 @@ Algumas partes da aplicação são grandes e só são precisas de vez em quando,
 
 ## O que a aplicação envia
 
-- **Um sinal de "aplicação em uso"**, só a partir do site: a cada 45 segundos enquanto a aplicação está aberta e no ecrã, envia o nome da aplicação, um ID aleatório criado no seu dispositivo e o tipo de dispositivo (web, telemóvel ou computador), para podermos contar quantas pessoas usam a aplicação. Não diz nada sobre os seus ficheiros e não está ligado a si. A aplicação para telemóvel não o envia.
 - **A procura de atualizações** e a obtenção da lista de novidades.
 
-Não há início de sessão, publicidade nem rastreio por terceiros.
+Não há início de sessão, contagem de utilização, publicidade nem rastreio por terceiros: a aplicação nem sequer nos avisa de que foi aberta.
 
 ## Confirme por si
 

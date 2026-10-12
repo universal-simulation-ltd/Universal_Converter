@@ -178,10 +178,9 @@ Uygulamanın bazı bölümleri büyüktür ve yalnızca ara sıra gerekir; bu y�
 
 ## Uygulamanın gönderdikleri
 
-- **"Bu uygulama kullanılıyor" sinyali**, yalnızca web sitesinden: uygulama açık ve ekranda olduğu sürece her 45 saniyede bir uygulamanın adını, cihazınızda oluşturulan rastgele bir kimliği ve cihaz türünü (web, telefon veya bilgisayar) gönderir; böylece uygulamayı kaç kişinin kullandığını sayabiliriz. Dosyalarınız hakkında hiçbir şey söylemez ve size bağlı değildir. Telefon uygulaması bunu göndermez.
 - **Güncellemelerin denetlenmesi** ve yenilikler listesinin alınması.
 
-Oturum açma, reklam ya da üçüncü taraf izleme yoktur.
+Oturum açma, kullanım sayımı, reklam ya da üçüncü taraf izleme yoktur: uygulama açıldığını bile bize bildirmez.
 
 ## Kendiniz doğrulayın
 
