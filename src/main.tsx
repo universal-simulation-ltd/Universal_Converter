@@ -24,9 +24,10 @@ if (import.meta.env.DEV) {
 // ship; RLS is the security boundary). Env vars override.
 // No accounts, and no user count from the phone app (privacy audit
 // 2026-10-12). `noAccounts: true` drops the navbar's profile icon and sign-in,
-// and <UsageTracker /> is gone. `presence` (the SDK user count: a random
-// install id + platform every 45 s) stays on the website only — the iOS and
-// Android builds send nothing, which is what ios/App/App/PrivacyInfo.xcprivacy
+// and <UsageTracker /> is gone. The SDK user count was retired in 0.187.0;
+// its anonymous daily open count is already off under `noAccounts`, and
+// `openCount` keeps it off in the iOS and Android builds whatever happens to
+// `noAccounts` — they send nothing, which is what ios/App/App/PrivacyInfo.xcprivacy
 // and store-assets/data-safety.json declare. Change all of them together, and
 // PRIVACY.md + the "files stay on your device" article with them.
 const universalConfig = {
@@ -36,7 +37,7 @@ const universalConfig = {
   // changelog/usage, neither of which this tool writes to.
   product: 'converter' as unknown as ProductCode,
   noAccounts: true,
-  presence: !Capacitor.isNativePlatform(),
+  openCount: !Capacitor.isNativePlatform(),
   cookieDomain: import.meta.env.PROD ? '.unisim.co.uk' : undefined,
 }
 
