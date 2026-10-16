@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useFileDrop } from '@unisim/sdk'
 import { LARGE_FILE_BYTES } from '../../lib/convert'
 import { DROP_COPY } from '../../lib/formats'
@@ -22,13 +22,18 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
   const removeItem = useConverterStore((s) => s.removeItem)
   const downloadItem = useConverterStore((s) => s.downloadItem)
   const [expanded, setExpanded] = useState(false)
+  const moreId = useId()
 
   const totalBytes = items.reduce((sum, i) => sum + i.file.size, 0)
   const doneCount = items.filter((i) => i.status === 'done').length
   // The store converts one file at a time, so there is at most one.
   const current = items.find((i) => i.status === 'converting')
   const collapsible = items.length > COLLAPSE_OVER
-  const shown = collapsible && !expanded ? items.slice(0, COLLAPSED_ROWS) : items
+  // The rows "View all" brings out are a list of their own, so the button can
+  // point at exactly them (`aria-controls`) and the SDK scrolls the new rows
+  // into view rather than the whole list back to its top.
+  const shown = collapsible ? items.slice(0, COLLAPSED_ROWS) : items
+  const more = collapsible && expanded ? items.slice(COLLAPSED_ROWS) : []
   const failedCount = items.filter((i) => i.status === 'failed').length
   // What a screen reader hears: the file being worked on, then the outcome.
   // Per FILE, never per percent — the visible strip below carries a live
@@ -39,6 +44,17 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
       ? `Finished: ${doneCount} ${doneCount === 1 ? 'file' : 'files'} ready` +
         (failedCount > 0 ? `, ${failedCount} couldn’t be converted` : '')
       : ''
+
+  const renderRow = (item: QueueItem) => (
+    <Row
+      key={item.id}
+      item={item}
+      targetExt={targetExt}
+      busy={running}
+      onRemove={() => removeItem(item.id)}
+      onDownload={() => downloadItem(item.id)}
+    />
+  )
 
   return (
     <div>
@@ -84,18 +100,8 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
         <span />
       </div>
 
-      <ul>
-        {shown.map((item) => (
-          <Row
-            key={item.id}
-            item={item}
-            targetExt={targetExt}
-            busy={running}
-            onRemove={() => removeItem(item.id)}
-            onDownload={() => downloadItem(item.id)}
-          />
-        ))}
-      </ul>
+      <ul>{shown.map(renderRow)}</ul>
+      {more.length > 0 && <ul id={moreId}>{more.map(renderRow)}</ul>}
 
       {collapsible && (
         <div className="border-t border-slate-200 px-4 py-2.5 dark:border-slate-800">
@@ -103,6 +109,7 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
             type="button"
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
+            aria-controls={expanded ? moreId : undefined}
             className="w-full rounded-lg px-3 py-2 text-[12px] font-semibold text-orange-800 hover:bg-orange-50 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 dark:text-orange-300 dark:hover:bg-orange-950/40"
           >
             {expanded ? 'Show fewer' : `View all ${items.length} files (${items.length - COLLAPSED_ROWS} more)`}
