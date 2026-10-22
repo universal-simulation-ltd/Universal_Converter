@@ -1,31 +1,15 @@
-import { DefaultViewSelect, UniversalAppsNavBar, UpdateNotice, type AboutAppConfig } from '@unisim/sdk'
-// Generated — `npm run credits` after any dependency change. Never edit it by
-// hand: it is read off the installed tree, so a hand-kept list drifts from the
-// lockfile the first time anyone upgrades anything, and a credits list naming a
-// package we removed is worse than no list at all.
-import credits from './generated/credits.json'
+import { DefaultViewSelect, UniversalAppsNavBar, UpdateNotice } from '@unisim/sdk'
 import AppMenu from './components/Header/AppMenu'
 import ProductLogo from './components/Header/ProductLogo'
 import ConverterApp from './components/converter/ConverterApp'
+import { ABOUT, REPO_URL } from './lib/aboutApp'
 import { CONTAINER } from './lib/layout'
 import { useConverterStore } from './stores/converterStore'
 import { useThemeStore } from './stores/themeStore'
 import { useSystemBarsStyle } from './lib/systemBars'
 import { KNOWLEDGE_BASE } from './knowledge'
-
-const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_Converter'
-
-// "About this app" — drawn by the SDK at the foot of "Tune this app" (SDK
-// 0.161.0; it was the last row of Actions ▸ Advanced until 2026-09-27).
-const ABOUT: AboutAppConfig = {
-  repo:    REPO_URL,
-  proof:   'https://github.com/universal-simulation-ltd/Universal_Converter/blob/main/PRIVACY.md',
-  subject: 'Your files',
-  plural:  true,
-  version: __APP_VERSION__,
-  credits,
-  noticesHref: 'https://github.com/universal-simulation-ltd/Universal_Converter/blob/main/THIRD-PARTY-NOTICES.md',
-}
+import { PHONE } from './native/shell'
+import { ConverterPhoneBar, ConverterPhoneLayers } from './native/PhoneApp'
 
 export default function App() {
   // The RESOLVED theme ('system' already turned into light or dark) — what the
@@ -44,8 +28,12 @@ export default function App() {
     // product name on the clock and the menu out of reach. In a browser the
     // inset is 0, so this is a no-op on web and on desktop. Universal PDF, QR
     // and Images all carry the same line.
-    <div className="flex flex-col min-h-screen bg-slate-100 pt-[env(safe-area-inset-top)] dark:bg-slate-950">
-      <UniversalAppsNavBar
+    //
+    // The phone app (PHONE) has no navbar at all: its bar pads itself under
+    // the status bar, and everything the navbar's dropdowns and dialogs held is
+    // a page or a bottom sheet (`src/native/`).
+    <div className={`flex flex-col min-h-screen bg-slate-100 dark:bg-slate-950 ${PHONE ? '' : 'pt-[env(safe-area-inset-top)]'}`}>
+      {PHONE ? <ConverterPhoneBar /> : <UniversalAppsNavBar
         product="converter"
         productLogo={<ProductLogo />}
         productHomeHref={import.meta.env.BASE_URL}
@@ -82,7 +70,7 @@ export default function App() {
         // Withheld mid-conversion, as the old actions-menu row was disabled
         // then: swapping settings under a running batch re-arms items.
         onResetDefaults={running ? undefined : resetSettings}
-      />
+      />}
 
       {/* Renders nothing until this tab is genuinely running superseded code.
           See the SDK's useAppUpdate: an autoUpdate PWA hands the new worker
@@ -91,13 +79,14 @@ export default function App() {
         <UpdateNotice />
       </div>
 
-      <main className="flex-1">
+      <main className={PHONE ? 'flex-1 pb-[env(safe-area-inset-bottom)]' : 'flex-1'}>
         <ConverterApp />
       </main>
 
       {/* pb-[env(safe-area-inset-bottom)] keeps the last line of the page off
           the home indicator / gesture bar in the native build; 0 everywhere else. */}
-      <footer className="border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-slate-800 dark:bg-slate-900">
+      {/* The website's footer. The phone app's credit is on its About page. */}
+      {!PHONE && <footer className="border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-slate-800 dark:bg-slate-900">
         <div className={`${CONTAINER} py-4 flex flex-row items-center gap-3 sm:gap-4 text-xs text-slate-500 dark:text-slate-400`}>
           <span>
             With{' '}
@@ -122,7 +111,9 @@ export default function App() {
             <span className="hidden sm:inline">GitHub</span>
           </a>
         </div>
-      </footer>
+      </footer>}
+
+      {PHONE && <ConverterPhoneLayers />}
     </div>
   )
 }
