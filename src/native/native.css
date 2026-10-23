@@ -1,34 +1,32 @@
-/* The phone chrome's motion: a page slides in from the right, a sheet rises,
-   its scrim fades. Only ever on screen in the iOS and Android apps. */
-.pp-page {
-  animation: pp-slide 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+/* The SDK phone kit's pages and sheets (@unisim/sdk ≥0.203.0) in this app's
+   Tailwind 4 palette, so they look as they did while the app kept its own
+   copies: slate grounds, orange-700 links and buttons, red-600 for a
+   destructive one, slate-950 / slate-900 in dark mode. The kit's rules weigh
+   nothing (:where()), so these win. */
+.unisim-phone-layer {
+  --uph-bg: oklch(98.4% 0.003 247.858);
+  --uph-sheet: oklch(98.4% 0.003 247.858);
+  --uph-text: oklch(20.8% 0.042 265.755);
+  --uph-muted: oklch(55.4% 0.046 257.417);
+  --uph-line: oklch(92.9% 0.013 255.508);
+  --uph-accent: oklch(55.3% 0.195 38.402);
+  --uph-primary: oklch(55.3% 0.195 38.402);
+  --uph-danger: oklch(57.7% 0.245 27.325);
+  --uph-scrim: oklch(12.9% 0.042 264.695 / 0.45);
+  --uph-grip: oklch(86.9% 0.022 252.894);
 }
-.pp-sheet {
-  animation: pp-rise 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+html.dark .unisim-phone-layer:not([data-uph-theme='light']) {
+  --uph-bg: oklch(12.9% 0.042 264.695);
+  --uph-surface: oklch(20.8% 0.042 265.755);
+  --uph-sheet: oklch(20.8% 0.042 265.755);
+  --uph-text: oklch(96.8% 0.007 247.896);
+  --uph-muted: oklch(70.4% 0.04 256.788);
+  --uph-line: oklch(27.9% 0.041 260.031);
+  --uph-accent: oklch(75% 0.183 55.934);
+  --uph-grip: oklch(44.6% 0.043 257.281);
 }
-.pp-scrim {
-  animation: pp-fade 160ms ease-out;
-}
-@keyframes pp-slide {
-  from { transform: translateX(28px); opacity: 0.5; }
-  to { transform: translateX(0); opacity: 1; }
-}
-@keyframes pp-rise {
-  from { transform: translateY(40px); opacity: 0.4; }
-  to { transform: translateY(0); opacity: 1; }
-}
-@keyframes pp-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .pp-page, .pp-sheet, .pp-scrim { animation: none; }
-}
-/* A sideways row with its scrollbar hidden: the edge fade says it scrolls. */
-.pp-row {
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-.pp-row::-webkit-scrollbar {
-  display: none;
+/* Cancel under a question: a step lighter than the sheet in dark mode. */
+html.dark .unisim-phone-layer:not([data-uph-theme='light']) .unisim-phone-btn:not([data-tone]) {
+  background: oklch(27.9% 0.041 260.031);
+  border-color: oklch(37.2% 0.044 257.287);
 }

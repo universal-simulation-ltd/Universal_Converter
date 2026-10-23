@@ -2,7 +2,8 @@ import { create } from 'zustand'
 
 // What the phone chrome has open: the ⋯ sheet, and the pages stacked over the
 // app (Tune this app, the guides, About, and this app's own). Each layer
-// registers its own Back step (`useBackCloses`), so this only holds the state.
+// registers its own Back step (the SDK's PhonePage and BottomSheet do), so
+// this only holds the state.
 
 interface PhoneNav {
   more: boolean

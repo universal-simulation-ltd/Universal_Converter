@@ -1,17 +1,21 @@
-import { Fragment, useEffect, useId, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
+  BottomSheet,
   LANGUAGE_LABELS,
+  PhoneDialogHost,
+  PhonePage,
   PrivacyNote,
   SUPPORTED_LANGUAGES,
   UniversalBar,
   parseArticleBody,
+  phoneConfirm,
   useLanguage,
   useResetAppDefaults,
   type AboutAppConfig,
   type Language,
   type ThemeStore,
 } from '@unisim/sdk'
-import { ask, AskHost, Card, CardLabel, Page, Row, Sheet } from './parts'
+import { Card, CardLabel, Row } from './parts'
 import { usePhoneNav } from './nav'
 import { useNT } from './strings'
 
@@ -108,14 +112,14 @@ export function PhoneLayers({
   return (
     <>
       {more && (
-        <Sheet label={t('more')} onClose={closeMore}>
+        <BottomSheet label={t('more')} onClose={closeMore}>
           {actions && <Card>{actions}</Card>}
           <Card>
             <Row icon="⚙️" label={t('sdk:prefs.app_preferences')} onClick={() => push('tune')} />
             <Row icon="📖" label={t('sdk:menu.knowledge_base')} onClick={() => push('kb')} />
             <Row icon="ℹ️" label={t('sdk:menu.about_app')} onClick={() => push('about')} />
           </Card>
-        </Sheet>
+        </BottomSheet>
       )}
       {stack.map((p) => (
         <Fragment key={p}>
@@ -128,7 +132,7 @@ export function PhoneLayers({
           {pages[p]}
         </Fragment>
       ))}
-      <AskHost />
+      <PhoneDialogHost />
     </>
   )
 }
@@ -170,7 +174,7 @@ function TunePage({
   ] as const
 
   return (
-    <Page title={t('sdk:prefs.app_preferences')} onBack={onBack}>
+    <PhonePage title={t('sdk:prefs.app_preferences')} onBack={onBack}>
       <div className="flex flex-col gap-3 px-4 pt-4">
         {extra && <Card>{extra}</Card>}
 
@@ -224,7 +228,7 @@ function TunePage({
           type="button"
           disabled={!onReset}
           onClick={async () => {
-            if (await ask(t('sdk:prefs.reset_confirm', { app: app.name }), t('sdk:prefs.reset_yes'))) {
+            if (await phoneConfirm({ message: t('sdk:prefs.reset_confirm', { app: app.name }), confirmLabel: t('sdk:prefs.reset_yes'), danger: true })) {
               reset()
               setDone(true)
             }
@@ -237,7 +241,7 @@ function TunePage({
           {done ? t('sdk:prefs.reset_done') : ''}
         </p>
       </div>
-    </Page>
+    </PhonePage>
   )
 }
 
@@ -290,7 +294,7 @@ function KnowledgePage({ app, onBack }: { app: PhoneAppInfo; onBack: () => void 
   }, [list, query])
 
   return (
-    <Page title={t('sdk:menu.knowledge_base')} onBack={onBack}>
+    <PhonePage title={t('sdk:menu.knowledge_base')} onBack={onBack}>
       <div className="flex flex-col gap-3 px-4 pt-4">
         <p className="px-1 text-[15px] leading-snug text-slate-600 dark:text-slate-300">{t('sdk:kb.intro', { app: app.name })}</p>
         {/* Never focused for the reader: a pull down from the top puts the finger here. */}
@@ -318,7 +322,7 @@ function KnowledgePage({ app, onBack }: { app: PhoneAppInfo; onBack: () => void 
           </Fragment>
         ))}
       </div>
-    </Page>
+    </PhonePage>
   )
 }
 
@@ -345,16 +349,16 @@ function ArticlePage({ app, onBack }: { app: PhoneAppInfo; onBack: () => void })
   const list = loaded && loaded !== 'failed' ? loaded.list : []
   const at = list.findIndex((a) => a.id === id)
   const article = at >= 0 ? list[at] : null
+  const bodyRef = useRef<HTMLDivElement>(null)
   const go = (i: number) => {
     const next = list[i]
     if (!next) return
     usePhoneNav.setState({ article: next.id })
-    const pages = document.querySelectorAll('[data-phone-page]')
-    pages[pages.length - 1]?.querySelector('.overflow-y-auto')?.scrollTo({ top: 0 })
+    bodyRef.current?.scrollTo({ top: 0 })
   }
 
   return (
-    <Page title={article?.title ?? t('sdk:menu.knowledge_base')} onBack={onBack}>
+    <PhonePage title={article?.title ?? t('sdk:menu.knowledge_base')} onBack={onBack} bodyRef={bodyRef}>
       {article && (
         <article className="flex flex-col gap-3 px-5 pt-5 text-[16px] leading-relaxed text-slate-700 dark:text-slate-300">
           <h2 className="text-[24px] font-bold leading-tight text-slate-900 dark:text-slate-100">{article.title}</h2>
@@ -404,7 +408,7 @@ function ArticlePage({ app, onBack }: { app: PhoneAppInfo; onBack: () => void })
           </div>
         </article>
       )}
-    </Page>
+    </PhonePage>
   )
 }
 
@@ -422,7 +426,7 @@ function AboutPage({ app, onBack }: { app: PhoneAppInfo; onBack: () => void }) {
   const heading = 'text-[13px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 
   return (
-    <Page title={t('sdk:menu.about_app')} onBack={onBack}>
+    <PhonePage title={t('sdk:menu.about_app')} onBack={onBack}>
       <div className="flex flex-col gap-3 px-4 pt-5">
         <div className="flex items-center gap-3 px-1">
           <span className="scale-150 origin-left">{app.logo}</span>
@@ -514,6 +518,6 @@ function AboutPage({ app, onBack }: { app: PhoneAppInfo; onBack: () => void }) {
           </p>
         )}
       </div>
-    </Page>
+    </PhonePage>
   )
 }
