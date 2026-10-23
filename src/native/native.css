@@ -2,7 +2,8 @@
    Tailwind 4 palette, so they look as they did while the app kept its own
    copies: slate grounds, orange-700 links and buttons, red-600 for a
    destructive one, slate-950 / slate-900 in dark mode. The kit's rules weigh
-   nothing (:where()), so these win. */
+   nothing (:where(), and since 0.203.1 in a layer under Tailwind's
+   utilities), so these win, and so does a Tailwind class on a kit part. */
 .unisim-phone-layer {
   --uph-bg: oklch(98.4% 0.003 247.858);
   --uph-sheet: oklch(98.4% 0.003 247.858);
