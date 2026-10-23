@@ -39,12 +39,21 @@ jobs:
 
       - run: npm ci
 
-      # The GIF checks read our files back with ffmpeg and ffprobe, a GIF
-      # implementation that is not ours. Installed only if the runner lacks it.
+      # ffmpeg and ffprobe, a GIF implementation that is not ours, read our
+      # files back. apt from archive.ubuntu.com, not the runner's own Azure
+      # mirror: on 2026-10-23 that mirror ran at a few KB/s and an apt install
+      # of ffmpeg (16 s on a good day) timed the job out. If apt is still slow,
+      # a static build from GitHub instead.
       - name: ffmpeg
         run: |
           if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
-            sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
+            sudo sed -i 's|http://azure.archive.ubuntu.com|http://archive.ubuntu.com|g' /etc/apt/sources.list.d/*.sources /etc/apt/sources.list 2>/dev/null || true
+            if ! sudo timeout 180 sh -c 'apt-get update -q && apt-get install -y -q --no-install-recommends ffmpeg'; then
+              echo "apt was too slow; using BtbN's static build"
+              curl -fsSL --retry 3 https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz | tar -xJ -C "$RUNNER_TEMP"
+              echo "$RUNNER_TEMP/ffmpeg-master-latest-linux64-gpl/bin" >> "$GITHUB_PATH"
+              export PATH="$RUNNER_TEMP/ffmpeg-master-latest-linux64-gpl/bin:$PATH"
+            fi
           fi
           ffmpeg -version | head -1
 
