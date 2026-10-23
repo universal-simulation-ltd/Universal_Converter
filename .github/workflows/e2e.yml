@@ -49,9 +49,10 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
       # --ipc=host: Chromium runs out of shared memory in a container
-      # without it. --user 1001: the runner's own user (Playwright's advice),
-      # so the checkout is writable and Firefox is not started as root.
-      options: --ipc=host --user 1001
+      # without it. Root (unlike Universal PDF's --user 1001), because the
+      # video spec needs ffmpeg and ffprobe from apt, and nothing here runs
+      # Firefox, the one engine that refuses root.
+      options: --ipc=host
     defaults:
       run:
         shell: bash
@@ -64,6 +65,13 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
+
+      # The video spec makes its fixture with ffmpeg and reads the GIF back
+      # with ffprobe, which is not ours.
+      - name: ffmpeg
+        run: |
+          apt-get update -q && apt-get install -y -q --no-install-recommends ffmpeg
+          ffmpeg -version | head -1
 
       - name: Playwright ${{ env.PLAYWRIGHT_VERSION }}
         run: npm install --no-save --no-audit --no-fund "playwright@$PLAYWRIGHT_VERSION"
