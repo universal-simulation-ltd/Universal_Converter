@@ -47,8 +47,12 @@ privacy page that pretended otherwise would look like a lie.
 
 - **The changelog and update notice.**
 
-There is **no sign-in** (`noAccounts` in [`src/main.tsx`](src/main.tsx)) and no
-usage tracking: nothing records that you opened the app. **There is no user
+There is **no account of its own**, and nothing here needs one (`noAccounts`
+in [`src/main.tsx`](src/main.tsx)). If your browser already holds a UNI·SIM
+sign-in (a Universal ID), the app recognises it so your suite-wide settings,
+such as colour scheme and language, come with you, and Tune this app offers a
+discreet Sign in; your files are never tied to it. There is no usage
+tracking: nothing records that you opened the app. **There is no user
 count either**, on any platform. The suite's old "this app is in use" signal
 (a random install ID sent every 45 seconds) was retired in `@unisim/sdk`
 0.187.0, and the anonymous daily open count that replaced it in other UNI·SIM

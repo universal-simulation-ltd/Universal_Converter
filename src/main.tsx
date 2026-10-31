@@ -23,8 +23,11 @@ if (import.meta.env.DEV) {
 // The fallback is the REAL public suite project (publishable anon key — safe to
 // ship; RLS is the security boundary). Env vars override.
 // No accounts, and no user count from the phone app (privacy audit
-// 2026-10-12). `noAccounts: true` drops the navbar's profile icon and sign-in,
-// and <UsageTracker /> is gone. The SDK user count was retired in 0.187.0;
+// 2026-10-12). `noAccounts: true` drops the navbar's profile icon and account
+// rows, and <UsageTracker /> is gone. Since SDK 0.211.0 it no longer keeps
+// people signed out: a suite session the browser already holds is read and
+// followed (their Global Tuning comes with them), and Tune this app offers a
+// discreet Sign in. The SDK user count was retired in 0.187.0;
 // its anonymous daily open count is already off under `noAccounts`, and
 // `openCount` keeps it off in the iOS and Android builds whatever happens to
 // `noAccounts` — they send nothing, which is what ios/App/App/PrivacyInfo.xcprivacy
