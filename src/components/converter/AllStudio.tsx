@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
+import { DropAnywhere, DropRing, useFileDrop, buttonClass } from '@unisim/sdk'
 import { CONTAINER } from '../../lib/layout'
 import { ALL_ACCEPT } from '../../lib/formats'
 import { KINDS, useConverterStore } from '../../stores/converterStore'
@@ -222,7 +222,7 @@ function DownloadEverything() {
       type="button"
       disabled={running}
       onClick={() => void downloadEverything()}
-      className="w-full rounded-xl bg-gradient-to-br from-[#FE8C01] to-[#E05504] px-4 py-3 text-[14px] font-bold text-white shadow-sm transition-opacity hover:opacity-95 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
+      className={`${buttonClass('primary')} w-full`}
     >
       {done === 1 ? 'Download the converted file' : `Download all ${done} converted files as one ZIP`}
     </button>

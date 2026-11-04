@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { buttonClass } from '@unisim/sdk'
 import { AudioDecodeError, convertAudio } from '../../lib/convert'
 import { saveBlob } from '../../lib/download'
 import { buildPdf, imageToJpeg } from '../../lib/pdf'
@@ -91,7 +92,7 @@ function ImagesToPdf() {
         type="button"
         disabled={busy || pictures.length === 0}
         onClick={run}
-        className="mt-3 w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 dark:bg-slate-700 dark:hover:bg-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+        className={`${buttonClass()} mt-3 w-full`}
       >
         {busy
           ? `Building… ${done}/${pictures.length}`
@@ -168,7 +169,7 @@ function DocumentsToOnePdf() {
         type="button"
         disabled={busy || documents.length < 2}
         onClick={() => void run()}
-        className="mt-3 w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 dark:bg-slate-700 dark:hover:bg-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+        className={`${buttonClass()} mt-3 w-full`}
       >
         {busy
           ? `Reading… ${done}/${documents.length}`

@@ -120,7 +120,7 @@ export function Segmented<T extends string | number>({
   unavailableTitle?: string
 }) {
   return (
-    <div className="flex overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+    <div className="u-tabs flex w-full">
       {options.map((o) => {
         const off = unavailable?.includes(o.value) ?? false
         return (
@@ -131,13 +131,7 @@ export function Segmented<T extends string | number>({
             title={off ? unavailableTitle : undefined}
             aria-pressed={value === o.value}
             onClick={() => onChange(o.value)}
-            className={`flex-1 py-1.5 text-[11.5px] font-semibold transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-orange-600 disabled:opacity-50 ${
-              value === o.value
-                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                : off
-                  ? 'text-slate-400 line-through'
-                  : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'
-            }`}
+            className={`u-tab flex-1 justify-center px-2 py-1.5 text-[11.5px] disabled:opacity-50 ${off ? 'line-through' : ''}`}
           >
             {o.label}
           </button>

@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import { useFileDrop } from '@unisim/sdk'
+import { useFileDrop, buttonClass } from '@unisim/sdk'
 import { LARGE_FILE_BYTES } from '../../lib/convert'
 import { DROP_COPY } from '../../lib/formats'
 import { formatBytes } from '../../lib/humanise'
@@ -155,7 +155,7 @@ function AddMore({ kind }: { kind: MediaKind }) {
         type="button"
         disabled={running}
         onClick={drop.open}
-        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-600 transition-colors hover:border-orange-300 hover:bg-orange-50 hover:text-orange-800 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:border-orange-700 dark:hover:bg-orange-950/40 dark:hover:text-orange-300"
+        className={`${buttonClass(undefined, 'sm')} w-full`}
       >
         <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
           <path d="M12 5v14M5 12h14" />
@@ -357,7 +357,7 @@ function Row({
             onClick={onDownload}
             // Which file, by the name it will be SAVED as.
             aria-label={`Save ${item.result?.name ?? item.file.name}`}
-            className="rounded-md bg-orange-500/12 px-2 py-1 text-[11px] font-bold text-orange-800 hover:bg-orange-500/20 dark:text-orange-300"
+            className={buttonClass('soft', 'sm')}
           >
             Save
           </button>

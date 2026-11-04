@@ -1,4 +1,4 @@
-import { DropAnywhere, DropRing, useFileDrop, ValueChip } from '@unisim/sdk'
+import { DropAnywhere, DropRing, useFileDrop, ValueChip, buttonClass } from '@unisim/sdk'
 import { DROP_COPY } from '../../lib/formats'
 import { canPickSaveLocation } from '../../lib/download'
 import { formatBytes } from '../../lib/humanise'
@@ -255,10 +255,9 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
   // downloads folder and is still right for the ZIP and for the first save.
   const onlyDone = t.done === 1 ? items.find((i) => i.kind === kind && i.result) : undefined
 
-  const primary =
-    'w-full rounded-xl bg-gradient-to-br from-[#FE8C01] to-[#E05504] px-4 py-3 text-[14px] font-bold text-white shadow-sm transition-opacity hover:opacity-95 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-40'
-  const secondary =
-    'w-full rounded-xl bg-orange-500/12 px-4 py-2.5 text-[13px] font-bold text-orange-800 transition-colors hover:bg-orange-500/20 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-orange-300'
+  // The suite's key buttons (SDK 0.216, BRANDING.md → Buttons).
+  const primary = `${buttonClass('primary')} w-full`
+  const secondary = `${buttonClass('soft')} w-full`
 
   // ⚠️ `max-lg:order-first`: on a stacked (phone/tablet) layout this card
   // comes BEFORE the Output card in its column, straight under the file list.
