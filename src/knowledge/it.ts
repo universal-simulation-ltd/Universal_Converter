@@ -180,7 +180,7 @@ Alcune parti dell’app sono grandi e servono solo ogni tanto, quindi vengono sc
 
 - **Il controllo degli aggiornamenti** e il recupero dell’elenco delle novità.
 
-Non ci sono accesso, conteggio degli utilizzi, pubblicità né tracciamento di terze parti: l’app non ci comunica nemmeno di essere stata aperta.
+Non ci sono un account proprio, conteggio degli utilizzi, pubblicità né tracciamento di terze parti: l’app non ci comunica nemmeno di essere stata aperta. Se hai già effettuato l’accesso a un’app UNI·SIM, l’app ti riconosce così che le tue impostazioni comuni a tutta la suite, come schema di colori e lingua, ti seguano, e Regola questa app offre un accesso discreto. I tuoi file non vengono mai collegati ad esso.
 
 ## Verificalo tu stesso
 

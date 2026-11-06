@@ -180,7 +180,7 @@ Algumas partes da aplicação são grandes e só são precisas de vez em quando,
 
 - **A procura de atualizações** e a obtenção da lista de novidades.
 
-Não há início de sessão, contagem de utilização, publicidade nem rastreio por terceiros: a aplicação nem sequer nos avisa de que foi aberta.
+Não há conta própria, contagem de utilização, publicidade nem rastreio por terceiros: a aplicação nem sequer nos avisa de que foi aberta. Se já tiver sessão iniciada numa aplicação UNI·SIM, a aplicação reconhece-a para que as suas definições comuns a todo o conjunto, como o esquema de cores e o idioma, o acompanhem, e Ajustar esta aplicação oferece um início de sessão discreto. Os seus ficheiros nunca ficam associados a ela.
 
 ## Confirme por si
 

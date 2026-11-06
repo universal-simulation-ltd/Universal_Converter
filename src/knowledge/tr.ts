@@ -180,7 +180,7 @@ Uygulamanın bazı bölümleri büyüktür ve yalnızca ara sıra gerekir; bu y�
 
 - **Güncellemelerin denetlenmesi** ve yenilikler listesinin alınması.
 
-Oturum açma, kullanım sayımı, reklam ya da üçüncü taraf izleme yoktur: uygulama açıldığını bile bize bildirmez.
+Uygulamanın kendi hesabı, kullanım sayımı, reklam ya da üçüncü taraf izleme yoktur: uygulama açıldığını bile bize bildirmez. Bir UNI·SIM uygulamasında zaten oturum açtıysanız uygulama bunu tanır; böylece renk düzeni ve dil gibi tüm pakette geçerli ayarlarınız sizinle gelir ve Bu uygulamayı ayarla bölümü göze batmayan bir oturum açma seçeneği sunar. Dosyalarınız asla buna bağlanmaz.
 
 ## Kendiniz doğrulayın
 
