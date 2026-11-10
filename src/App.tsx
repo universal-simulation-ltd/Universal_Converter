@@ -34,6 +34,9 @@ export default function App() {
     // a page or a bottom sheet (`src/native/`).
     <div className={`flex flex-col min-h-screen bg-slate-100 dark:bg-slate-950 ${PHONE ? '' : 'pt-[env(safe-area-inset-top)]'}`}>
       {PHONE ? <ConverterPhoneBar /> : <UniversalAppsNavBar
+        // Signed in, the bar says whose it is: "Bradley’s Converter" ("James’ Converter",
+        // "My Converter" with no name), and Tune this app gets the account area (James, 2026-11-10 rollout).
+        personalTitle={(name) => (name ? `${/s$/i.test(name.trim()) ? `${name}’` : `${name}’s`} Converter` : 'My Converter')}
         product="converter"
         productLogo={<ProductLogo />}
         productHomeHref={import.meta.env.BASE_URL}
