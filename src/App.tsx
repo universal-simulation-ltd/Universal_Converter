@@ -32,7 +32,13 @@ export default function App() {
     // The phone app (PHONE) has no navbar at all: its bar pads itself under
     // the status bar, and everything the navbar's dropdowns and dialogs held is
     // a page or a bottom sheet (`src/native/`).
-    <div className={`flex flex-col min-h-screen bg-slate-100 dark:bg-slate-950 ${PHONE ? '' : 'pt-[env(safe-area-inset-top)]'}`}>
+    //
+    // pb-[var(--u-dock-space)]: on a phone the section tray docks at the foot
+    // of the screen (SDK 0.222). The SDK pads <body> by the same amount, but
+    // html/body are height:100% here, so the page overflows body and that
+    // padding never reaches the end of the scroll. Padding this box does: the
+    // footer and the last row scroll clear of the dock. 0 from 768px up.
+    <div className={`flex flex-col min-h-screen pb-[var(--u-dock-space,0px)] bg-slate-100 dark:bg-slate-950 ${PHONE ? '' : 'pt-[env(safe-area-inset-top)]'}`}>
       {PHONE ? <ConverterPhoneBar /> : <UniversalAppsNavBar
         // Signed in, the bar says whose it is: "Bradley’s Converter" ("James’ Converter",
         // "My Converter" with no name), and Tune this app gets the account area (James, 2026-11-10 rollout).

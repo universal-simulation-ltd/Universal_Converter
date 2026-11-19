@@ -30,7 +30,11 @@ export default function ConverterApp() {
 
   return (
     <div>
-      <div className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      {/* On a phone the tray docks at the foot of the screen (owner rule
+          2026-11-19, BRANDING.md → "On a phone, navigation sits at the
+          bottom"; SDK 0.222 `u-tabs--dock`), so this strip has nothing left
+          in it there: no border, no padding. From 768px up it is unchanged. */}
+      <div className="border-slate-200 md:border-b md:bg-white dark:border-slate-800 md:dark:bg-slate-900">
         {/* No `overflow-x-auto` here. Setting one axis to `auto` computes the
             other to `auto` as well, and the tabs' `-mb-px` overflows this box
             by exactly 1px — which is enough for a permanent vertical scrollbar
@@ -45,9 +49,9 @@ export default function ConverterApp() {
           role="tablist"
           aria-label="What to convert"
           onKeyDown={onTabKey}
-          className={`${CONTAINER} py-3`}
+          className={`${CONTAINER} md:py-3`}
         >
-          <div className="u-tabs">
+          <div className="u-tabs u-tabs--dock">
           {/* ⚠️ Hints short enough that all five tabs sit on ONE row. The old
               ones ("MP3, M4A, Opus, FLAC, WAV & AIFF · on your device" …) were
               wider than the 1216px container, so Files wrapped onto a row of
