@@ -1,23 +1,44 @@
-import { create } from 'zustand'
-import { normaliseTabOrder } from '@unisim/sdk'
+import { createSyncedSettings, normaliseTabOrder } from '@unisim/sdk'
 import { TABS, type TabId } from '../stores/converterStore'
 
 // The phone app's tab order (BRANDING.md ▸ "Tabs reorder: hold and drag"):
 // hold a section tab on the docked bar and drag it, or use Tune this app ▸
 // Tab order. Reset to defaults puts it back. The website keeps its own fixed
-// order. Kept on this device: the app has no backup file, and the account sync
-// (SDK 0.229) carries only the SDK's own Tune rows so far.
+// order.
+//
+// Kept on this device and — signed in — on the account (James, 2026-10-30:
+// "mobile app and web app settings in tune this app should be saved and
+// synced to their account … Global rule"): an SDK synced store
+// (`createSyncedSettings`, @unisim/sdk 0.232.0), carried to the account's
+// `tune-app:converter` row, newest change wins. The order saved before
+// (`converter:tab-order`, a bare array) is read once, so nobody loses theirs.
 
-const KEY = 'converter:tab-order'
+const LEGACY_KEY = 'converter:tab-order'
 
-function read(): TabId[] {
+export interface ConverterTune {
+  /** Every tab, in the order the phone's bar shows them. */
+  tabOrder: TabId[]
+}
+
+export function normaliseConverterTune(raw: unknown): ConverterTune {
+  const r = raw && typeof raw === 'object' ? (raw as Partial<Record<keyof ConverterTune, unknown>>) : {}
+  return { tabOrder: normaliseTabOrder(r.tabOrder ?? null, TABS) as TabId[] }
+}
+
+/** The bare array the order was kept as before. `undefined`: nothing to bring over. */
+export function readLegacyTabOrder(storage: Pick<Storage, 'getItem'>): ConverterTune | undefined {
   try {
-    const raw = localStorage.getItem(KEY)
-    return normaliseTabOrder(raw ? (JSON.parse(raw) as string[]) : null, TABS) as TabId[]
+    const raw = storage.getItem(LEGACY_KEY)
+    if (raw === null) return undefined
+    return { tabOrder: JSON.parse(raw) as TabId[] }
   } catch {
-    return [...TABS]
+    return undefined
   }
 }
+
+export const converterTune = createSyncedSettings<ConverterTune>('converter', { tabOrder: [...TABS] }, normaliseConverterTune, {
+  legacy: () => readLegacyTabOrder(window.localStorage),
+})
 
 interface TabOrderState {
   order: TabId[]
@@ -25,15 +46,13 @@ interface TabOrderState {
   setOrder: (order: readonly TabId[] | null) => void
 }
 
-export const useTabOrder = create<TabOrderState>((set) => ({
-  order: read(),
-  setOrder: (order) => {
-    try {
-      if (order) localStorage.setItem(KEY, JSON.stringify(order))
-      else localStorage.removeItem(KEY)
-    } catch {
-      /* private mode: this session only */
-    }
-    set({ order: order ? [...order] : [...TABS] })
-  },
-}))
+const setOrder = (order: readonly TabId[] | null) => converterTune.set({ tabOrder: order ? [...order] : [...TABS] })
+
+function useTabOrderSlice<U>(selector: (s: TabOrderState) => U): U {
+  return converterTune((s) => selector({ order: s.tabOrder, setOrder }))
+}
+
+/** The zustand-style view the phone bar and Tune use. */
+export const useTabOrder = Object.assign(useTabOrderSlice, {
+  getState: (): TabOrderState => ({ order: converterTune.getState().tabOrder, setOrder }),
+})
