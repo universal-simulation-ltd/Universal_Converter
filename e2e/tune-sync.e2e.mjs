@@ -3,7 +3,8 @@
 // saved and synced to their account … Global rule"; @unisim/sdk 0.232.0
 // createSyncedSettings, src/native/tabOrder.ts).
 //
-//   npm run test:tune-sync   (dev server up: npm run dev, or E2E_BASE_URL)
+//   npm run test:tune-sync   (starts its own dev server, like the other specs;
+//                             E2E_BASE_URL to use one already running)
 //
 // Run on the phone screens in a browser (`?app`, dev only), where Tune this
 // app ▸ Tab order lives. Supabase is mocked at the network: every /auth/v1,
@@ -19,11 +20,50 @@
 //   • a second device opens with it, changes it, and the first follows;
 //   • Reset to defaults on one device puts the other back too.
 
-import { dirname, join } from 'node:path'
+import { spawn } from 'node:child_process'
+import { createServer } from 'node:net'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
-const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:5173/'
+
+async function freePort() {
+  return new Promise((done) => {
+    const probe = createServer()
+    probe.listen(0, '127.0.0.1', () => {
+      const { port } = probe.address()
+      probe.close(() => done(port))
+    })
+  })
+}
+
+/** A dev server of our own, as routing.e2e.mjs starts one. */
+function startDevServer(port) {
+  const vite = resolve(HERE, '../node_modules/vite/bin/vite.js')
+  const child = spawn(process.execPath, [vite, '--port', String(port), '--strictPort'], {
+    cwd: resolve(HERE, '..'),
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  return new Promise((done, fail) => {
+    const timer = setTimeout(() => fail(new Error('dev server did not start in 90s')), 90000)
+    child.stdout.on('data', (chunk) => {
+      if (String(chunk).includes(String(port))) {
+        clearTimeout(timer)
+        setTimeout(() => done(child), 800)
+      }
+    })
+    child.stderr.on('data', (chunk) => process.stderr.write(chunk))
+    child.on('exit', (code) => fail(new Error(`dev server exited with ${code}`)))
+  })
+}
+
+let server = null
+let BASE = process.env.E2E_BASE_URL
+if (!BASE) {
+  const port = await freePort()
+  server = await startDevServer(port)
+  BASE = `http://localhost:${port}/`
+}
 
 const PRODUCT = 'converter'
 const ROW = `tune-app:${PRODUCT}`
@@ -251,6 +291,7 @@ try {
   check('no page errors', errors.length === 0, errors[0])
 } finally {
   await browser.close()
+  server?.kill()
 }
 
 console.log(failures.length ? `\n${failures.length} failed` : '\nall passed')
