@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { useDefaultView } from '@unisim/sdk'
+import { TabOrderList, useDefaultView } from '@unisim/sdk'
 import ProductLogo from '../components/Header/ProductLogo'
 import { loadArticles } from '../knowledge'
 import { ABOUT } from '../lib/aboutApp'
@@ -9,6 +9,8 @@ import { usePhoneNav } from './nav'
 import { Row } from './parts'
 import { PhoneBar, PhoneLayers, type PhoneAppInfo } from './screens'
 import { useNT } from './strings'
+import { useTabOrder } from './tabOrder'
+import { UndoToast } from './undo'
 
 // Universal Converter's phone chrome (iOS and Android). The website's navbar
 // opened four popups here: the Actions dropdown (Clear the queue), Tune this
@@ -64,6 +66,25 @@ function OpensOn() {
   )
 }
 
+/** Tune this app ▸ Tab order: the bar's hold and drag, as a list with grips and arrows. */
+function TabOrder() {
+  const t = useNT()
+  const order = useTabOrder((s) => s.order)
+  const setOrder = useTabOrder((s) => s.setOrder)
+  return (
+    <div className="px-4 py-3">
+      <TabOrderList
+        order={order}
+        onChange={setOrder}
+        label={(tab) => TAB_LABEL[tab]}
+        // The SDK's line ends "Tune this app stays last", and Tune is not on
+        // this bar (it is in ⋯), so this app says the rest of it.
+        note={t('app.tab_order_note')}
+      />
+    </div>
+  )
+}
+
 export function ConverterPhoneLayers() {
   const t = useNT()
   const items = useConverterStore((s) => s.items)
@@ -71,6 +92,7 @@ export function ConverterPhoneLayers() {
   const clearQueue = useConverterStore((s) => s.clearQueue)
   const resetSettings = useConverterStore((s) => s.resetSettings)
   return (
+    <>
     <PhoneLayers
       app={APP}
       actions={
@@ -85,10 +107,24 @@ export function ConverterPhoneLayers() {
           }}
         />
       }
-      tuneExtra={<OpensOn />}
+      tuneExtra={
+        <>
+          <OpensOn />
+          <TabOrder />
+        </>
+      }
       // Withheld mid-conversion, as on the website: swapping settings under a
-      // running batch re-arms items.
-      onReset={running ? undefined : resetSettings}
+      // running batch re-arms items. The tab order goes back with the rest.
+      onReset={
+        running
+          ? undefined
+          : () => {
+              resetSettings()
+              useTabOrder.getState().setOrder(null)
+            }
+      }
     />
+    <UndoToast />
+    </>
   )
 }

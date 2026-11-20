@@ -1,5 +1,9 @@
-import { useId, useState } from 'react'
-import { useFileDrop, buttonClass } from '@unisim/sdk'
+import { useId, useState, type TouchEvent } from 'react'
+import { Button, SelectCheckbox, SelectionBar, SwipeGroup, SwipeRow, useFileDrop, buttonClass } from '@unisim/sdk'
+import { removeSwipe, selectSwipe, useListSelect } from '../../native/listGestures'
+import { PHONE } from '../../native/shell'
+import { useNT } from '../../native/strings'
+import { offerUndo } from '../../native/undo'
 import { LARGE_FILE_BYTES } from '../../lib/convert'
 import { DROP_COPY } from '../../lib/formats'
 import { formatBytes } from '../../lib/humanise'
@@ -23,6 +27,16 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
   const downloadItem = useConverterStore((s) => s.downloadItem)
   const [expanded, setExpanded] = useState(false)
   const moreId = useId()
+  const t = useNT()
+  // The phone app's list gestures: swipe a row left to take it off the queue
+  // (with Undo), right to select it; hold to select. Not while a batch runs,
+  // when the website hides the ✕ as well.
+  const pick = useListSelect(items.map((i) => i.id), PHONE && !running)
+  const swipeOff = (item: QueueItem) => {
+    const { takeItem, restoreItem } = useConverterStore.getState()
+    const taken = takeItem(item.id)
+    if (taken) offerUndo({ name: item.file.name, restore: () => restoreItem(taken) })
+  }
 
   const totalBytes = items.reduce((sum, i) => sum + i.file.size, 0)
   const doneCount = items.filter((i) => i.status === 'done').length
@@ -53,6 +67,19 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
       busy={running}
       onRemove={() => removeItem(item.id)}
       onDownload={() => downloadItem(item.id)}
+      phone={
+        PHONE
+          ? {
+              t,
+              selecting: pick.selecting,
+              checked: pick.sel.has(item.id),
+              onToggle: () => pick.sel.toggle(item.id),
+              onHold: pick.holdStart(item.id),
+              onSwipeOff: () => swipeOff(item),
+              onSelect: () => pick.start(item.id),
+            }
+          : null
+      }
     />
   )
 
@@ -90,7 +117,27 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
         </div>
       )}
 
-      <AddMore kind={kind} />
+      {pick.selecting ? (
+        // The suite's select-several bar: Remove selected (the files leave the
+        // queue, nothing is deleted), Clear, and Done to leave.
+        <SelectionBar
+          sel={pick.sel}
+          action="remove"
+          noun={{ one: t('app.noun_one'), other: t('app.noun_other') }}
+          onDelete={(ids) => {
+            for (const id of ids) removeItem(id)
+            pick.leave()
+          }}
+          extra={
+            <Button size="sm" onClick={pick.leave} data-select-done>
+              {t('app.select_done')}
+            </Button>
+          }
+          className="flex-wrap border-b border-slate-200 px-4 py-2.5 dark:border-slate-800"
+        />
+      ) : (
+        <AddMore kind={kind} />
+      )}
 
       <div className="grid grid-cols-[26px_minmax(0,1fr)_112px_72px_136px] gap-3 bg-slate-50 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 max-sm:hidden dark:bg-slate-800/60">
         <span />
@@ -100,8 +147,14 @@ export default function FileQueue({ kind, targetExt }: { kind: MediaKind; target
         <span />
       </div>
 
-      <ul>{shown.map(renderRow)}</ul>
-      {more.length > 0 && <ul id={moreId}>{more.map(renderRow)}</ul>}
+      {/* Clipped to the card's corners on the phone: a swiped row's sliding
+          layer is square, and the last row is the card's foot. */}
+      <div className={PHONE && !collapsible ? 'overflow-hidden rounded-b-xl' : undefined}>
+        <SwipeGroup>
+          <ul>{shown.map(renderRow)}</ul>
+          {more.length > 0 && <ul id={moreId}>{more.map(renderRow)}</ul>}
+        </SwipeGroup>
+      </div>
 
       {collapsible && (
         <div className="border-t border-slate-200 px-4 py-2.5 dark:border-slate-800">
@@ -173,12 +226,15 @@ function Row({
   busy,
   onRemove,
   onDownload,
+  phone,
 }: {
   item: QueueItem
   targetExt: string
   busy: boolean
   onRemove: () => void
   onDownload: () => void
+  /** The phone app's swipes, hold and selection mode; null on the website. */
+  phone: PhoneRow | null
 }) {
   const skipped = item.status === 'unsupported'
   const failed = item.status === 'failed'
@@ -216,12 +272,23 @@ function Row({
   // so it is not filler beside the source's own size any more.
   const outBytes = item.result ? item.result.blob.size : estimate
 
-  return (
-    <li
-      className={`grid grid-cols-[26px_minmax(0,1fr)_112px_72px_136px] items-center gap-3 border-t border-slate-200 px-4 py-3 max-sm:grid-cols-[26px_minmax(0,1fr)_128px] dark:border-slate-800 ${
+  const selecting = phone?.selecting ?? false
+  // Swiped off, or ✕: never the file being converted, nor during a batch.
+  const removable = !busy && item.status !== 'converting'
+
+  const grid = (
+    <div
+      className={`grid grid-cols-[26px_minmax(0,1fr)_112px_72px_136px] items-center gap-3 px-4 py-3 max-sm:grid-cols-[26px_minmax(0,1fr)_128px] ${
         skipped || failed ? 'bg-red-50/40 dark:bg-red-950/20' : ''
       } ${item.status === 'done' ? 'row-settle' : ''}`}
     >
+      {selecting && phone ? (
+        <SelectCheckbox
+          checked={phone.checked}
+          onChange={phone.onToggle}
+          label={phone.t('app.swipe_select_named', { name: item.file.name })}
+        />
+      ) : (
       <span
         className={`flex h-6.5 w-6.5 items-center justify-center rounded-md text-[8.5px] font-extrabold ${
           skipped || failed ? 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
@@ -230,6 +297,7 @@ function Row({
       >
         {(item.ext || '?').slice(0, 4).toUpperCase()}
       </span>
+      )}
 
       <span className="min-w-0">
         {/* Where it sat in a dropped folder — the place it goes back to in
@@ -351,7 +419,7 @@ function Row({
 
       <span className="flex items-center justify-end gap-1.5">
         <Status item={item} />
-        {item.status === 'done' && (
+        {item.status === 'done' && !selecting && (
           <button
             type="button"
             onClick={onDownload}
@@ -362,7 +430,7 @@ function Row({
             Save
           </button>
         )}
-        {!busy && item.status !== 'converting' && (
+        {removable && !selecting && (
           <button
             type="button"
             onClick={onRemove}
@@ -375,8 +443,43 @@ function Row({
           </button>
         )}
       </span>
+    </div>
+  )
+
+  if (!phone) return <li className="border-t border-slate-200 dark:border-slate-800">{grid}</li>
+
+  return (
+    <li
+      className="border-t border-slate-200 dark:border-slate-800"
+      // A hold selects: no system menu under the finger.
+      style={{ WebkitTouchCallout: 'none' }}
+      onTouchStart={selecting || !removable ? undefined : phone.onHold}
+      // In selection mode a tap anywhere on the row ticks it.
+      onClick={selecting ? (e) => { if (!(e.target as Element).closest('input,button')) phone.onToggle() } : undefined}
+      data-queue-row={item.id}
+    >
+      <SwipeRow
+        id={item.id}
+        left={selectSwipe(phone.t, item.file.name, phone.onSelect)}
+        right={removeSwipe(phone.t, item.file.name, phone.onSwipeOff)}
+        disabled={selecting || !removable}
+        actionWidth={88}
+        frontClassName="bg-white dark:bg-slate-900"
+      >
+        {grid}
+      </SwipeRow>
     </li>
   )
+}
+
+interface PhoneRow {
+  t: ReturnType<typeof useNT>
+  selecting: boolean
+  checked: boolean
+  onToggle: () => void
+  onHold: (e: TouchEvent) => void
+  onSwipeOff: () => void
+  onSelect: () => void
 }
 
 // Status is carried by a semantic dot plus a word — never by the accent orange,

@@ -1,5 +1,7 @@
-import type { KeyboardEvent } from 'react'
-import { useDefaultView, type UseDefaultView } from '@unisim/sdk'
+import type { KeyboardEvent, RefObject } from 'react'
+import { isDefaultTabOrder, useDefaultView, useTabReorder, type TabReorder, type UseDefaultView } from '@unisim/sdk'
+import { PHONE } from '../../native/shell'
+import { useTabOrder } from '../../native/tabOrder'
 import { TABS, useConverterStore } from '../../stores/converterStore'
 import { CONTAINER } from '../../lib/layout'
 import AllStudio from './AllStudio'
@@ -27,6 +29,18 @@ export default function ConverterApp() {
   // the same default at start-up; this is the tap that sets it and the orange
   // mark that shows which one it is. Tune this app has the same choice.
   const dv = useDefaultView<TabId>('tab', 'all', { views: TABS })
+  // The phone app's tabs reorder: hold one and drag it along the bar
+  // (BRANDING.md ▸ "Tabs reorder: hold and drag"; SDK phone kit 0.230). No bin:
+  // every tab is always there. The website keeps the fixed order.
+  const stored = useTabOrder((s) => s.order)
+  const setOrder = useTabOrder((s) => s.setOrder)
+  const order = PHONE ? stored : TAB_ORDER
+  const reorder = useTabReorder<TabId>({
+    tabs: order,
+    onReorder: (next) => setOrder(isDefaultTabOrder(next, TABS) ? null : next),
+    enabled: PHONE,
+  })
+  const shownOrder = PHONE ? reorder.order : TAB_ORDER
 
   return (
     <div>
@@ -51,18 +65,11 @@ export default function ConverterApp() {
           onKeyDown={onTabKey}
           className={`${CONTAINER} md:py-3`}
         >
-          <div className="u-tabs u-tabs--dock">
-          {/* ⚠️ Hints short enough that all five tabs sit on ONE row. The old
-              ones ("MP3, M4A, Opus, FLAC, WAV & AIFF · on your device" …) were
-              wider than the 1216px container, so Files wrapped onto a row of
-              its own on every desktop — the first thing a newcomer saw was a
-              tab bar that looked broken. "On your device" is not lost: every
-              tab opens on a PrivacyNote, and the landing lead says it too. */}
-          <TopTab id="all" current={tab} onClick={setTab} dv={dv} label="All" hint="Anything — sorted for you" />
-          <TopTab id="audio" current={tab} onClick={setTab} dv={dv} label="Audio" hint="MP3, M4A, FLAC & more" />
-          <TopTab id="image" current={tab} onClick={setTab} dv={dv} label="Images" hint="Convert & resize" />
-          <TopTab id="video" current={tab} onClick={setTab} dv={dv} label="Video" hint="Trim, resize & compress" />
-          <TopTab id="document" current={tab} onClick={setTab} dv={dv} label="Files" hint="Word & text → PDF" />
+          <div className="u-tabs u-tabs--dock" ref={PHONE ? (reorder.barRef as RefObject<HTMLDivElement>) : undefined}>
+          {/* The hints: see TAB_COPY. */}
+          {shownOrder.map((id) => (
+            <TopTab key={id} id={id} current={tab} onClick={setTab} dv={dv} label={TAB_COPY[id].label} hint={TAB_COPY[id].hint} reorder={PHONE ? reorder : null} />
+          ))}
           </div>
         </div>
       </div>
@@ -78,12 +85,13 @@ export default function ConverterApp() {
   )
 
   function onTabKey(e: KeyboardEvent<HTMLDivElement>) {
-    const at = TAB_ORDER.indexOf(tab)
+    // The arrows follow the bar as drawn (the phone's own order).
+    const at = order.indexOf(tab)
     const next =
-      e.key === 'ArrowRight' ? TAB_ORDER[(at + 1) % TAB_ORDER.length]
-      : e.key === 'ArrowLeft' ? TAB_ORDER[(at - 1 + TAB_ORDER.length) % TAB_ORDER.length]
-      : e.key === 'Home' ? TAB_ORDER[0]
-      : e.key === 'End' ? TAB_ORDER[TAB_ORDER.length - 1]
+      e.key === 'ArrowRight' ? order[(at + 1) % order.length]
+      : e.key === 'ArrowLeft' ? order[(at - 1 + order.length) % order.length]
+      : e.key === 'Home' ? order[0]
+      : e.key === 'End' ? order[order.length - 1]
       : null
     if (!next) return
     e.preventDefault()
@@ -93,6 +101,20 @@ export default function ConverterApp() {
 }
 
 const TAB_ORDER: TabId[] = ['all', 'audio', 'image', 'video', 'document']
+
+// ⚠️ Hints short enough that all five tabs sit on ONE row. The old ones ("MP3,
+// M4A, Opus, FLAC, WAV & AIFF · on your device" …) were wider than the 1216px
+// container, so Files wrapped onto a row of its own on every desktop — the
+// first thing a newcomer saw was a tab bar that looked broken. "On your
+// device" is not lost: every tab opens on a PrivacyNote, and the landing lead
+// says it too.
+const TAB_COPY: Record<TabId, { label: string; hint: string }> = {
+  all: { label: 'All', hint: 'Anything — sorted for you' },
+  audio: { label: 'Audio', hint: 'MP3, M4A, FLAC & more' },
+  image: { label: 'Images', hint: 'Convert & resize' },
+  video: { label: 'Video', hint: 'Trim, resize & compress' },
+  document: { label: 'Files', hint: 'Word & text → PDF' },
+}
 const tabId = (id: TabId) => `converter-tab-${id}`
 const panelId = (id: TabId) => `converter-panel-${id}`
 
@@ -103,6 +125,7 @@ function TopTab({
   label,
   hint,
   dv,
+  reorder,
 }: {
   id: TabId
   current: TabId
@@ -110,6 +133,8 @@ function TopTab({
   label: string
   hint: string
   dv: UseDefaultView<TabId>
+  /** The phone's hold and drag; null on the website. */
+  reorder: TabReorder<TabId> | null
 }) {
   const active = current === id
   const dvProps = dv.buttonProps(id, label)
@@ -122,6 +147,7 @@ function TopTab({
       aria-controls={active ? panelId(id) : undefined}
       tabIndex={active ? 0 : -1}
       {...dvProps}
+      {...(reorder ? reorder.tabProps(id) : {})}
       onClick={() => { dv.tap(id); onClick(id) }}
       // The suite's tray tabs (SDK 0.216, BRANDING.md → Tabs): aria-selected
       // selects, and buttonProps' data-default-view draws the opens-here dot.

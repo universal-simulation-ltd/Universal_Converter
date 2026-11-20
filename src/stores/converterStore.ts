@@ -91,6 +91,13 @@ interface ConverterState {
    */
   addDropped: (files: File[], on: TabId) => DropOutcome
   removeItem: (id: string) => void
+  /**
+   * Take a row off the queue so it can be put back: the phone's swipe to
+   * remove, which offers Undo. Keeps the row's estimate tile with it.
+   */
+  takeItem: (id: string) => TakenItem | null
+  /** Put a row from `takeItem` back where it was. */
+  restoreItem: (taken: TakenItem) => void
   clearQueue: (kind?: MediaKind) => void
   updateAudio: (patch: Partial<AudioSettings>) => void
   updateImage: (patch: Partial<ImageSettings>) => void
@@ -111,6 +118,14 @@ interface ConverterState {
    * one archive, not one per kind).
    */
   downloadEverything: () => Promise<void>
+}
+
+/** A row taken off the queue by `takeItem`, with what it needs to come back. */
+export interface TakenItem {
+  item: QueueItem
+  /** Its place in the whole queue (every tab's rows together). */
+  index: number
+  sample: ImageSample | undefined
 }
 
 /** Every kind, in tab order — the one list the sorting and clearing loops use. */
@@ -444,6 +459,27 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
   removeItem: (id) => {
     forgetSample(id)
     set({ items: get().items.filter((i) => i.id !== id) })
+  },
+
+  takeItem: (id) => {
+    const items = get().items
+    const index = items.findIndex((i) => i.id === id)
+    if (index < 0) return null
+    const taken = { item: items[index]!, index, sample: samples.get(id) }
+    forgetSample(id)
+    set({ items: items.filter((i) => i.id !== id) })
+    return taken
+  },
+
+  restoreItem: ({ item, index, sample }) => {
+    const items = get().items
+    if (items.some((i) => i.id === item.id)) return
+    if (sample) samples.set(item.id, sample)
+    const next = [...items]
+    next.splice(Math.min(index, next.length), 0, item)
+    set({ items: next })
+    // The settings may have changed while it was away.
+    if (item.kind === 'image') void refreshEstimates(item.id)
   },
 
   clearQueue: (kind) => {
