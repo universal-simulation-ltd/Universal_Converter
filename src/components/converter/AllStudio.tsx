@@ -80,7 +80,9 @@ export default function AllStudio() {
   return (
     <div className={`${CONTAINER} flex flex-col gap-4 py-5`}>
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)]">
-        <div className="flex flex-col items-center gap-5 rounded-xl border border-slate-200 bg-white px-4 py-8 sm:px-8 dark:border-slate-800 dark:bg-slate-900">
+        {/* Where more files come in: a Viewfinder box (BRANDING.md → Boxes,
+            D), its leading corner lit because something is in frame now. */}
+        <div className="u-box u-box--frame flex flex-col items-center gap-5 rounded-lg bg-white px-4 py-8 sm:px-8 dark:bg-slate-900">
           <div
             {...drop.dropzoneProps}
             className="relative w-full max-w-[300px] cursor-pointer rounded-full transition-transform focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-600"
@@ -166,14 +168,16 @@ function SortingColumn({
           <div className="flex flex-col gap-2">
             {KINDS.map((kind) =>
               waiting[kind] > 0 ? (
+                // Each row opens its tab: the suite's Orbit corner (BRANDING.md
+                // → Boxes, A). When everything went to ONE tab, that row is
+                // the box to go to (`u-box--next`, its light running along the
+                // top), where it used to be filled orange.
                 <button
                   key={kind}
                   type="button"
                   onClick={() => setTab(kind)}
-                  className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition-colors ${
-                    tabsUsed.length === 1
-                      ? 'border-orange-500 bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/40 dark:hover:bg-orange-950/70'
-                      : 'border-slate-300 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800'
+                  className={`u-box u-box--orbit u-box--row flex items-center justify-between gap-3 bg-white px-3 py-2 text-left transition-colors hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 ${
+                    tabsUsed.length === 1 ? 'u-box--next' : ''
                   }`}
                 >
                   <span>

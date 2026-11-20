@@ -297,10 +297,15 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
         ) : (
           <>
             {t.done > 0 && (
-              <div className="rounded-lg bg-white/70 px-3 py-2.5 ring-1 ring-orange-200/70 dark:bg-slate-950/40 dark:ring-orange-900/60">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-slate-500 dark:text-slate-400">
-                    {allDone ? 'New size' : 'So far'}
+              // The result: a record carrying a value, so the suite's Key box
+              // (BRANDING.md → Boxes, C), its tab saying what the figure is.
+              // The tab stays neutral; the chip beside the size carries the
+              // green or amber.
+              <div className="u-box u-box--key mt-2 bg-white/70 px-3 pb-2.5 pt-5 dark:bg-slate-950/40">
+                <span className="u-box__key">{allDone ? 'New size' : 'So far'}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[26px] font-bold leading-none tabular-nums text-slate-900 dark:text-slate-100">
+                    {formatBytes(t.bytesOutDone)}
                   </span>
                   {/* Green for smaller, amber for bigger, nothing for neither.
                       ⚠️ A converter is not a compressor: PNG out of a JPEG is
@@ -316,9 +321,6 @@ function ActionCard({ kind, canConvert }: { kind: MediaKind; canConvert: boolean
                       +{-saved}%
                     </ValueChip>
                   )}
-                </div>
-                <div className="mt-1 text-[26px] font-bold leading-none tabular-nums text-slate-900 dark:text-slate-100">
-                  {formatBytes(t.bytesOutDone)}
                 </div>
                 <div className="mt-1.5 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
                   {saved >= 1 || saved <= -1 ? (

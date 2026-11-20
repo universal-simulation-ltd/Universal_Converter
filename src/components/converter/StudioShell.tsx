@@ -76,7 +76,17 @@ export default function StudioShell({
             : 'lg:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.95fr)]'
         }`}
       >
-        <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        {/* Empty, this is the tab's front door with nothing in frame yet: the
+            suite's Viewfinder box, empty (BRANDING.md → Boxes, D), all four
+            corners muted and no outline. With a queue it is a plain card round
+            a plain list. */}
+        <div
+          className={
+            empty
+              ? 'u-box u-box--frame u-box--empty rounded-lg bg-white p-0 dark:bg-slate-900'
+              : 'rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
+          }
+        >
           {empty ? (
             // No padding wrapper: the empty state is the ring, and it centres
             // itself in the card the same way the All tab's does.
