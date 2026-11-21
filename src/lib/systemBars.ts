@@ -1,13 +1,6 @@
 import { useEffect } from 'react'
-import { Capacitor, registerPlugin, SystemBars, SystemBarsStyle } from '@capacitor/core'
-
-/**
- * The Android shell's own plugin (android/…/WindowThemePlugin.java): repaints
- * the window background, which is what shows in the strips around the web view
- * on a WebView older than Chromium 140. There is no iOS side; it is only ever
- * called on Android.
- */
-const WindowTheme = registerPlugin<{ set(options: { theme: 'light' | 'dark' }): Promise<void> }>('WindowTheme')
+import { Capacitor, SystemBars, SystemBarsStyle } from '@capacitor/core'
+import { setAndroidWindowTheme } from '@unisim/sdk'
 
 /**
  * Keeps the native status bar in step with the app's own resolved theme, live
@@ -19,8 +12,10 @@ const WindowTheme = registerPlugin<{ set(options: { theme: 'light' | 'dark' }): 
  *   `env(safe-area-inset-*)`);
  * - an older Android WebView: a strip Capacitor's SystemBars pads the page out
  *   by, showing the WINDOW background. Android 15 ignores a status-bar colour
- *   set at run time, so WindowTheme repaints that background instead — the
- *   navbar's own surface colour, light or dark (values/colors.xml).
+ *   set at run time, so @unisim/sdk's `setAndroidWindowTheme()` (its native
+ *   UnisimWindowTheme plugin, registered by `cap sync`) repaints that
+ *   background instead — the navbar's own surface colour, light or dark
+ *   (android/…/values/colors.xml). It resolves false off Android.
  *
  * Either way the glyphs then follow the theme. On Android they only switch to
  * light once the strip has actually been repainted, so a failed repaint leaves
@@ -34,19 +29,11 @@ export function useSystemBarsStyle(theme: 'light' | 'dark') {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
     let cancelled = false
-    const setGlyphs = (t: 'light' | 'dark') => {
+    setAndroidWindowTheme(theme).then((repainted) => {
       if (cancelled) return
-      const style = t === 'dark' ? SystemBarsStyle.Dark : SystemBarsStyle.Light
-      SystemBars.setStyle({ style }).catch(() => {})
-    }
-    if (Capacitor.getPlatform() === 'android') {
-      WindowTheme.set({ theme }).then(
-        () => setGlyphs(theme),
-        () => setGlyphs('light'),
-      )
-    } else {
-      setGlyphs(theme)
-    }
+      const dark = theme === 'dark' && (repainted || Capacitor.getPlatform() === 'ios')
+      SystemBars.setStyle({ style: dark ? SystemBarsStyle.Dark : SystemBarsStyle.Light }).catch(() => {})
+    })
     return () => {
       cancelled = true
     }

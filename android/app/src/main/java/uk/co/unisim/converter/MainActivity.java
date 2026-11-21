@@ -1,14 +1,7 @@
 package uk.co.unisim.converter;
 
-import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
 
-public class MainActivity extends BridgeActivity {
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        // Local plugins register before super.onCreate builds the bridge.
-        registerPlugin(WindowThemePlugin.class);
-        super.onCreate(savedInstanceState);
-    }
-}
+// The strips round the web view follow the app's Light / Dark through
+// @unisim/sdk's UnisimWindowTheme plugin, which `cap sync` registers.
+public class MainActivity extends BridgeActivity {}
