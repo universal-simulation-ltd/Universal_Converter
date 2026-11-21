@@ -39,8 +39,10 @@ if (import.meta.env.DEV) {
 // discreet Sign in. The SDK user count was retired in 0.187.0;
 // its anonymous daily open count is already off under `noAccounts`, and
 // `openCount` keeps it off in the iOS and Android builds whatever happens to
-// `noAccounts` — they send nothing, which is what ios/App/App/PrivacyInfo.xcprivacy
-// and store-assets/data-safety.json declare. Change all of them together, and
+// `noAccounts`. Signed out they send nothing; with a suite session another app
+// made, the SDK keeps Tune this app's choices with the account (TuneSync), which
+// is what ios/App/App/PrivacyInfo.xcprivacy and store-assets/data-safety.json
+// declare (User ID + other data, 2026-11-21). Change all of them together, and
 // PRIVACY.md + the "files stay on your device" article with them.
 const universalConfig = {
   supabaseUrl: import.meta.env.VITE_SUPABASE_URL || 'https://rygfxgalojojppxmhddo.supabase.co',
