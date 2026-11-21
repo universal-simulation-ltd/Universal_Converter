@@ -180,7 +180,7 @@ Algunas partes de la aplicación son grandes y solo se necesitan de vez en cuand
 
 - **La búsqueda de actualizaciones** y la descarga de la lista de novedades.
 
-No hay una cuenta propia, ni recuento de uso, ni publicidad, ni seguimiento de terceros: la aplicación ni siquiera nos avisa de que se ha abierto. Si ya ha iniciado sesión en una app de UNI·SIM, la aplicación lo reconoce para que sus ajustes comunes a todo el conjunto, como el esquema de colores y el idioma, le acompañen, y Ajustar esta app ofrece un discreto inicio de sesión. Sus archivos nunca se vinculan a él.
+No hay una cuenta propia, ni recuento de uso, ni publicidad, ni seguimiento de terceros: la aplicación ni siquiera nos avisa de que se ha abierto. Si ya ha iniciado sesión en UNI·SIM (en el teléfono, a través de otra de nuestras apps), la aplicación lo reconoce: sus ajustes comunes a todo el conjunto, como el esquema de colores y el idioma, le acompañan, y los ajustes de Ajustar esta app y el nombre con el que prefiere que le llamen se guardan en esa cuenta. La app del teléfono no tiene inicio de sesión propio; en el sitio web, Ajustar esta app ofrece un discreto inicio de sesión. Sus archivos nunca se vinculan a él.
 
 ## Compruébelo usted mismo
 

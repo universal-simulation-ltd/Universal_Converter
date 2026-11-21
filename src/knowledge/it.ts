@@ -180,7 +180,7 @@ Alcune parti dell’app sono grandi e servono solo ogni tanto, quindi vengono sc
 
 - **Il controllo degli aggiornamenti** e il recupero dell’elenco delle novità.
 
-Non ci sono un account proprio, conteggio degli utilizzi, pubblicità né tracciamento di terze parti: l’app non ci comunica nemmeno di essere stata aperta. Se hai già effettuato l’accesso a un’app UNI·SIM, l’app ti riconosce così che le tue impostazioni comuni a tutta la suite, come schema di colori e lingua, ti seguano, e Regola questa app offre un accesso discreto. I tuoi file non vengono mai collegati ad esso.
+Non ci sono un account proprio, conteggio degli utilizzi, pubblicità né tracciamento di terze parti: l’app non ci comunica nemmeno di essere stata aperta. Se hai già effettuato l’accesso a UNI·SIM (sul telefono, tramite un’altra delle nostre app), l’app lo riconosce: le tue impostazioni comuni a tutta la suite, come schema di colori e lingua, ti seguono, e le impostazioni di Regola questa app e il nome con cui preferisci essere chiamato vengono salvati in quell’account. L’app per telefono non ha un accesso proprio; sul sito web, Regola questa app offre un accesso discreto. I tuoi file non vengono mai collegati ad esso.
 
 ## Verificalo tu stesso
 

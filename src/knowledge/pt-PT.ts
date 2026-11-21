@@ -180,7 +180,7 @@ Algumas partes da aplicação são grandes e só são precisas de vez em quando,
 
 - **A procura de atualizações** e a obtenção da lista de novidades.
 
-Não há conta própria, contagem de utilização, publicidade nem rastreio por terceiros: a aplicação nem sequer nos avisa de que foi aberta. Se já tiver sessão iniciada numa aplicação UNI·SIM, a aplicação reconhece-a para que as suas definições comuns a todo o conjunto, como o esquema de cores e o idioma, o acompanhem, e Ajustar esta aplicação oferece um início de sessão discreto. Os seus ficheiros nunca ficam associados a ela.
+Não há conta própria, contagem de utilização, publicidade nem rastreio por terceiros: a aplicação nem sequer nos avisa de que foi aberta. Se já tiver sessão iniciada na UNI·SIM (no telemóvel, através de outra das nossas aplicações), a aplicação reconhece-a: as suas definições comuns a todo o conjunto, como o esquema de cores e o idioma, acompanham-no, e as definições de Ajustar esta aplicação e o nome pelo qual prefere ser tratado são guardados nessa conta. A aplicação para telemóvel não tem início de sessão próprio; no site, Ajustar esta aplicação oferece um início de sessão discreto. Os seus ficheiros nunca ficam associados a ela.
 
 ## Confirme por si
 

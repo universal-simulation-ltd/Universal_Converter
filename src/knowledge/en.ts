@@ -180,7 +180,7 @@ A few parts of the app are large and only needed occasionally, so they are downl
 
 - **Checking for updates** and fetching the list of changes.
 
-There is no account of its own, no usage count, no advertising and no third-party tracking: the app does not even tell us that it was opened. If you are already signed in to a UNI·SIM app, it recognises you so your suite-wide settings, such as colour scheme and language, come with you, and Tune this app offers a discreet Sign in. Your files are never tied to it.
+There is no account of its own, no usage count, no advertising and no third-party tracking: the app does not even tell us that it was opened. If you are already signed in to UNI·SIM (on a phone, through another of our apps), the app recognises it: your suite-wide settings, such as colour scheme and language, come with you, and this app's Tune settings and the name you go by are saved to that account. The phone app has no sign-in of its own; on the website, Tune this app offers a discreet Sign in. Your files are never tied to it.
 
 ## Check it yourself
 

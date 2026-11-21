@@ -180,7 +180,7 @@ Algumas partes do app são grandes e só são usadas de vez em quando, então s�
 
 - **A verificação de atualizações** e a busca da lista de novidades.
 
-Não há conta própria, contagem de uso, publicidade nem rastreamento de terceiros: o app nem sequer nos avisa que foi aberto. Se você já fez login em um app da UNI·SIM, o app reconhece isso para que suas configurações de toda a suíte, como esquema de cores e idioma, venham junto, e Ajustar este app oferece um login discreto. Seus arquivos nunca ficam ligados a ele.
+Não há conta própria, contagem de uso, publicidade nem rastreamento de terceiros: o app nem sequer nos avisa que foi aberto. Se você já fez login na UNI·SIM (no celular, por meio de outro app nosso), o app reconhece isso: suas configurações de toda a suíte, como esquema de cores e idioma, vêm junto, e as configurações de Ajustar este app e o nome pelo qual você prefere ser chamado são salvos nessa conta. O app para celular não tem login próprio; no site, Ajustar este app oferece um login discreto. Seus arquivos nunca ficam ligados a ele.
 
 ## Confira você mesmo
 

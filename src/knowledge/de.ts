@@ -180,7 +180,7 @@ Einige Teile der App sind groß und werden nur gelegentlich gebraucht. Sie werde
 
 - **Die Suche nach Updates** und das Abrufen der Liste der Neuerungen.
 
-Es gibt kein eigenes Konto, keine Nutzungszählung, keine Werbung und kein Tracking durch Dritte: Die App teilt uns nicht einmal mit, dass sie geöffnet wurde. Sind Sie bereits bei einer UNI·SIM-App angemeldet, erkennt die App das, damit Ihre suiteweiten Einstellungen wie Farbschema und Sprache mitkommen, und „Diese App anpassen“ bietet eine dezente Anmeldung an. Ihre Dateien werden nie damit verknüpft.
+Es gibt kein eigenes Konto, keine Nutzungszählung, keine Werbung und kein Tracking durch Dritte: Die App teilt uns nicht einmal mit, dass sie geöffnet wurde. Sind Sie bereits bei UNI·SIM angemeldet (auf dem Telefon über eine andere unserer Apps), erkennt die App das: Ihre suiteweiten Einstellungen wie Farbschema und Sprache kommen mit, und die Einstellungen aus „Diese App anpassen“ sowie der Name, mit dem Sie angesprochen werden möchten, werden in diesem Konto gespeichert. Die Telefon-App hat keine eigene Anmeldung; auf der Website bietet „Diese App anpassen“ eine dezente Anmeldung an. Ihre Dateien werden nie damit verknüpft.
 
 ## Prüfen Sie es selbst
 

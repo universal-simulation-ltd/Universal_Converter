@@ -52,7 +52,9 @@ in [`src/main.tsx`](src/main.tsx)). If your browser or phone already holds a
 UNI·SIM sign-in (a Universal ID), the app recognises it: your suite-wide
 settings, such as colour scheme and language, come with you, and what you pick
 in Tune this app is kept with your account (under your account ID, so it
-follows you to your other devices). That is all it sends, and your files are
+follows you to your other devices), with the name you go by in the suite
+("Call me" in Global Tuning, if this device holds one the account lacks). That
+is all it sends, and your files are
 never tied to it. On the website, Tune this app offers a discreet Sign in; the
 iPhone and Android apps offer no sign-in of their own and show nothing about
 accounts (`signInInTune` in [`src/main.tsx`](src/main.tsx)). There is no usage
@@ -70,9 +72,9 @@ script.** You can check that without reading any code: view the page source of
 loads. The page, its scripts, styles and fonts all come from our own domain
 (opensource.unisim.co.uk), and the changelog from changelog.unisim.co.uk. No
 count or usage figure is sent to our database host, Supabase
-(`rygfxgalojojppxmhddo.supabase.co`), or anywhere else; the only thing that
-goes there is your Tune this app settings, and only if you are already signed
-in.
+(`rygfxgalojojppxmhddo.supabase.co`), or anywhere else; the only things that go
+there are your Tune this app settings and the name you go by, and only if you
+are already signed in.
 
 ---
 
